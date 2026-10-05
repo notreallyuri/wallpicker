@@ -83,9 +83,9 @@ pub(super) fn LocalTile(img: LocalImage) -> impl IntoView {
                         trash.ask(delete_path.clone());
                     }
                 }
-                class="flex w-full flex-col overflow-hidden rounded-2xl bg-card/70 text-left shadow-md shadow-black/10 ring-1 ring-foreground/5 backdrop-blur-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/20 hover:ring-2 hover:ring-primary/70 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                class="flex w-full flex-col overflow-hidden rounded-3xl bg-card/70 p-1.5 text-left shadow-md shadow-black/10 ring-1 ring-foreground/5 backdrop-blur-sm transition duration-300 ease-bounce hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 hover:ring-2 hover:ring-primary/70 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
             >
-                <div class="relative aspect-[16/10] w-full overflow-hidden bg-muted">
+                <div class="relative aspect-[16/10] w-full overflow-hidden rounded-[1.1rem] bg-muted">
                     {move || match (src.get(), broken.get()) {
                         (Some(s), _) => {
                             view! {

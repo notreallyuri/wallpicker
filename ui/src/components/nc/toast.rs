@@ -277,7 +277,7 @@ fn ToastItem(
             class=move || {
                 cn!(
                     "before:absolute before:-inset-y-4 before:inset-x-0 before:z-[-1] before:content-['']",
-                    "absolute left-0 w-full flex items-center justify-between space-x-2 overflow-hidden rounded-md border shadow-lg",
+                    "absolute left-0 w-full flex items-center justify-between space-x-2 overflow-hidden rounded-2xl border-2 shadow-xl",
                     if is_top { "top-0 origin-top" } else { "bottom-0 origin-bottom" },
                     "translate-x-[var(--drag-x,0px)] translate-y-[calc(var(--toast-y,0px)+var(--drag-y,0px))] scale-[var(--toast-scale,1)]",
                     "z-[var(--toast-z,100)] opacity-[var(--toast-opacity,1)]",
@@ -334,7 +334,7 @@ fn ToastItem(
                             }
                             class=move || {
                                 cn!(
-                                    "shrink-0 rounded-md px-2.5 py-1 text-xs font-medium ring-1 transition-colors focus-visible:outline-none focus-visible:ring-2",
+                                    "shrink-0 rounded-xl px-2.5 py-1 text-xs font-bold ring-1 transition-colors focus-visible:outline-none focus-visible:ring-2",
                                     match toast.variant {
                                         ToastVariant::Default => {
                                             "ring-border hover:bg-accent hover:text-accent-foreground"

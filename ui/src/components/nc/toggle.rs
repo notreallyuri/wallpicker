@@ -43,7 +43,7 @@ impl AsClass for ToggleSize {
     }
 }
 
-pub(crate) const TOGGLE_BASE: &str = "inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent text-sm font-medium whitespace-nowrap transition-all outline-none select-none data-[state=off]:hover:bg-muted data-[state=off]:hover:text-foreground data-[state=on]:bg-primary/20 data-[state=on]:text-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4";
+pub(crate) const TOGGLE_BASE: &str = "inline-flex shrink-0 items-center justify-center rounded-xl border border-transparent text-sm font-bold transition-all duration-150 ease-bounce active:scale-95 whitespace-nowrap transition-all outline-none select-none data-[state=off]:hover:bg-muted data-[state=off]:hover:text-foreground data-[state=on]:bg-primary/20 data-[state=on]:text-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4";
 
 #[component]
 pub fn Toggle(

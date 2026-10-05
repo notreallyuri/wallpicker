@@ -74,7 +74,7 @@ fn Shell() -> impl IntoView {
         <crate::palette::Backdrop />
         <Tabs default_value=TAB_LOCAL class="relative z-10 flex h-screen flex-col gap-0">
             <header class="flex items-center gap-4 border-b border-border/60 bg-background/55 px-5 py-3 backdrop-blur-xl">
-                <span class="bg-gradient-to-r from-primary to-foreground/80 bg-clip-text text-lg font-bold tracking-tight text-transparent">
+                <span class="bg-gradient-to-r from-primary to-foreground/80 bg-clip-text text-xl font-black tracking-tight text-transparent">
                     "wallpicker"
                 </span>
                 <TabsList>

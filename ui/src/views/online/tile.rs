@@ -102,7 +102,7 @@ pub(super) fn RemoteTile(w: OnlineWallpaper) -> impl IntoView {
     };
 
     view! {
-        <div data-menu-key=key class="group flex flex-col gap-1.5 transition duration-200 hover:-translate-y-0.5">
+        <div data-menu-key=key class="group flex flex-col gap-1.5 transition duration-300 ease-bounce hover:-translate-y-1">
             <div class=format!(
                 "relative aspect-[16/10] w-full overflow-hidden rounded-2xl bg-muted shadow-md shadow-black/10 ring-2 {ring} transition group-hover:shadow-lg group-hover:ring-[3px]",
             )>

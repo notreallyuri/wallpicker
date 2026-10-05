@@ -82,7 +82,7 @@ pub fn DropdownMenuContent(
             side_offset=side_offset
             class=move || {
                 cn!(
-                    "z-50 min-w-32 overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md pointer-events-auto data-[state=closed]:pointer-events-none",
+                    "z-50 min-w-32 overflow-hidden rounded-2xl border-2 bg-popover p-1.5 text-popover-foreground shadow-xl pointer-events-auto data-[state=closed]:pointer-events-none",
                     "data-[state=open]:animate-in data-[state=closed]:animate-out",
                     "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
                     "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
@@ -109,7 +109,7 @@ pub fn DropdownMenuItem(
             on_click=on_click
             class=move || {
                 cn!(
-                    "relative flex font-medium cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground hover:bg-accent hover:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50",
+                    "relative flex font-medium cursor-default select-none items-center rounded-xl px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground hover:bg-accent hover:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50",
                     class.get()
                 )
             }
@@ -149,7 +149,7 @@ pub fn DropdownMenuCheckboxItem(
             }
             class=move || {
                 cn!(
-                    "relative flex font-medium cursor-default select-none items-center rounded-sm py-1.5 pr-2 pl-8 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground hover:bg-accent hover:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50",
+                    "relative flex font-medium cursor-default select-none items-center rounded-xl py-1.5 pr-2 pl-8 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground hover:bg-accent hover:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50",
                     class.get()
                 )
             }
@@ -187,7 +187,7 @@ pub fn DropdownMenuSubTrigger(
     view! {
         <DropdownMenuSubTriggerRoot class=move || {
             cn!(
-                "group flex w-full cursor-default select-none font-medium justify-between items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground",
+                "group flex w-full cursor-default select-none font-medium justify-between items-center rounded-xl px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground",
                 class.get()
             )
         }>{children()} <ChevronRight class="ml-auto" /></DropdownMenuSubTriggerRoot>

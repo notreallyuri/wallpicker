@@ -36,7 +36,7 @@ pub fn ToggleGroup(
                 value=value
                 class=move || {
                     cn!(
-                        "group/toggle-group flex w-fit items-center rounded-lg data-[orientation=vertical]:flex-col data-[orientation=vertical]:items-stretch",
+                        "group/toggle-group flex w-fit items-center gap-1 rounded-2xl data-[orientation=vertical]:flex-col data-[orientation=vertical]:items-stretch",
                         class.get()
                     )
                 }
@@ -69,7 +69,7 @@ pub fn ToggleGroupItem(
                     TOGGLE_BASE,
                     variant.as_class(),
                     size.as_class(),
-                    "rounded-none first:rounded-l-lg last:rounded-r-lg group-data-[orientation=vertical]/toggle-group:first:rounded-t-lg group-data-[orientation=vertical]/toggle-group:last:rounded-b-lg group-data-[orientation=vertical]/toggle-group:first:rounded-r-lg group-data-[orientation=vertical]/toggle-group:last:rounded-l-lg",
+                    "rounded-xl",
                     class.get()
                 )
             }

@@ -385,3 +385,8 @@ To add another nocomponents component, run `cargo nocli components add <name>` i
   `"csp": null` is a quick way to confirm it's the CSP.
 - **Blank window in `cargo tauri dev`**: open the web inspector (right-click → Inspect) and look
   at the console.
+
+## Credits
+
+The app's font is [Nunito](https://github.com/googlefonts/nunito), under the SIL Open Font License
+(`ui/assets/fonts/OFL.txt`).

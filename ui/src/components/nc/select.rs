@@ -30,7 +30,7 @@ pub fn SelectTrigger(
     view! {
         <SelectTriggerRoot class=move || {
             cn!(
-                "flex h-8 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+                "flex h-9 w-full items-center justify-between rounded-xl border-2 border-input bg-card/60 px-3 font-semibold py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
                 "aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40",
                 class.get()
             )
@@ -62,7 +62,7 @@ pub fn SelectContent(
     view! {
         <SelectContentRoot class=move || {
             cn!(
-                "z-50 overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md pointer-events-auto data-[state=closed]:pointer-events-none",
+                "z-50 overflow-hidden rounded-2xl border-2 bg-popover p-1 text-popover-foreground shadow-xl pointer-events-auto data-[state=closed]:pointer-events-none",
                 "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2",
                 class.get()
             )
@@ -83,7 +83,7 @@ pub fn SelectItem(
             value=value
             class=move || {
                 cn!(
-                    "group relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none hover:bg-accent hover:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50",
+                    "group relative flex w-full cursor-default select-none items-center rounded-xl py-1.5 font-medium pl-8 pr-2 text-sm outline-none hover:bg-accent hover:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50",
                     class.get()
                 )
             }
