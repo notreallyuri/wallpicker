@@ -1,0 +1,21 @@
+[Desktop Entry]
+Type=Application
+Name=wallpicker
+GenericName=Wallpaper picker
+Comment=Pick wallpapers for Hyprland: your library, Wallhaven, Konachan, yande.re
+Exec=wallpicker
+Icon=wallpicker
+Terminal=false
+Categories=Utility;
+Keywords=wallpaper;background;hyprpaper;noctalia;wallhaven;konachan;yandere;
+StartupWMClass=wallpicker
+SingleMainWindow=true
+Actions=random;previous;
+
+[Desktop Action random]
+Name=Random wallpaper
+Exec=wallpicker random
+
+[Desktop Action previous]
+Name=Previous wallpaper
+Exec=wallpicker previous

@@ -90,8 +90,21 @@ hyprpaper must be running with IPC enabled, which is its default.
 ```bash
 cargo tauri dev                  # trunk serves the UI on :1420, the window hot-reloads
 cargo tauri build --no-bundle    # release binary at target/release/wallpicker
-install -m755 target/release/wallpicker ~/.local/bin/wallpicker
+scripts/install-local.sh         # ~/.local/bin/wallpicker, a launcher entry and its icon
 ```
+
+`install-local.sh` also adds wallpicker to your app launcher (`wallpicker.desktop`, with Random
+and Previous as quick actions). Its entry uses the full path to the binary, since launchers
+often run with a PATH that doesn't include `~/.local/bin`.
+
+### Starting it
+
+Keep it in the tray from login, and bring the window up when you want it:
+
+- Autostart `wallpicker --tray` (in Hyprland's autostart): only the tray icon at first.
+- Open it from the launcher, the tray menu, the panel's "Open wallpicker", or a keybind on
+  `wallpicker --toggle`. Any of these brings up the one running app.
+- Closing the window keeps it in the tray; quit from the tray menu.
 
 Build releases with `cargo tauri build`, not `cargo build --release`: the plain cargo build is a
 development build whose window loads the UI from the dev server on :1420 instead of embedding
