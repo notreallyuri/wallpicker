@@ -382,7 +382,7 @@ pub(crate) fn OnlineView() -> impl IntoView {
     view! {
         // Stays at the top while the results scroll.
         <form
-            class="sticky top-0 z-20 -mx-5 -mt-5 border-b bg-background px-5 pt-5 pb-3 mb-5 flex flex-wrap items-center gap-2"
+            class="sticky top-0 z-20 -mx-5 -mt-5 border-b border-border/60 bg-background/70 px-5 pt-5 pb-3 backdrop-blur-xl mb-5 flex flex-wrap items-center gap-2"
             on:submit=move |ev| {
                 ev.prevent_default();
                 run();

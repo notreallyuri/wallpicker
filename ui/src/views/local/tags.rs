@@ -101,7 +101,7 @@ pub(super) fn TagFilterRow(
                             key=|(tag, n)| (tag.clone(), *n)
                             children=|(tag, n): (String, usize)| {
                                 view! {
-                                    <ToggleGroupItem value=tag.clone() class="rounded-full! px-3">
+                                    <ToggleGroupItem value=tag.clone() class="rounded-full! border-primary/25! bg-primary/5 px-3 hover:bg-primary/15">
                                         {tag}
                                         <span class="text-muted-foreground">{n}</span>
                                     </ToggleGroupItem>

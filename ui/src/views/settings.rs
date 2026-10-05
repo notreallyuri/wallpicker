@@ -411,6 +411,13 @@ fn SettingsForm(on_saved: Callback<()>) -> impl IntoView {
                                     "way Noctalia makes them (needs Noctalia installed). Save to apply."
                                 </p>
                                 <NoctaliaColorsField />
+                                <Field orientation=Orientation::Horizontal>
+                                    <Switch checked=ctx.backdrop />
+                                    <FieldLabel>"Wallpaper behind the app"</FieldLabel>
+                                </Field>
+                                <p class="-mt-2 text-sm text-muted-foreground">
+                                    "Your current wallpaper, blurred, as the app's background. Applies right away."
+                                </p>
                             }
                             .into_any(),
                             SECTION_DOWNLOADS => view! {

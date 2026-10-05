@@ -141,7 +141,7 @@ pub(crate) fn CollectionsView() -> impl IntoView {
         <Provider value=tiles>
             <Provider value=online>
                 // Stays at the top while the results scroll.
-                <div class="sticky top-0 z-20 -mx-5 -mt-5 mb-5 flex flex-wrap items-center gap-2 border-b bg-background px-5 pt-5 pb-3">
+                <div class="sticky top-0 z-20 -mx-5 -mt-5 mb-5 flex flex-wrap items-center gap-2 border-b border-border/60 bg-background/70 px-5 pt-5 pb-3 backdrop-blur-xl">
                     <span class="text-sm text-muted-foreground">"Wallhaven collections"</span>
                     {move || match list.get() {
                         None => view! { <Spinner /> }.into_any(),

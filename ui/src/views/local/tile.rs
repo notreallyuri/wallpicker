@@ -83,7 +83,7 @@ pub(super) fn LocalTile(img: LocalImage) -> impl IntoView {
                         trash.ask(delete_path.clone());
                     }
                 }
-                class="flex w-full flex-col overflow-hidden rounded-xl bg-card text-left ring-1 ring-foreground/10 transition hover:ring-2 hover:ring-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                class="flex w-full flex-col overflow-hidden rounded-2xl bg-card/70 text-left shadow-md shadow-black/10 ring-1 ring-foreground/5 backdrop-blur-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/20 hover:ring-2 hover:ring-primary/70 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
             >
                 <div class="relative aspect-[16/10] w-full overflow-hidden bg-muted">
                     {move || match (src.get(), broken.get()) {
@@ -154,7 +154,7 @@ pub(super) fn LocalTile(img: LocalImage) -> impl IntoView {
                                 key=|t| t.clone()
                                 children=|t: String| {
                                     view! {
-                                        <span class="shrink-0 rounded bg-secondary px-1.5 py-0.5 text-[10px] text-secondary-foreground">
+                                        <span class="shrink-0 rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-medium text-primary">
                                             {t}
                                         </span>
                                     }

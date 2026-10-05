@@ -28,7 +28,7 @@ pub(crate) fn MonitorBar() -> impl IntoView {
     });
 
     view! {
-        <div class="flex flex-wrap items-center gap-3 border-b bg-muted/30 px-5 py-2.5">
+        <div class="flex flex-wrap items-center gap-3 border-b border-border/60 bg-background/35 px-5 py-2.5 backdrop-blur-xl">
             <span class="text-sm text-muted-foreground">"Apply to"</span>
             <Show
                 when=move || ctx.monitors.with(|m| !m.is_empty())

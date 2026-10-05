@@ -313,7 +313,7 @@ pub(crate) fn LocalView() -> impl IntoView {
     view! {
         // Stays at the top while the grid scrolls (the scroll area's padding
         // is taken back with negative margins, so nothing shows above it).
-        <div class="sticky top-0 z-20 -mx-5 -mt-5 border-b bg-background px-5 pt-5 pb-3 mb-4 flex flex-col gap-3">
+        <div class="sticky top-0 z-20 -mx-5 -mt-5 border-b border-border/60 bg-background/70 px-5 pt-5 pb-3 backdrop-blur-xl mb-4 flex flex-col gap-3">
         <div class="flex items-center gap-3">
             <div class="relative w-full max-w-sm">
                 <SearchIcon class="pointer-events-none absolute top-2 left-2.5 text-muted-foreground" />

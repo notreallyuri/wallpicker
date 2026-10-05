@@ -37,6 +37,9 @@ pub(crate) struct Ctx {
     /// A Wallhaven search asked for from elsewhere (a tag in a collection's
     /// details): the Online tab runs it and clears this.
     pub(crate) online_search: RwSignal<Option<String>>,
+    /// The current wallpaper, blurred, behind the app (Appearance; a
+    /// per-machine view preference, kept in localStorage).
+    pub(crate) backdrop: RwSignal<bool>,
     pub(crate) toasts: ToastContext,
 }
 
@@ -61,6 +64,7 @@ impl Ctx {
             applying: RwSignal::new(None),
             catalog: RwSignal::new(Catalog::default()),
             online_search: RwSignal::new(None),
+            backdrop: RwSignal::new(crate::prefs::get("ui.backdrop").as_deref() != Some("0")),
             toasts,
         }
     }
