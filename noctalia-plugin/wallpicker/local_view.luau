@@ -566,17 +566,14 @@ return function(app)
           app.render()
         end,
       }),
+      -- The app's: copies are compared side by side there.
       ui.button({
         key = "duplicates",
         glyph = "copy",
-        tooltip = app.tr("dups_title"),
-        variant = if S.dups.open then "secondary" else "ghost",
+        tooltip = app.tr("dups_in_app"),
+        variant = "ghost",
         onClick = function()
-          if S.dups.open then
-            app.closeDuplicates()
-          else
-            app.openDuplicates()
-          end
+          app.openInApp("duplicates")
         end,
       }),
       ui.button({

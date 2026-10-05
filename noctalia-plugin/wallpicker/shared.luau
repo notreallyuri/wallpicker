@@ -98,12 +98,10 @@ function M.new(ui: any, noctalia: any, panel: any)
     -- right-click menu.
     detail = {
       path = nil,
-      tagInput = "",
-      inputRev = 0, -- bumped to clear the tag input
       confirmTrash = false,
       busy = false,
     },
-    allTags = {}, -- { name, count }, for suggestions
+    allTags = {}, -- { name, count }, for the tag chips
 
     -- The online result whose details replace the grid; nil shows the grid.
     onlineDetail = {
@@ -135,7 +133,7 @@ function M.new(ui: any, noctalia: any, panel: any)
   app.state = S
 
   -- Set by panel.luau: app.render (draws everything) and app.config (the
-  -- Filters/Settings views, config.luau).
+  -- Filters view, config.luau).
 
   function app.tr(key, subst)
     return noctalia.tr(key, subst)
@@ -144,6 +142,24 @@ function M.new(ui: any, noctalia: any, panel: any)
   -- The wallpicker command to run, or nil when it can't be found.
   function app.command()
     return Command.find(noctalia)
+  end
+
+  -- Hand a job to the app: `wallpicker --open PLACE [IMAGE]` shows its
+  -- window there (starting it if needed) and the panel closes. PLACE: local,
+  -- online, collections, settings, duplicates, or tags with the image.
+  function app.openInApp(place, image)
+    local cmd = app.command()
+    if cmd == nil then
+      noctalia.notifyError(app.tr("title"), app.tr("missing_command"))
+      return
+    end
+    local argv = { cmd, "--open", place }
+    if image ~= nil then
+      table.insert(argv, image)
+    end
+    -- Detached: no callback.
+    noctalia.runAsync(argv)
+    app.panel.close()
   end
 
   -- "All monitors", then each output by name.

@@ -1,6 +1,6 @@
 --!nonstrict
 -- A local wallpaper's own view, in place of the grid: preview, favorite,
--- tags (with suggestions) and trash, which asks first.
+-- fit, its tags (edited in the app) and trash, which asks first.
 
 return function(app)
   local ui, noctalia = app.ui, app.noctalia
@@ -35,8 +35,6 @@ return function(app)
 
   function app.openDetail(path, confirmTrash)
     S.detail.path = path
-    S.detail.tagInput = ""
-    S.detail.inputRev += 1
     S.detail.confirmTrash = confirmTrash == true
     app.render()
   end
@@ -47,20 +45,21 @@ return function(app)
     app.render()
   end
 
+  -- Its tags; one picks that tag in the grid. Editing them is the app's.
   function app.tagChips(image)
     local chips, texts = {}, {}
     for _, tag in ipairs(image.tags or {}) do
-      table.insert(texts, tag .. "  ×")
+      table.insert(texts, tag)
       table.insert(chips, ui.button({
         key = "tag_" .. tag,
-        text = tag .. "  ×",
+        text = tag,
         variant = "secondary",
         controlSize = "sm",
         fontSize = app.CHIP_FONT,
-        tooltip = app.tr("remove_tag"),
-        enabled = not S.detail.busy,
+        tooltip = app.tr("tag_filter_hint"),
         onClick = function()
-          app.edit({ "tag", image.path, "remove", tag }, "edit_failed")
+          S.selectedTags = { tag }
+          app.closeDetail()
         end,
       }))
     end
@@ -70,36 +69,6 @@ return function(app)
     return app.flow(chips, texts)
   end
 
-  -- Tags used elsewhere that this wallpaper doesn't have, matching the input.
-  function app.tagSuggestions(image)
-    local typed = string.lower(noctalia.string.trim(S.detail.tagInput))
-    local mine = {}
-    for _, t in ipairs(image.tags or {}) do
-      mine[string.lower(t)] = true
-    end
-    local out, texts = {}, {}
-    for _, t in ipairs(S.allTags) do
-      local lower = string.lower(t.name)
-      if not mine[lower] and (typed == "" or string.find(lower, typed, 1, true)) and #out < 10 then
-        table.insert(texts, "+ " .. t.name)
-        table.insert(out, ui.button({
-          key = "suggest_" .. t.name,
-          text = "+ " .. t.name,
-          variant = "outline",
-          controlSize = "sm",
-          fontSize = app.CHIP_FONT,
-          enabled = not S.detail.busy,
-          onClick = function()
-            S.detail.tagInput = ""
-            S.detail.inputRev += 1
-            app.edit({ "tag", image.path, "add", t.name }, "edit_failed")
-          end,
-        }))
-      end
-    end
-    return out, texts
-  end
-
   function app.detailView()
     local image = app.findImage(S.detail.path)
     if image == nil then
@@ -107,7 +76,6 @@ return function(app)
     end
     local path = image.path
     local fav = image.favorite == true
-    local suggestions, suggestionTexts = app.tagSuggestions(image)
     local trashRow
     if S.detail.confirmTrash then
       trashRow = ui.row({ gap = 8, align = "center" }, {
@@ -151,29 +119,13 @@ return function(app)
       -- The full image, not the grid thumbnail.
       ui.image({ path = path, width = width, height = math.floor(width * 9 / 16), fit = "contain", radius = app.TILE_RADIUS, border = "outline", borderWidth = 1 }),
       app.fitRow(image),
-      ui.label({ text = app.tr("tags"), fontSize = 12, color = "on_surface_variant" }),
-      app.tagChips(image),
       ui.row({ gap = 8, align = "center" }, {
-        ui.input({
-          key = `tag_input_{S.detail.inputRev}`,
-          placeholder = app.tr("add_tag_placeholder"),
-          value = S.detail.tagInput,
-          flexGrow = 1,
-          onChange = function(value)
-            S.detail.tagInput = value
-            app.render()
-          end,
-          onSubmit = function(value)
-            local t = noctalia.string.trim(value)
-            if t ~= "" then
-              S.detail.tagInput = ""
-              S.detail.inputRev += 1
-              app.edit({ "tag", path, "add", t }, "edit_failed")
-            end
-          end,
-        }),
+        ui.label({ text = app.tr("tags"), fontSize = 12, color = "on_surface_variant", flexGrow = 1 }),
+        ui.button({ text = app.tr("edit_tags_in_app"), glyph = "external-link", variant = "outline", controlSize = "sm", onClick = function()
+          app.openInApp("tags", path)
+        end }),
       }),
-      if #suggestions > 0 then app.flow(suggestions, suggestionTexts) else ui.box({ height = 0 }),
+      app.tagChips(image),
       ui.separator({}),
       trashRow,
     })

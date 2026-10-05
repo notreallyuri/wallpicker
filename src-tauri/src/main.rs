@@ -67,7 +67,10 @@ fn main() {
              wallpicker settings [set KEY=VALUE...]  read or change the settings\n  \
              wallpicker --restore               re-apply the saved wallpapers (hyprpaper) and exit\n  \
              wallpicker --tray                  start in the tray, window hidden (for an autostart)\n  \
-             wallpicker --toggle                show or hide the window (opens it if not running)\n\n\
+             wallpicker --toggle                show or hide the window (opens it if not running)\n  \
+             wallpicker --open local|online|collections|settings|duplicates\n                                     \
+             show the window at that tab or dialog (opens it if not running)\n  \
+             wallpicker --open tags <image>     edit an image's tags in the window\n\n\
              Running `wallpicker` while it's open brings up that window. Closing the window\n\
              keeps it in the tray (Settings → General); quit from the tray menu."
         );
@@ -78,6 +81,18 @@ fn main() {
         std::process::exit(wallpicker_lib::restore_cli());
     }
 
-    // `--toggle` with nothing running yet just opens it.
+    // Checked here, before a running app gets the arguments: a mistake is
+    // reported to whoever typed it.
+    let cwd = std::env::current_dir().unwrap_or_default();
+    match wallpicker_lib::open::parse(&args, &cwd) {
+        Ok(Some(place)) => wallpicker_lib::open::set_pending(place),
+        Ok(None) => {}
+        Err(e) => {
+            eprintln!("wallpicker: {e}");
+            std::process::exit(2);
+        }
+    }
+
+    // `--toggle` (or `--open`) with nothing running yet just opens it.
     wallpicker_lib::run(args.iter().any(|a| a == "--tray"));
 }

@@ -17,15 +17,17 @@
 --                                                uploader and source
 --   wallpicker preview <handle>               -> its sharpest image, cached
 --
+-- It's the quick picker; bigger jobs are the app's, and the panel hands them
+-- over with `wallpicker --open PLACE` (app.openInApp): Settings, Duplicates,
+-- Collections and editing tags.
+--
 -- The parts:
 --   shared.luau        state, layout constants, small helpers
 --   local_view.luau    the Local tab (grid, folders, tags, Now showing, menu)
---   local_detail.luau  a local wallpaper's view (favorite, tags, trash)
+--   local_detail.luau  a local wallpaper's view (favorite, fit, trash)
 --   online_view.luau   the Online tab (search, pages, grid, menu)
 --   online_detail.luau an online result's details
---   duplicates_view.luau copies and resized versions: keep one, trash the rest
---   collections_view.luau your Wallhaven collections
---   config.luau        the Filters and Settings views
+--   config.luau        the online Filters view
 --   library.luau       sorting, tag matching, the folder tree, preferences
 --   theme.luau         Noctalia's corner rounding, for thumbnails
 -- This file wires them up, draws the frame and holds the host's callbacks.
@@ -40,8 +42,6 @@ require("./local_view.luau")(app)
 require("./local_detail.luau")(app)
 require("./online_view.luau")(app)
 require("./online_detail.luau")(app)
-require("./duplicates_view.luau")(app)
-require("./collections_view.luau")(app)
 
 app.config = Config.new({
   ui = ui,
@@ -53,23 +53,14 @@ app.config = Config.new({
   monitors = function()
     return S.monitors
   end,
-  tags = function()
-    return S.allTags
-  end,
   render = function()
     app.render()
   end,
-  openApp = function()
-    onOpenApp()
-  end,
   onClosed = function(changed)
-    if changed.library or changed.applied then
-      app.loadLibrary()
-    end
-    if S.mode == "online" and (changed.filters or changed.online) then
+    if S.mode == "online" and changed.filters then
       app.searchOnline(1)
     else
-      if changed.filters or changed.online then
+      if changed.filters then
         -- Searched again when the Online tab opens.
         S.online.searched = false
       end
@@ -80,7 +71,6 @@ app.config = Config.new({
 
 app.render = function()
   local isLocal = S.mode == "local"
-  local isCollections = S.mode == "collections"
   -- An online result's details, in the tab it was opened from.
   local showDetail = S.onlineDetail.item ~= nil and S.onlineDetail.from == S.mode
   if app.config.isOpen() then
@@ -99,33 +89,34 @@ app.render = function()
       ui.row({ gap = 4, align = "center", flexGrow = 1 }, {
         ui.button({ key = "mode_local", text = app.tr("mode_local"), variant = if isLocal then "primary" else "ghost", onClick = "onModeLocal" }),
         ui.button({ key = "mode_online", text = app.tr("mode_online"), variant = if S.mode == "online" then "primary" else "ghost", onClick = "onModeOnline" }),
-        ui.button({ key = "mode_collections", text = app.tr("mode_collections"), variant = if isCollections then "primary" else "ghost", onClick = "onModeCollections" }),
+        -- The app's: a collection is browsed there.
+        ui.button({ key = "mode_collections", text = app.tr("mode_collections"), glyph = "external-link", tooltip = app.tr("in_app_hint"), variant = "ghost", onClick = function()
+          app.openInApp("collections")
+        end }),
       }),
       ui.label({ text = app.tr("monitor"), fontSize = 12, color = "on_surface_variant" }),
       app.monitorSelect(),
       ui.button({ glyph = "refresh", tooltip = app.tr("refresh"), variant = "ghost", onClick = "onRefresh", enabled = not S.loading and not S.online.loading }),
       ui.button({ text = app.tr("open_app"), variant = "outline", onClick = "onOpenApp" }),
-      ui.button({ glyph = "settings", tooltip = app.tr("settings_title"), variant = "ghost", onClick = function()
-        app.config.openSettings()
+      -- Settings are the app's.
+      ui.button({ glyph = "settings", tooltip = app.tr("settings_in_app"), variant = "ghost", onClick = function()
+        app.openInApp("settings")
       end }),
       ui.button({ glyph = "close", variant = "ghost", onClick = "onCloseClicked" }),
     }),
-    if isLocal then app.localControls() elseif isCollections then app.collectionsControls() else app.onlineControls(),
-    (if isLocal and S.detail.path == nil and not S.dups.open then app.tagChipsRow() else app.tagSuggestionsRow()) or ui.box({ height = 0 }),
-    (if isLocal and S.detail.path == nil and not S.dups.open then app.nowShowing() else nil) or ui.box({ height = 0 }),
+    if isLocal then app.localControls() else app.onlineControls(),
+    (if isLocal and S.detail.path == nil then app.tagChipsRow() else app.tagSuggestionsRow()) or ui.box({ height = 0 }),
+    (if isLocal and S.detail.path == nil then app.nowShowing() else nil) or ui.box({ height = 0 }),
     ui.scroll({
-      key = if isLocal then `scroll_local_{S.localScrollRev}`
-        elseif isCollections then `scroll_collections_{S.collections.scrollRev}`
-        else `scroll_online_{S.online.scrollRev}`,
+      key = if isLocal then `scroll_local_{S.localScrollRev}` else `scroll_online_{S.online.scrollRev}`,
       flexGrow = 1,
       gap = 12,
     }, {
-      if isLocal then (if S.dups.open then app.duplicatesView() elseif S.detail.path ~= nil then app.detailView() else app.grid())
+      if isLocal then (if S.detail.path ~= nil then app.detailView() else app.grid())
       elseif showDetail then app.onlineDetailView()
-      elseif isCollections then app.collectionsGrid()
       else app.onlineGrid(),
     }),
-    if isLocal or showDetail then ui.box({ height = 0 }) elseif isCollections then app.collectionsPager() else app.onlinePager(),
+    if isLocal or showDetail then ui.box({ height = 0 }) else app.onlinePager(),
   }))
 end
 
@@ -153,7 +144,9 @@ function onLocalMenu(actionId, context)
     end
   elseif actionId == "favorite" then
     app.setFavorite(image.path, not image.favorite)
-  elseif actionId == "tags" or actionId == "fit" then
+  elseif actionId == "tags" then
+    app.openInApp("tags", image.path)
+  elseif actionId == "fit" then
     app.openDetail(image.path)
   elseif actionId == "trash" then
     -- Never straight away: the wallpaper's view asks first.
@@ -184,9 +177,7 @@ function onOpen(_context)
 end
 
 function onRefresh()
-  if S.mode == "collections" then
-    app.loadCollections()
-  elseif S.mode == "online" then
+  if S.mode == "online" then
     app.refreshPage()
   else
     app.loadLibrary()
@@ -196,15 +187,6 @@ end
 function onModeLocal()
   S.mode = "local"
   app.render()
-end
-
-function onModeCollections()
-  S.mode = "collections"
-  if S.collections.list == nil and not S.collections.loading then
-    app.loadCollections()
-  else
-    app.render()
-  end
 end
 
 function onModeOnline()
@@ -263,15 +245,9 @@ function onNextPage()
   end
 end
 
+-- The app, on the tab the panel is showing.
 function onOpenApp()
-  local cmd = app.command()
-  if cmd == nil then
-    noctalia.notifyError(app.tr("title"), app.tr("missing_command"))
-    return
-  end
-  -- Detached: no callback.
-  noctalia.runAsync({ cmd })
-  panel.close()
+  app.openInApp(S.mode)
 end
 
 function onFilterChange(value)
@@ -305,8 +281,6 @@ function onKey(chord, pressed)
       app.config.close()
     elseif S.mode ~= "local" and S.onlineDetail.item ~= nil and S.onlineDetail.from == S.mode then
       app.closeOnlineDetail()
-    elseif S.mode == "local" and S.dups.open then
-      app.closeDuplicates()
     elseif S.mode == "local" and S.detail.path ~= nil then
       app.closeDetail()
     else
@@ -338,8 +312,6 @@ function onKey(chord, pressed)
     onModeLocal()
   elseif chord == "ctrl+2" then
     onModeOnline()
-  elseif chord == "ctrl+3" then
-    onModeCollections()
   end
 end
 

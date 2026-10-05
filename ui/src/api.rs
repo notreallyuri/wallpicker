@@ -17,6 +17,30 @@ extern "C" {
 
     #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"], js_name = convertFileSrc)]
     fn tauri_convert_file_src(path: &str) -> String;
+
+    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "event"], js_name = listen, catch)]
+    fn tauri_listen(event: &str, handler: &Closure<dyn FnMut(JsValue)>) -> Result<js_sys::Promise, JsValue>;
+}
+
+/// Run `f` each time the backend emits `event` (for as long as the window lives).
+pub fn listen(event: &str, mut f: impl FnMut() + 'static) {
+    let handler = Closure::<dyn FnMut(JsValue)>::new(move |_| f());
+    // Fails only outside Tauri (a browser preview): then nothing comes.
+    if tauri_listen(event, &handler).is_ok() {
+        handler.forget();
+    }
+}
+
+/// Where `wallpicker --open` asked the window to go: a tab, "settings",
+/// "duplicates", or "tags" with the image.
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+pub struct OpenPlace {
+    pub view: String,
+    pub path: Option<String>,
+}
+
+pub async fn take_open_request() -> Result<Option<OpenPlace>, String> {
+    call("take_open_request", &NoArgs {}).await
 }
 
 /// URL the webview can load a local file from (via Tauri's asset protocol).

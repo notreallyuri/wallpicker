@@ -32,27 +32,25 @@ Decided 2026-10-05: they stop chasing feature parity. The plugin is the quick pi
 there on SUPER+W, nearly free, native to the shell); the app is the library manager (real
 dialogs, wrapping layouts, easier to build and test).
 
-- [ ] **Plugin = quick picker.** Keep it to applying, random / previous, favorites, search and
-  online browsing. Heavy features stay out (duplicates, tag editing beyond the basics, slideshow
-  setup, collections management); if one is already there and costly to keep, consider moving
-  it out.
-- [ ] **App first for new features.** Blacklist, export / import, spanning across monitors and
+- [x] **Plugin = quick picker.** Keep it to applying, random / previous, favorites, search and
+  online browsing (with filters), plus favorite, fit and trash. Settings, Duplicates,
+  Collections and tag editing moved to the app (v0.16.0).
+- [x] **App first for new features.** Blacklist, export / import, spanning across monitors and
   the like land in the app; the plugin gets them only if they fit a quick picker.
-- [ ] **"Open in wallpicker" in the plugin**: a button (header, and in the menus where a task
-  belongs to the app: "Find duplicates", "Edit tags…") that runs `wallpicker --toggle`, maybe
-  with what to open (`--toggle --tab collections`, `--toggle --duplicates`), so the panel hands
-  bigger jobs off.
-- [ ] **Autostart optional.** The app needs to run only while managing the library (it uses
-  ~214 MB, plus WebKit helpers). A setting or install-script choice for starting it at login
-  (`wallpicker --tray` in Hyprland's startup), off by default once the plugin can open it; the
-  slideshow keeps running from the plugin's service either way.
+- [x] **"Open in wallpicker" in the plugin**: `wallpicker --open
+  local|online|collections|settings|duplicates` and `--open tags <image>` show the window there
+  (starting the app if needed); the panel's cog, copy icon, Collections, "Edit in wallpicker" and
+  "Open wallpicker" use them.
+- [x] **Autostart optional.** The app needs to run only while managing the library (it uses
+  ~214 MB, plus WebKit helpers). The README now presents `wallpicker --tray` at login as an
+  option; the slideshow keeps running from the plugin's service either way.
 
 ## Noctalia
 
 - [x] Wallpaper backend setting: hyprpaper or Noctalia (`noctalia msg wallpaper-set`).
 - [x] Command line for everything the app does (`wallpicker --help`).
-- [x] Noctalia plugin (`noctalia-plugin/`): bar icon + a panel that's a full client (local,
-  online, collections, filters, settings, slideshow clock).
+- [x] Noctalia plugin (`noctalia-plugin/`): bar icon + a quick-picker panel (local, online,
+  filters, slideshow clock); the rest opens in the app.
 - [x] Tray icon for the app; closing keeps it running, `--toggle` / `--tray`.
 - [x] Colors from the wallpaper: the app (Noctalia's generator, `noctalia theme`) and Noctalia
   itself (`color-scheme-set wallpaper`, a switch in Settings → Appearance).

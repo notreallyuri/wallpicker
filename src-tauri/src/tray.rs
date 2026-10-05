@@ -38,10 +38,13 @@ pub fn toggle(app: &AppHandle) {
     }
 }
 
-/// A second `wallpicker` started: `--toggle` shows or hides the window,
-/// `--tray` leaves it as it is, anything else shows it.
-pub fn second_launch(app: &AppHandle, argv: &[String]) {
-    if argv.iter().any(|a| a == "--toggle") {
+/// A second `wallpicker` started: `--open WHERE` shows the window there,
+/// `--toggle` shows or hides it, `--tray` leaves it as it is, anything else
+/// shows it. (`main` checked the arguments before handing them over.)
+pub fn second_launch(app: &AppHandle, argv: &[String], cwd: &std::path::Path) {
+    if let Ok(Some(place)) = crate::open::parse(argv, cwd) {
+        crate::open::request(app, place);
+    } else if argv.iter().any(|a| a == "--toggle") {
         toggle(app);
     } else if !argv.iter().any(|a| a == "--tray") {
         show(app);

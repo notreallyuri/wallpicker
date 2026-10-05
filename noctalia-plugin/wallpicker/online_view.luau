@@ -153,14 +153,9 @@ return function(app)
     end, app.LIST_TIMEOUT_MS)
   end
 
-  -- A result shown in Online or Collections, by key.
+  -- A result shown in Online, by key.
   function app.findOnline(key)
     for _, item in ipairs(S.online.items) do
-      if item.key == key then
-        return item
-      end
-    end
-    for _, item in ipairs(S.collections and S.collections.items or {}) do
       if item.key == key then
         return item
       end

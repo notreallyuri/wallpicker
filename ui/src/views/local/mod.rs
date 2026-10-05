@@ -112,6 +112,24 @@ pub(crate) fn LocalView() -> impl IntoView {
         open: RwSignal::new(false),
     };
     provide_context(editor);
+    // `wallpicker --open duplicates` / `--open tags IMAGE`, on this tab
+    // (switched here: the shell's effect may run after this one).
+    let tabs = nocomponents::primitives::tabs::use_tabs();
+    Effect::new(move |_| {
+        let Some(place) = ctx.open_place.get() else { return };
+        if matches!(place.view.as_str(), "duplicates" | "tags") {
+            tabs.current_tab.set("local".to_string());
+        }
+        match place.view.as_str() {
+            "duplicates" => duplicates_open.set(true),
+            "tags" => {
+                editor.editing.set(place.path.clone());
+                editor.open.set(true);
+            }
+            _ => return,
+        }
+        ctx.open_place.set(None);
+    });
     let trash = TrashConfirm::new();
     provide_context(trash);
 

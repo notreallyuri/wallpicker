@@ -1,6 +1,6 @@
 id = "wallpicker/wallpicker"
 name = "wallpicker"
-version = "0.15.0"
+version = "0.16.0"
 # runAsync with an argv table needs API 24; right-click menus (panel.openContextMenu) need 28.
 plugin_api = 28
 author = "wallpicker"
@@ -8,7 +8,7 @@ license = "MIT"
 dependencies = []
 tags = ["wallpaper"]
 icon = "photo"
-description = "wallpicker in a panel: your library (favorites first) and online search (Wallhaven, Konachan, yande.re); click to apply."
+description = "wallpicker's quick picker: your library (favorites first) and online search (Wallhaven, Konachan, yande.re); click to apply. Settings, duplicates, collections and tag editing open in the app."
 
 [[setting]]
 key = "command"
@@ -25,9 +25,9 @@ height = 760
 placement = "attached"
 position = "auto"
 # Esc backs out of a sub-view (then closes); Ctrl+F search field; Ctrl+R
-# random; Alt+Up parent folder; Alt+Left/Right online pages; Ctrl+1/2/3 tabs.
+# random; Alt+Up parent folder; Alt+Left/Right online pages; Ctrl+1/2 tabs.
 # No plain letters: they'd be taken from the search field.
-capture_keys = ["escape", "ctrl+f", "ctrl+r", "alt+up", "alt+left", "alt+right", "ctrl+1", "ctrl+2", "ctrl+3"]
+capture_keys = ["escape", "ctrl+f", "ctrl+r", "alt+up", "alt+left", "alt+right", "ctrl+1", "ctrl+2"]
 
 [[service]]
 id = "slideshow"

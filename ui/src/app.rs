@@ -6,6 +6,7 @@
 
 use leptos::prelude::*;
 use leptos::task::spawn_local;
+use nocomponents::primitives::tabs::use_tabs;
 use nocomponents::utils::theme::ThemeProvider;
 
 use crate::api;
@@ -114,6 +115,7 @@ fn Shell() -> impl IntoView {
                 </TabsContent>
             </div>
             <SettingsDialog open=settings_open />
+            <OpenPlaces settings_open=settings_open />
         </Tabs>
     }
 }
@@ -137,4 +139,37 @@ fn CogIcon() -> impl IntoView {
             <circle cx="12" cy="12" r="3" />
         </svg>
     }
+}
+
+/// `wallpicker --open WHERE` (the Noctalia panel handing a job over): takes
+/// the place at startup and whenever the backend says there's a new one,
+/// then goes there. Duplicates and tags are Local's to open.
+#[component]
+fn OpenPlaces(settings_open: RwSignal<bool>) -> impl IntoView {
+    let ctx = expect_context::<Ctx>();
+    let tabs = use_tabs();
+    let take = move || {
+        spawn_local(async move {
+            if let Ok(Some(place)) = api::take_open_request().await {
+                ctx.open_place.set(Some(place));
+            }
+        });
+    };
+    take();
+    api::listen("open-request", take);
+    Effect::new(move |_| {
+        let Some(view) = ctx.open_place.with(|p| p.as_ref().map(|p| p.view.clone())) else { return };
+        match view.as_str() {
+            TAB_LOCAL | TAB_ONLINE | TAB_COLLECTIONS => {
+                tabs.current_tab.set(view);
+                ctx.open_place.set(None);
+            }
+            "settings" => {
+                settings_open.set(true);
+                ctx.open_place.set(None);
+            }
+            // Local opens these.
+            _ => tabs.current_tab.set(TAB_LOCAL.to_string()),
+        }
+    });
 }

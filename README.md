@@ -106,11 +106,14 @@ often run with a PATH that doesn't include `~/.local/bin`.
 
 ### Starting it
 
-Keep it in the tray from login, and bring the window up when you want it:
+The app doesn't need to run all the time: the Noctalia panel is the quick picker, the plugin keeps
+the slideshow going, and anything bigger in the panel opens the app where it's needed
+(`wallpicker --open local|online|collections|settings|duplicates`, `--open tags <image>`).
 
-- Autostart `wallpicker --tray` (in Hyprland's autostart): only the tray icon at first.
-- Open it from the launcher, the tray menu, the panel's "Open wallpicker", or a keybind on
-  `wallpicker --toggle`. Any of these brings up the one running app.
+- Open it from the launcher, the tray menu, the panel, or a keybind on `wallpicker --toggle`. Any
+  of these brings up the one running app.
+- Optionally autostart `wallpicker --tray` (in Hyprland's autostart) to keep it in the tray from
+  login: it opens instantly then, at the cost of keeping it in memory.
 - Closing the window keeps it in the tray; quit from the tray menu.
 
 Build releases with `cargo tauri build`, not `cargo build --release`: the plain cargo build is a
@@ -205,10 +208,11 @@ a bigger image in `preview/` there); cached images unused for 14 days are remove
 ## Noctalia plugin
 
 `noctalia-plugin/` holds a Noctalia v5 plugin: a bar icon and a panel that works without the app
-window. **Local**: your library (favorites first, filter by name or tag); right-click a caption for
-apply/favorite/tags/trash, or click it for the wallpaper's own view. **Online**: search
-Wallhaven, Konachan or yande.re with a sort and paging; already-downloaded results are marked.
-Pick a monitor, click to apply. It's built on the command line above.
+window: the quick picker. **Local**: your library (favorites first, filter by name or tag);
+right-click a caption for apply/favorite/fit/trash, or click it for the wallpaper's own view.
+**Online**: search Wallhaven, Konachan or yande.re with a sort, filters and paging;
+already-downloaded results are marked. Pick a monitor, click to apply. Settings, Duplicates,
+Collections and tag editing open in the app. It's built on the command line above.
 See `noctalia-plugin/README.md` to install it.
 
 ## Noctalia as the backend

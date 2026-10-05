@@ -11,15 +11,6 @@ return function(app)
     if type(query) ~= "string" or query == "" then
       return
     end
-    -- From a collection's wallpaper: a Wallhaven search on the Online tab.
-    if S.mode == "collections" then
-      S.mode = "online"
-      if S.online.provider ~= "wallhaven" then
-        S.online.provider = "wallhaven"
-        S.online.sorts = {}
-        S.online.items = {}
-      end
-    end
     S.online.query = query
     S.online.inputRev = (S.online.inputRev or 0) + 1
     app.searchOnline(1)

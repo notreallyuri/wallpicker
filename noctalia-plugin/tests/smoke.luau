@@ -110,10 +110,8 @@ mock.fire(mock.byKey("/w/anime/b.jpg").children[2], "onClick")
 step("local: b.jpg view")
 mock.fire(mock.byKey("fit_/w/anime/b.jpg"), "onChange", "2", "Contain")
 step("local: b.jpg fits as contain")
-mock.fire(mock.byKey("tag_input_1"), "onSubmit", "night")
-step("local: add tag night")
-mock.fire(mock.byKey("tag_Mitsu"), "onClick")
-step("local: remove tag Mitsu")
+mock.fire(mock.byText("Edit in wallpicker"), "onClick")
+step("local: edit tags hands over to the app")
 mock.fire(mock.byText("Move to trash"), "onClick")
 step("local: trash asks")
 mock.fire(mock.byText("Cancel"), "onClick")
@@ -121,16 +119,19 @@ onKey("escape", true)
 step("local: escape back to the grid")
 
 mock.fire(mock.byKey("duplicates"), "onClick")
-step("local: duplicates")
-mock.fire(mock.byKey("dup_1_2").children[1], "onClick")
-step("local: keep a.jpg instead")
-mock.fire(mock.byKey("dup_keep_1"), "onClick")
-step("local: kept a.jpg, the others trashed")
-onKey("escape", true)
+step("local: duplicates hand over to the app")
+onLocalMenu("tags", "/w/e.jpg")
+step("local: menu edit tags hands over to the app")
 
 onLocalMenu("trash", "/w/e.jpg")
 step("local: trash from the menu opens the view, asking")
 onKey("escape", true)
+
+-- A tag in a wallpaper's view picks it in the grid (and again unpicks it).
+mock.fire(mock.byKey("/w/anime/b.jpg").children[2], "onClick")
+mock.fire(mock.byKey("tag_Mitsu"), "onClick")
+step("local: Mitsu from b.jpg's view, picked in the grid")
+mock.fire(mock.byKey("chip_Mitsu"), "onClick")
 
 -- --------------------------------------------------------------- online ----
 
@@ -197,48 +198,18 @@ step("online: custom resolution typed, bad minimum refused")
 mock.fire(mock.byText("Done"), "onClick")
 step("online: filters done, searched again")
 
--- ----------------------------------------------------------- collections ----
+-- ------------------------------------------------------ the app's parts ----
+-- Collections, Settings and the app itself open in the app.
 
-onKey("ctrl+3", true)
-step("collections: opened (the first one shown)")
-mock.fire(mock.byKey("collection_2"), "onClick")
-step("collections: goon")
-mock.fire(mock.byKey("col_next"), "onClick")
-step("collections: goon page 2")
-local colTile = mock.find(function(n)
-  return n.kind == "button" and n.props.onRightClick ~= nil
-end)
-mock.fire(colTile, "onRightClick")
-menu("first collection wallpaper")
-onOnlineMenu("apply", mock.menu.context)
-step("collections: apply from the menu")
-mock.fire(colTile, "onClick")
-step("collections: details")
-mock.fire(mock.byKey("otag_landscape"), "onClick")
-step("collections: a tag searches on Online (Wallhaven)")
-onKey("ctrl+3", true)
-step("collections: back, the list kept")
-
--- -------------------------------------------------------------- settings ----
-
+mock.fire(mock.byKey("mode_collections"), "onClick")
+step("collections hand over to the app")
 onKey("ctrl+1", true)
 mock.fire(mock.find(function(n)
   return n.kind == "button" and n.props.glyph == "settings"
 end), "onClick")
-step("settings view")
-mock.fire(mock.byKey("recursive"), "onChange", "false")
-step("settings: subfolders off")
-mock.fire(mock.byKey("monitor_fit_DP-1"), "onChange", "2", "Contain")
-mock.fire(mock.byKey("monitor_fit_DP-2"), "onChange", "0", "Same as above")
-step("settings: DP-1 contain, DP-2 back to the general fit")
-mock.fire(mock.byKey("show_minutes"), "onChange", "4", "1 hour")
-mock.fire(mock.byKey("show_tag_dark"), "onClick")
-mock.fire(mock.byKey("show_mon_DP-2"), "onClick")
-step("settings: slideshow every hour, tags Mitsu+dark, only DP-2")
-mock.fire(mock.byText("Change now"), "onClick")
-step("settings: slideshow change now")
-onKey("escape", true)
-step("settings: escape closes it, library reloads")
+step("settings hand over to the app")
+onOpenApp()
+step("open app: on the tab shown")
 
 -- ---------------------------------------------------------------- errors ----
 

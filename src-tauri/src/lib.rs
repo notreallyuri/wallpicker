@@ -3,6 +3,7 @@
 //! and does the HTTP calls to Wallhaven.
 
 pub mod cli;
+pub mod open;
 pub mod theme;
 mod tray;
 
@@ -520,6 +521,12 @@ async fn resolve_duplicates(
     resolve_duplicates_with(&state, &keep, &others).await
 }
 
+/// Where `wallpicker --open` asked the window to go, once.
+#[tauri::command]
+fn take_open_request() -> Option<open::Place> {
+    open::take()
+}
+
 /// The app's colors, from the current wallpaper (None: its own).
 #[tauri::command]
 async fn wallpaper_palette(state: tauri::State<'_, AppState>) -> CmdResult<Option<theme::Palette>> {
@@ -968,8 +975,8 @@ pub fn run(start_hidden: bool) {
 
     tauri::Builder::default()
         // First: a second `wallpicker` hands over to this one and exits.
-        .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
-            tray::second_launch(app, &argv)
+        .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
+            tray::second_launch(app, &argv, std::path::Path::new(&cwd))
         }))
         .manage(AppState::new(store.clone()))
         .on_window_event(|window, event| {
@@ -1025,6 +1032,7 @@ pub fn run(start_hidden: bool) {
             find_duplicates,
             previous_wallpaper,
             wallpaper_palette,
+            take_open_request,
             noctalia_colors,
             set_noctalia_colors,
             wallhaven_collections,

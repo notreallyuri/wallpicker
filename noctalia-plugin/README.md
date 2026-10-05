@@ -1,6 +1,9 @@
 # wallpicker for Noctalia
 
-A Noctalia v5 plugin: a bar icon that opens wallpicker in a panel.
+A Noctalia v5 plugin: a bar icon that opens wallpicker's quick picker in a panel. Bigger jobs
+are the app's, and the panel hands them over (`wallpicker --open …`, which starts the app if it
+isn't running): **Settings** (the cog), **Duplicates** (the copy icon), **Collections** (header)
+and **editing tags** (a wallpaper's view, or right-click → Edit tags in wallpicker…).
 
 - **Local**: your library, favorites first; filter by name or tag. The wallpaper on the chosen
   monitor is outlined, and tiles say which monitors show them and the image's size (amber,
@@ -18,31 +21,26 @@ A Noctalia v5 plugin: a bar icon that opens wallpicker in a panel.
   filters as saved in the app. Already-downloaded results show ✓; the border shows the rating:
   green SFW, yellow sketchy, red NSFW. Clicking downloads and applies.
 - Keys: Esc backs out of a view (then closes), Ctrl+F search field, Ctrl+R random, Alt+Up parent
-  folder, Alt+Left/Right online pages, Ctrl+1/2/3 Local/Online/Collections.
-- Right-click a caption for a menu: favorite, Edit tags…, Apply to (all, or one monitor), Show in
+  folder, Alt+Left/Right online pages, Ctrl+1/2 Local/Online.
+- Right-click a caption for a menu: favorite, Edit tags in wallpicker…, Apply to (all, or one monitor), Show in
   folder, Copy path, Move to trash… (local) or
   Apply, Details…, Download only, Open the provider's page (online). Clicking an online caption
   opens its details: a big preview, stats, "More by" the artist, "More from" the uploader, the
   source link, and its tags; click a tag to search for it. Clicking a local caption opens the
-  wallpaper's view: favorite, tags (with suggestions from your other tags) and trash, which asks
-  first. Menus need Noctalia's plugin API 28.
+  wallpaper's view: favorite, fit, its tags (click one to show that tag's wallpapers; "Edit in
+  wallpicker" to change them) and trash, which asks first. Menus need Noctalia's plugin API 28.
 - **Filters** (next to the search box, with a count when any are on): the provider's filters,
   the same ones as the app's Filters dialog. Saved as you change them; Done searches again.
-- **Fit**: a wallpaper's own fit in its view (or right-click → Fit…); per-monitor fits in
-  Settings. A change is re-applied where it shows (hyprpaper backend).
-- **Duplicates** (the copy icon in Local): copies and resized versions; pick the one to keep, the
-  others go to the trash with their favorite and tags moved over.
-- **Slideshow**: Settings → Slideshow sets it up (how often, favorites, tags, folder, monitors).
-  The plugin's background service asks wallpicker every minute whether it's time; it does
-  nothing while the slideshow is off.
+- **Fit**: a wallpaper's own fit in its view (or right-click → Fit…); per-monitor fits in the
+  app's Settings. A change is re-applied where it shows (hyprpaper backend).
+- **Slideshow**: set up in the app (Settings → Slideshow). The plugin's background service asks
+  wallpicker every minute whether it's time, so it runs without the app; it does nothing while
+  the slideshow is off.
 - On Konachan and yande.re, typing shows the real tag names it may mean (they match exact tags
   only); click one to search with it. Commas separate tags typed with spaces ("long hair, night").
-- **Collections**: your Wallhaven collections, like online results (apply, menu, details; a tag
-  searches on Online). Needs the API key and your Wallhaven username, set in the app.
-- **Settings** (the cog): wallpaper backend, fit mode (and per monitor), wallpaper folders, subfolders, thumbnail
-  width, download folder, Konachan site. The Wallhaven API key stays in the app.
 - Thumbnails round their corners like the rest of Noctalia (its corner radius scale).
-- Pick a monitor (or all) at the top; it applies to both. "Open wallpicker" starts the app.
+- Pick a monitor (or all) at the top; it applies to both. "Open wallpicker" opens the app on the
+  tab you're on.
 
 It goes through the `wallpicker` command (`list`, `apply`, `search`, `apply-online`), so it shares
 the app's library, favorites, tags, saved state, filters and wallpaper backend (hyprpaper or
