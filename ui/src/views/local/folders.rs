@@ -23,7 +23,7 @@ pub(super) fn FolderCard(sub: Subfolder, cover: String, on_open: Callback<Option
             type="button"
             title=sub.name.clone()
             on:click=move |_| on_open.run(Some(place.get_value()))
-            class="group flex w-full flex-col overflow-hidden rounded-3xl bg-card/70 p-1.5 text-left shadow-md shadow-black/10 ring-1 ring-foreground/5 backdrop-blur-sm transition duration-300 ease-bounce hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 hover:ring-2 hover:ring-primary/70 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            class="group flex w-full flex-col overflow-hidden rounded-3xl bg-card/80 p-1.5 text-left shadow-md shadow-black/10 ring-1 ring-foreground/5 transition duration-300 ease-bounce hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 hover:ring-2 hover:ring-primary/70 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         >
             <div class="relative aspect-[16/10] w-full overflow-hidden rounded-[1.1rem] bg-muted">
                 {move || {

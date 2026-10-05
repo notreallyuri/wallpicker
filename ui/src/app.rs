@@ -96,18 +96,18 @@ fn Shell() -> impl IntoView {
             <MonitorBar />
             // Every panel stays mounted (inactive ones are only hidden), so
             // switching tabs keeps search results and scroll position.
-            // `relative` makes this the containing block of absolutely
-            // positioned content inside it (like `sr-only` labels), so it's
-            // clipped here. Without it, such content at the bottom of a long
-            // list stretches the page itself, and the whole app scrolls away.
-            <div data-scroll-root class="relative min-h-0 flex-1 overflow-y-auto">
-                <TabsContent value=TAB_LOCAL class="p-5">
+            // Each tab is a fixed header over its own scroll area
+            // (`data-scroll-root`, `relative` so absolutely positioned content
+            // like `sr-only` labels is clipped there instead of stretching
+            // the page and scrolling the whole app away).
+            <div class="relative flex min-h-0 flex-1 flex-col">
+                <TabsContent value=TAB_LOCAL class="flex min-h-0 flex-col">
                     <LocalView />
                 </TabsContent>
-                <TabsContent value=TAB_ONLINE class="p-5">
+                <TabsContent value=TAB_ONLINE class="flex min-h-0 flex-col">
                     <OnlineView />
                 </TabsContent>
-                <TabsContent value=TAB_COLLECTIONS class="p-5">
+                <TabsContent value=TAB_COLLECTIONS class="flex min-h-0 flex-col">
                     <CollectionsView />
                 </TabsContent>
             </div>

@@ -68,9 +68,10 @@ impl Online {
     }
 }
 
-/// A new page of results starts at the top, not where the last one was scrolled to.
-fn scroll_to_top() {
-    if let Ok(Some(el)) = document().query_selector("[data-scroll-root]") {
+/// A new page of results starts at the top, not where the last one was
+/// scrolled to. `view` is the tab's scroll area: "online", "collections".
+fn scroll_to_top(view: &str) {
+    if let Ok(Some(el)) = document().query_selector(&format!("[data-scroll-root={view}]")) {
         el.set_scroll_top(0);
     }
 }
@@ -255,7 +256,7 @@ pub(crate) fn OnlineView() -> impl IntoView {
                     );
                     page_info.set(Some(page));
                     last_query.set_value(Some(q));
-                    scroll_to_top();
+                    scroll_to_top("online");
                 }
                 Err(e) => {
                     let name = q.provider().label();
@@ -380,9 +381,9 @@ pub(crate) fn OnlineView() -> impl IntoView {
     let searched = move || page_info.with(Option::is_some);
 
     view! {
-        // Stays at the top while the results scroll.
+        // Stays put; only the results below scroll.
         <form
-            class="sticky top-0 z-20 -mx-5 -mt-5 border-b border-border/60 bg-background/70 px-5 pt-5 pb-3 backdrop-blur-xl mb-5 flex flex-wrap items-center gap-2"
+            class="z-20 shrink-0 border-b border-border/60 bg-background/70 px-5 pt-5 pb-3 backdrop-blur-xl flex flex-wrap items-center gap-2"
             on:submit=move |ev| {
                 ev.prevent_default();
                 run();
@@ -447,6 +448,7 @@ pub(crate) fn OnlineView() -> impl IntoView {
             </Show>
         </form>
 
+        <div data-scroll-root="online" class="relative min-h-0 flex-1 overflow-y-auto p-5">
         // Sorting and filters live in a dialog, so the results start right
         // under the search box.
         <Dialog open=filters_open>
@@ -538,6 +540,7 @@ pub(crate) fn OnlineView() -> impl IntoView {
                         })
                 }}
             </div>
+        </div>
         </div>
 
         <DetailsDialog />

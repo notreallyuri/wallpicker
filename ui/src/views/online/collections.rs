@@ -101,7 +101,7 @@ pub(crate) fn CollectionsView() -> impl IntoView {
                     let mut seen = HashSet::new();
                     results.set(std::mem::take(&mut p.items).into_iter().filter(|w| seen.insert(w.key())).collect());
                     page_info.set(Some(p));
-                    scroll_to_top();
+                    scroll_to_top("collections");
                 }
                 Err(e) => {
                     results.set(Vec::new());
@@ -141,7 +141,7 @@ pub(crate) fn CollectionsView() -> impl IntoView {
         <Provider value=tiles>
             <Provider value=online>
                 // Stays at the top while the results scroll.
-                <div class="sticky top-0 z-20 -mx-5 -mt-5 mb-5 flex flex-wrap items-center gap-2 border-b border-border/60 bg-background/70 px-5 pt-5 pb-3 backdrop-blur-xl">
+                <div class="z-20 flex shrink-0 flex-wrap items-center gap-2 border-b border-border/60 bg-background/70 px-5 pt-5 pb-3 backdrop-blur-xl">
                     <span class="text-sm text-muted-foreground">"Wallhaven collections"</span>
                     {move || match list.get() {
                         None => view! { <Spinner /> }.into_any(),
@@ -178,6 +178,7 @@ pub(crate) fn CollectionsView() -> impl IntoView {
                     </Button>
                 </div>
 
+                <div data-scroll-root="collections" class="relative min-h-0 flex-1 overflow-y-auto p-5">
                 <Show when=move || error.with(Option::is_some)>
                     <p class="text-sm text-destructive">{move || error.get()}</p>
                 </Show>
@@ -207,6 +208,7 @@ pub(crate) fn CollectionsView() -> impl IntoView {
                         </Show>
                         {move || page_info.with(|p| p.as_ref().map(|p| format!("{} wallpapers · page {} of {}", p.total, p.page, p.last_page)))}
                     </div>
+                </div>
                 </div>
 
                 <DetailsDialog />

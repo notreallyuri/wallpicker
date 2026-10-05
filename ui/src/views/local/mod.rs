@@ -311,9 +311,9 @@ pub(crate) fn LocalView() -> impl IntoView {
     };
 
     view! {
-        // Stays at the top while the grid scrolls (the scroll area's padding
-        // is taken back with negative margins, so nothing shows above it).
-        <div class="sticky top-0 z-20 -mx-5 -mt-5 border-b border-border/60 bg-background/70 px-5 pt-5 pb-3 backdrop-blur-xl mb-4 flex flex-col gap-3">
+        // The header stays put and only the grid below scrolls (its own scroll
+        // area: a sticky header lagged behind fast scrolling in WebKitGTK).
+        <div class="z-20 shrink-0 border-b border-border/60 bg-background/70 px-5 pt-5 pb-3 backdrop-blur-xl flex flex-col gap-3">
         <div class="flex items-center gap-3">
             <div class="relative w-full max-w-sm">
                 <SearchIcon class="pointer-events-none absolute top-2 left-2.5 text-muted-foreground" />
@@ -421,6 +421,7 @@ pub(crate) fn LocalView() -> impl IntoView {
         </Show>
         </div>
 
+        <div data-scroll-root="local" class="relative min-h-0 flex-1 overflow-y-auto p-5">
         <Show when=move || !loading.get() && images.with(|v| v.is_empty())>
             <Empty>
                 <EmptyHeader>
@@ -470,6 +471,7 @@ pub(crate) fn LocalView() -> impl IntoView {
             </div>
         </Show>
 
+        </div>
         <TagsDialog editing=editor.editing open=editor.open />
         <DuplicatesDialog open=duplicates_open />
         <TrashDialog confirm=trash />
