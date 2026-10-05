@@ -315,7 +315,8 @@ pub(crate) fn LocalView() -> impl IntoView {
         // area: a sticky header lagged behind fast scrolling in WebKitGTK).
         <div class="z-20 shrink-0 border-b border-border/60 bg-background/70 px-5 pt-5 pb-3 backdrop-blur-xl flex flex-col gap-3">
         <div class="flex items-center gap-3">
-            <div class="relative w-full max-w-sm">
+            // A fixed width: the row's other parts (the count) change, the box doesn't.
+            <div class="relative w-80 shrink-0">
                 <SearchIcon class="pointer-events-none absolute top-2 left-2.5 text-muted-foreground" />
                 <Input
                     model=filter
@@ -384,7 +385,7 @@ pub(crate) fn LocalView() -> impl IntoView {
                 </Lucide>
                 "Random"
             </Button>
-            <span class="shrink-0 text-sm whitespace-nowrap text-muted-foreground">
+            <span class="min-w-24 shrink-0 text-sm whitespace-nowrap text-muted-foreground tabular-nums">
                 {move || {
                     if loading.get() {
                         "Scanning…".to_string()
