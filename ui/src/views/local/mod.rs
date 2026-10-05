@@ -311,9 +311,8 @@ pub(crate) fn LocalView() -> impl IntoView {
     };
 
     view! {
-        // The header stays put and only the grid below scrolls (its own scroll
-        // area: a sticky header lagged behind fast scrolling in WebKitGTK).
-        <div class="z-20 shrink-0 border-b border-border/60 bg-background/70 px-5 pt-5 pb-3 backdrop-blur-xl flex flex-col gap-3">
+        // Floats over the grid's scroll area (see heads.rs).
+        <div data-tab-head class="absolute top-0 left-0 right-[var(--sb-w,0px)] z-20 border-b border-border/60 bg-background/70 px-5 pt-5 pb-3 backdrop-blur-xl flex flex-col gap-3">
         <div class="flex items-center gap-3">
             // A fixed width: the row's other parts (the count) change, the box doesn't.
             <div class="relative w-80 shrink-0">
@@ -422,7 +421,7 @@ pub(crate) fn LocalView() -> impl IntoView {
         </Show>
         </div>
 
-        <div data-scroll-root="local" class="relative min-h-0 flex-1 overflow-y-auto p-5">
+        <div data-scroll-root="local" class="relative min-h-0 flex-1 scroll-pt-[var(--head-h,0px)] overflow-y-auto px-5 pb-5 pt-[calc(var(--head-h,0px)+1.25rem)]">
         <Show when=move || !loading.get() && images.with(|v| v.is_empty())>
             <Empty>
                 <EmptyHeader>

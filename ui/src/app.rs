@@ -38,6 +38,8 @@ fn Shell() -> impl IntoView {
     let ctx = Ctx::new(use_toast());
     provide_context(ctx);
     crate::shortcuts::install();
+    // After the first render, when the tabs' headers exist.
+    Effect::new(move |_| crate::heads::install());
     crate::palette::install(ctx);
     // Back from the tray (or after the slideshow, the tray's Random, a
     // keybind...): what each monitor shows may have changed meanwhile.
@@ -96,18 +98,18 @@ fn Shell() -> impl IntoView {
             <MonitorBar />
             // Every panel stays mounted (inactive ones are only hidden), so
             // switching tabs keeps search results and scroll position.
-            // Each tab is a fixed header over its own scroll area
-            // (`data-scroll-root`, `relative` so absolutely positioned content
+            // Each tab is a header floating over its own scroll area
+            // (heads.rs; `data-scroll-root`, `relative` so absolutely positioned content
             // like `sr-only` labels is clipped there instead of stretching
             // the page and scrolling the whole app away).
             <div class="relative flex min-h-0 flex-1 flex-col">
-                <TabsContent value=TAB_LOCAL class="flex min-h-0 flex-col">
+                <TabsContent value=TAB_LOCAL class="relative flex min-h-0 flex-col">
                     <LocalView />
                 </TabsContent>
-                <TabsContent value=TAB_ONLINE class="flex min-h-0 flex-col">
+                <TabsContent value=TAB_ONLINE class="relative flex min-h-0 flex-col">
                     <OnlineView />
                 </TabsContent>
-                <TabsContent value=TAB_COLLECTIONS class="flex min-h-0 flex-col">
+                <TabsContent value=TAB_COLLECTIONS class="relative flex min-h-0 flex-col">
                     <CollectionsView />
                 </TabsContent>
             </div>

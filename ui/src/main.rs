@@ -2,6 +2,7 @@ mod api;
 mod app;
 mod components;
 mod ctx;
+mod heads;
 mod monitor_bar;
 mod palette;
 mod prefs;

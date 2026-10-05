@@ -141,7 +141,7 @@ pub(crate) fn CollectionsView() -> impl IntoView {
         <Provider value=tiles>
             <Provider value=online>
                 // Stays at the top while the results scroll.
-                <div class="z-20 flex shrink-0 flex-wrap items-center gap-2 border-b border-border/60 bg-background/70 px-5 pt-5 pb-3 backdrop-blur-xl">
+                <div data-tab-head class="absolute top-0 left-0 right-[var(--sb-w,0px)] z-20 flex flex-wrap items-center gap-2 border-b border-border/60 bg-background/70 px-5 pt-5 pb-3 backdrop-blur-xl">
                     <span class="text-sm text-muted-foreground">"Wallhaven collections"</span>
                     {move || match list.get() {
                         None => view! { <Spinner /> }.into_any(),
@@ -178,7 +178,7 @@ pub(crate) fn CollectionsView() -> impl IntoView {
                     </Button>
                 </div>
 
-                <div data-scroll-root="collections" class="relative min-h-0 flex-1 overflow-y-auto p-5">
+                <div data-scroll-root="collections" class="relative min-h-0 flex-1 scroll-pt-[var(--head-h,0px)] overflow-y-auto px-5 pb-5 pt-[calc(var(--head-h,0px)+1.25rem)]">
                 <Show when=move || error.with(Option::is_some)>
                     <p class="text-sm text-destructive">{move || error.get()}</p>
                 </Show>

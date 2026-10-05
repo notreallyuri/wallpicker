@@ -381,9 +381,10 @@ pub(crate) fn OnlineView() -> impl IntoView {
     let searched = move || page_info.with(Option::is_some);
 
     view! {
-        // Stays put; only the results below scroll.
+        // Floats over the results' scroll area (see heads.rs).
         <form
-            class="z-20 shrink-0 border-b border-border/60 bg-background/70 px-5 pt-5 pb-3 backdrop-blur-xl flex flex-wrap items-center gap-2"
+            data-tab-head
+            class="absolute top-0 left-0 right-[var(--sb-w,0px)] z-20 border-b border-border/60 bg-background/70 px-5 pt-5 pb-3 backdrop-blur-xl flex flex-wrap items-center gap-2"
             on:submit=move |ev| {
                 ev.prevent_default();
                 run();
@@ -448,7 +449,7 @@ pub(crate) fn OnlineView() -> impl IntoView {
             </Show>
         </form>
 
-        <div data-scroll-root="online" class="relative min-h-0 flex-1 overflow-y-auto p-5">
+        <div data-scroll-root="online" class="relative min-h-0 flex-1 scroll-pt-[var(--head-h,0px)] overflow-y-auto px-5 pb-5 pt-[calc(var(--head-h,0px)+1.25rem)]">
         // Sorting and filters live in a dialog, so the results start right
         // under the search box.
         <Dialog open=filters_open>

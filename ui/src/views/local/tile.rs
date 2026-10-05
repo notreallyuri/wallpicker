@@ -83,7 +83,7 @@ pub(super) fn LocalTile(img: LocalImage) -> impl IntoView {
                         trash.ask(delete_path.clone());
                     }
                 }
-                class="flex w-full flex-col overflow-hidden rounded-3xl bg-card/80 p-1.5 text-left shadow-md shadow-black/10 ring-1 ring-foreground/5 transition duration-300 ease-bounce hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 hover:ring-2 hover:ring-primary/70 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                class="flex w-full flex-col overflow-hidden rounded-3xl bg-card/80 p-1.5 text-left shadow-md shadow-black/10 ring-1 ring-foreground/5 transition duration-300 ease-bounce group-hover:-translate-y-1 group-hover:shadow-lg group-hover:shadow-primary/20 group-hover:ring-2 group-hover:ring-primary/70 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
             >
                 <div class="relative aspect-[16/10] w-full overflow-hidden rounded-[1.1rem] bg-muted">
                     {move || match (src.get(), broken.get()) {
@@ -172,7 +172,7 @@ pub(super) fn LocalTile(img: LocalImage) -> impl IntoView {
                 on:click=move |_| spawn_local(ctx.set_favorite(star_path.clone(), !favorite.get_untracked()))
                 class=move || {
                     format!(
-                        "absolute top-2 right-2 flex size-7 items-center justify-center rounded-full bg-background/80 transition hover:bg-background focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-ring {}",
+                        "absolute top-2 right-2 flex size-7 items-center justify-center rounded-full bg-background/80 transition duration-300 ease-bounce group-hover:-translate-y-1 hover:scale-110 hover:bg-background focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-ring {}",
                         if favorite.get() {
                             "text-yellow-400"
                         } else {
