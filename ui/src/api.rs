@@ -246,6 +246,37 @@ pub async fn resolve_duplicates(keep: &str, others: &[String]) -> Result<Resolve
     call("resolve_duplicates", &Args { keep, others }).await
 }
 
+/// Material 3 colors from the current wallpaper (role → "#rrggbb").
+#[derive(Debug, Clone, Deserialize)]
+pub struct Palette {
+    pub dark: std::collections::BTreeMap<String, String>,
+    pub light: std::collections::BTreeMap<String, String>,
+}
+
+pub async fn wallpaper_palette() -> Result<Option<Palette>, String> {
+    call("wallpaper_palette", &NoArgs {}).await
+}
+
+/// Whether Noctalia's colors follow the wallpaper.
+#[derive(Debug, Clone, Deserialize)]
+pub struct NoctaliaColors {
+    pub available: bool,
+    pub following: bool,
+    pub scheme: Option<String>,
+}
+
+pub async fn noctalia_colors() -> Result<NoctaliaColors, String> {
+    call("noctalia_colors", &NoArgs {}).await
+}
+
+pub async fn set_noctalia_colors(follow: bool) -> Result<NoctaliaColors, String> {
+    #[derive(Serialize)]
+    struct Args {
+        follow: bool,
+    }
+    call("set_noctalia_colors", &Args { follow }).await
+}
+
 /// Back to what each of `monitors` showed before.
 pub async fn previous_wallpaper(monitors: &[String]) -> Result<ApplyReport, String> {
     #[derive(Serialize)]

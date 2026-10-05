@@ -3,6 +3,7 @@
 //! and does the HTTP calls to Wallhaven.
 
 pub mod cli;
+pub mod theme;
 mod tray;
 
 use std::path::{Path, PathBuf};
@@ -519,6 +520,24 @@ async fn resolve_duplicates(
     resolve_duplicates_with(&state, &keep, &others).await
 }
 
+/// The app's colors, from the current wallpaper (None: its own).
+#[tauri::command]
+async fn wallpaper_palette(state: tauri::State<'_, AppState>) -> CmdResult<Option<theme::Palette>> {
+    let store = state.store.clone();
+    tauri::async_runtime::spawn_blocking(move || theme::palette(&store)).await.map_err(err)?
+}
+
+#[tauri::command]
+async fn noctalia_colors() -> CmdResult<theme::NoctaliaColors> {
+    tauri::async_runtime::spawn_blocking(theme::noctalia_colors).await.map_err(err)
+}
+
+#[tauri::command]
+async fn set_noctalia_colors(state: tauri::State<'_, AppState>, follow: bool) -> CmdResult<theme::NoctaliaColors> {
+    let store = state.store.clone();
+    tauri::async_runtime::spawn_blocking(move || theme::set_noctalia_follow(&store, follow)).await.map_err(err)?
+}
+
 /// The slideshow's next change, for Settings.
 #[tauri::command]
 async fn slideshow_status(state: tauri::State<'_, AppState>) -> CmdResult<cli::slideshow::Status> {
@@ -1005,6 +1024,9 @@ pub fn run(start_hidden: bool) {
             slideshow_now,
             find_duplicates,
             previous_wallpaper,
+            wallpaper_palette,
+            noctalia_colors,
+            set_noctalia_colors,
             wallhaven_collections,
             tag_suggestions,
             wallhaven_collection,

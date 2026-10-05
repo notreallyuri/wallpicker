@@ -63,6 +63,11 @@ manager (Settings → General → Wallpaper backend).
   brings the window back instead of starting a second app; `wallpicker --toggle` shows or hides it
   (for a keybind), and `wallpicker --tray` starts with only the tray icon (for an autostart).
   The tray needs a tray host in the bar (Noctalia has one) and libappindicator.
+- **Colors from the wallpaper** (Settings → Appearance): the app takes its colors from the
+  wallpaper on your first monitor, made by Noctalia's palette generator with its wallpaper scheme,
+  so it matches Noctalia. **Noctalia's colors follow the wallpaper** switches Noctalia's color
+  source to the wallpaper too (and back to the scheme it had). The panel uses Noctalia's colors, so
+  it follows along. `wallpicker theme` shows the palette; `wallpicker noctalia-colors on|off`.
 - **Previous**: each monitor remembers its last 30 wallpapers; **↶ Previous** (in the monitor
   bar, the tray menu, the panel, or `wallpicker previous` for a keybind) goes back through them.
 - **Saved choices**: every applied wallpaper is written to `state.json`, and

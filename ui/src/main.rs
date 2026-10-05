@@ -3,6 +3,7 @@ mod app;
 mod components;
 mod ctx;
 mod monitor_bar;
+mod palette;
 mod prefs;
 mod shortcuts;
 mod tile_menu;

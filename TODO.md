@@ -33,9 +33,10 @@ in Settings.
 - [x] Noctalia plugin (`noctalia-plugin/`): bar icon + a panel that's a full client (local,
   online, collections, filters, settings, slideshow clock).
 - [x] Tray icon for the app; closing keeps it running, `--toggle` / `--tray`.
-- [ ] Noctalia's colors from wallpicker's wallpaper with the hyprpaper backend: Noctalia has
-  `color-scheme-set wallpaper …` and `templates-apply`, but check whether it can take colors
-  from a wallpaper it isn't drawing.
+- [x] Colors from the wallpaper: the app (Noctalia's generator, `noctalia theme`) and Noctalia
+  itself (`color-scheme-set wallpaper`, a switch in Settings → Appearance).
+  With the hyprpaper backend Noctalia isn't drawing the wallpaper, so its own colors can't follow;
+  the app's still do (it reads the image).
 - [ ] Use the current wallpaper for hyprlock and Noctalia's greeter (`noctalia msg greeter-sync`).
 
 ## Monitors

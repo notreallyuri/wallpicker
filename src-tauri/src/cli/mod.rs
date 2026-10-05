@@ -279,6 +279,49 @@ pub fn previous(args: &[String]) -> i32 {
     }
 }
 
+/// `wallpicker theme [--json]`: the palette from the current wallpaper.
+/// `wallpicker noctalia-colors on|off|status`: Noctalia's colors follow the
+/// wallpaper, or go back to its earlier scheme.
+pub fn theme(args: &[String]) -> i32 {
+    let store = Store::new(Dirs::from_env());
+    match crate::theme::palette(&store) {
+        Ok(Some(p)) if args.iter().any(|a| a == "--json") => print_json(&p),
+        Ok(Some(p)) => {
+            println!("{} ({})", p.image.display(), p.scheme);
+            for k in ["primary", "secondary", "tertiary", "surface", "on_surface"] {
+                println!("  {k:<10} dark {}  light {}", p.dark.get(k).map_or("-", String::as_str), p.light.get(k).map_or("-", String::as_str));
+            }
+            0
+        }
+        Ok(None) => fail(&"no palette: turned off, nothing applied yet, or no Noctalia to make one"),
+        Err(e) => fail(&e),
+    }
+}
+
+pub fn noctalia_colors(args: &[String]) -> i32 {
+    let store = Store::new(Dirs::from_env());
+    let result = match args.first().map(String::as_str) {
+        Some("on") => crate::theme::set_noctalia_follow(&store, true),
+        Some("off") => crate::theme::set_noctalia_follow(&store, false),
+        Some("status") | None => Ok(crate::theme::noctalia_colors()),
+        Some(other) => return fail(&format!("noctalia-colors: {other}? use on, off or status")),
+    };
+    match result {
+        Ok(s) => {
+            println!(
+                "{}",
+                if !s.available {
+                    "Noctalia isn't running".to_string()
+                } else {
+                    format!("{} ({})", if s.following { "follows the wallpaper" } else { "its own scheme" }, s.scheme.unwrap_or_default())
+                }
+            );
+            0
+        }
+        Err(e) => fail(&e),
+    }
+}
+
 /// A value and its label, for the plugin's selects.
 #[derive(Serialize)]
 struct Choice {

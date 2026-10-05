@@ -50,6 +50,32 @@ pub fn wallpaper_enabled(settings_toml: &str) -> Option<bool> {
 
 /// Whether Noctalia's wallpaper is on, from its settings file. `None` when
 /// the file can't be read or doesn't say (Noctalia's default then applies).
+/// The generator scheme Noctalia uses for wallpaper colors
+/// (`[theme] wallpaper_scheme`, "m3-rainbow"), if the file says.
+pub fn wallpaper_scheme(settings_toml: &str) -> Option<String> {
+    let mut in_theme = false;
+    for line in settings_toml.lines() {
+        let line = line.trim();
+        if line.starts_with('[') {
+            in_theme = line == "[theme]";
+            continue;
+        }
+        if in_theme
+            && let Some((key, value)) = line.split_once('=')
+            && key.trim() == "wallpaper_scheme"
+        {
+            let v = value.trim().trim_matches('"');
+            let ok = !v.is_empty() && v.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_');
+            return ok.then(|| v.to_string());
+        }
+    }
+    None
+}
+
+pub fn wallpaper_scheme_on_disk() -> Option<String> {
+    wallpaper_scheme(&std::fs::read_to_string(settings_path()?).ok()?)
+}
+
 pub fn wallpaper_enabled_on_disk() -> Option<bool> {
     let text = std::fs::read_to_string(settings_path()?).ok()?;
     wallpaper_enabled(&text)
@@ -84,6 +110,14 @@ pub fn apply(runner: &dyn Runner, monitor: &str, path: &Path, enabled: Option<bo
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn reads_the_wallpaper_scheme() {
+        let toml = "[theme]\nbuiltin = \"Tokyo-Night\"\nwallpaper_scheme = \"m3-rainbow\"\n\n    [theme.templates]\nx = 1\n[wallpaper]\nwallpaper_scheme = \"no\"\n";
+        assert_eq!(wallpaper_scheme(toml).as_deref(), Some("m3-rainbow"));
+        assert_eq!(wallpaper_scheme("[theme]\nmode = \"dark\"\n"), None);
+        assert_eq!(wallpaper_scheme("[theme]\nwallpaper_scheme = \"rm -rf\"\n"), None);
+    }
+
     use super::*;
     use std::cell::RefCell;
 

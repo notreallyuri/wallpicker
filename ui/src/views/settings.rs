@@ -108,6 +108,7 @@ fn SettingsForm(on_saved: Callback<()>) -> impl IntoView {
     let download_dir = RwSignal::new(String::new());
     let recursive = RwSignal::new(true);
     let close_to_tray = RwSignal::new(true);
+    let theme_from_wallpaper = RwSignal::new(true);
     let api_key = RwSignal::new(String::new());
     let username = RwSignal::new(String::new());
     let fit = RwSignal::new(String::new());
@@ -151,6 +152,7 @@ fn SettingsForm(on_saved: Callback<()>) -> impl IntoView {
             download_dir.set(s.download_dir.display().to_string());
             recursive.set(s.recursive);
             close_to_tray.set(s.close_to_tray);
+            theme_from_wallpaper.set(s.theme_from_wallpaper);
             api_key.set(s.wallhaven_api_key.clone().unwrap_or_default());
             username.set(s.wallhaven_username.clone().unwrap_or_default());
             konachan_site.set(s.konachan_site.as_str().to_string());
@@ -216,6 +218,7 @@ fn SettingsForm(on_saved: Callback<()>) -> impl IntoView {
 
         s.recursive = recursive.get_untracked();
         s.close_to_tray = close_to_tray.get_untracked();
+        s.theme_from_wallpaper = theme_from_wallpaper.get_untracked();
         let key = api_key.get_untracked().trim().to_string();
         s.wallhaven_api_key = (!key.is_empty()).then_some(key);
         let name = username.get_untracked().trim().to_string();
@@ -398,6 +401,16 @@ fn SettingsForm(on_saved: Callback<()>) -> impl IntoView {
                                     <Choice items=THEMES.to_vec() model=theme_choice />
                                     <FieldDescription>"Applies right away."</FieldDescription>
                                 </Field>
+                                <Field orientation=Orientation::Horizontal>
+                                    <Switch checked=theme_from_wallpaper />
+                                    <FieldLabel>"Colors from the wallpaper"</FieldLabel>
+                                </Field>
+                                // Plain text: a FieldDescription needs to sit inside a Field.
+                                <p class="-mt-2 text-sm text-muted-foreground">
+                                    "The app takes its colors from the wallpaper on your first monitor, the "
+                                    "way Noctalia makes them (needs Noctalia installed). Save to apply."
+                                </p>
+                                <NoctaliaColorsField />
                             }
                             .into_any(),
                             SECTION_DOWNLOADS => view! {
@@ -715,5 +728,59 @@ fn SlideshowPane(form: SlideshowForm) -> impl IntoView {
             <code>"wallpicker slideshow run"</code>
             " (for a Hyprland autostart). Save to apply changes here."
         </p>
+    }
+}
+
+/// Noctalia's colors follow the wallpaper, or its own scheme. Applies at
+/// once (it's Noctalia's setting, not wallpicker's).
+#[component]
+fn NoctaliaColorsField() -> impl IntoView {
+    let ctx = expect_context::<Ctx>();
+    let status = RwSignal::new(None::<api::NoctaliaColors>);
+    spawn_local(async move {
+        status.try_set(api::noctalia_colors().await.ok());
+    });
+    let following = RwSignal::new(false);
+    Effect::new(move |_| {
+        if let Some(s) = status.get() {
+            following.set(s.following);
+        }
+    });
+    // A flip of the switch: tell Noctalia.
+    Effect::new(move |prev: Option<bool>| {
+        let want = following.get();
+        let known = status.with_untracked(|s| s.as_ref().map(|s| s.following));
+        if prev.is_some() && known.is_some() && known != Some(want) {
+            spawn_local(async move {
+                match api::set_noctalia_colors(want).await {
+                    Ok(s) => {
+                        status.set(Some(s));
+                    }
+                    Err(e) => {
+                        ctx.error_with("Could not change Noctalia's colors", &e);
+                        if let Ok(s) = api::noctalia_colors().await {
+                            status.set(Some(s));
+                        }
+                    }
+                }
+            });
+        }
+        want
+    });
+    view! {
+        <Show when=move || status.with(|s| s.as_ref().is_some_and(|s| s.available))>
+            <Field orientation=Orientation::Horizontal>
+                <Switch checked=following />
+                <FieldLabel>"Noctalia's colors follow the wallpaper"</FieldLabel>
+            </Field>
+            <p class="-mt-2 text-sm text-muted-foreground">
+                {move || {
+                    let now = status.with(|s| s.as_ref().and_then(|s| s.scheme.clone()).unwrap_or_default());
+                    format!(
+                        "Applies at once. Now: {now}. Turning it off goes back to the scheme Noctalia had before."
+                    )
+                }}
+            </p>
+        </Show>
     }
 }

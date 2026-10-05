@@ -38,6 +38,7 @@ fn Shell() -> impl IntoView {
     let ctx = Ctx::new(use_toast());
     provide_context(ctx);
     crate::shortcuts::install();
+    crate::palette::install(ctx);
     // Back from the tray (or after the slideshow, the tray's Random, a
     // keybind...): what each monitor shows may have changed meanwhile.
     let _ = window_event_listener(leptos::ev::focus, move |_| {

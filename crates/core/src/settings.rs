@@ -98,6 +98,12 @@ pub struct Settings {
     pub slideshow: Slideshow,
     /// Closing the window hides it to the tray (the app keeps running).
     pub close_to_tray: bool,
+    /// The app's colors come from the current wallpaper (through Noctalia's
+    /// palette generator, when it's installed).
+    pub theme_from_wallpaper: bool,
+    /// Noctalia's color scheme before "follow the wallpaper" was turned on
+    /// ("community Garnet"), to go back to.
+    pub noctalia_previous_scheme: Option<String>,
     /// Width in pixels of generated thumbnails.
     pub thumb_width: u32,
 }
@@ -120,6 +126,8 @@ impl Default for Settings {
             konachan_site: KonachanSite::default(),
             slideshow: Slideshow::default(),
             close_to_tray: true,
+            theme_from_wallpaper: true,
+            noctalia_previous_scheme: None,
             thumb_width: 360,
         }
     }
