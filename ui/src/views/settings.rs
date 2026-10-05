@@ -82,7 +82,19 @@ const BACKENDS: &[(&str, &str)] = &settings::BACKENDS;
 
 const KONACHAN_SITES: &[(&str, &str)] = &settings::KONACHAN_SITES;
 
-const THEMES: &[(&str, &str)] = &[("system", "System"), ("light", "Light"), ("dark", "Dark")];
+const THEMES: &[(&str, &str)] = &[("system", "Like the system"), ("light", "Off"), ("dark", "On")];
+
+/// Color themes: `data-theme` name ("" is the base one), label, and the
+/// background and accent of its light and dark halves, for the swatches.
+/// The colors themselves are in globals.css.
+const COLOR_THEMES: &[(&str, &str, [&str; 4])] = &[
+    ("", "Blossom", ["oklch(0.975 0.012 75)", "oklch(0.62 0.16 350)", "oklch(0.2 0.022 305)", "oklch(0.8 0.11 345)"]),
+    ("matcha", "Matcha", ["oklch(0.975 0.014 115)", "oklch(0.58 0.11 150)", "oklch(0.2 0.022 115)", "oklch(0.82 0.11 150)"]),
+    ("peach", "Peach", ["oklch(0.975 0.014 55)", "oklch(0.64 0.15 38)", "oklch(0.2 0.022 55)", "oklch(0.82 0.11 38)"]),
+    ("lagoon", "Lagoon", ["oklch(0.975 0.014 215)", "oklch(0.58 0.1 195)", "oklch(0.2 0.022 215)", "oklch(0.82 0.09 195)"]),
+    ("lavender", "Lavender", ["oklch(0.975 0.014 295)", "oklch(0.58 0.15 290)", "oklch(0.2 0.022 295)", "oklch(0.8 0.11 290)"]),
+    ("honey", "Honey", ["oklch(0.975 0.014 80)", "oklch(0.78 0.14 72)", "oklch(0.2 0.022 80)", "oklch(0.85 0.12 72)"]),
+];
 
 #[component]
 pub(crate) fn SettingsDialog(open: RwSignal<bool>) -> impl IntoView {
@@ -109,6 +121,8 @@ fn SettingsForm(on_saved: Callback<()>) -> impl IntoView {
     let recursive = RwSignal::new(true);
     let close_to_tray = RwSignal::new(true);
     let theme_from_wallpaper = RwSignal::new(true);
+    // "" is the first monitor.
+    let theme_monitor = RwSignal::new(String::new());
     let api_key = RwSignal::new(String::new());
     let username = RwSignal::new(String::new());
     let fit = RwSignal::new(String::new());
@@ -153,6 +167,7 @@ fn SettingsForm(on_saved: Callback<()>) -> impl IntoView {
             recursive.set(s.recursive);
             close_to_tray.set(s.close_to_tray);
             theme_from_wallpaper.set(s.theme_from_wallpaper);
+            theme_monitor.set(s.theme_monitor.clone().unwrap_or_default());
             api_key.set(s.wallhaven_api_key.clone().unwrap_or_default());
             username.set(s.wallhaven_username.clone().unwrap_or_default());
             konachan_site.set(s.konachan_site.as_str().to_string());
@@ -219,6 +234,7 @@ fn SettingsForm(on_saved: Callback<()>) -> impl IntoView {
         s.recursive = recursive.get_untracked();
         s.close_to_tray = close_to_tray.get_untracked();
         s.theme_from_wallpaper = theme_from_wallpaper.get_untracked();
+        s.theme_monitor = Some(theme_monitor.get_untracked()).filter(|m| !m.is_empty());
         let key = api_key.get_untracked().trim().to_string();
         s.wallhaven_api_key = (!key.is_empty()).then_some(key);
         let name = username.get_untracked().trim().to_string();
@@ -397,19 +413,23 @@ fn SettingsForm(on_saved: Callback<()>) -> impl IntoView {
                             .into_any(),
                             SECTION_APPEARANCE => view! {
                                 <Field>
-                                    <FieldLabel>"Theme"</FieldLabel>
+                                    <FieldLabel>"Dark mode"</FieldLabel>
                                     <Choice items=THEMES.to_vec() model=theme_choice />
                                     <FieldDescription>"Applies right away."</FieldDescription>
                                 </Field>
+                                <ColorThemes following=theme_from_wallpaper />
                                 <Field orientation=Orientation::Horizontal>
                                     <Switch checked=theme_from_wallpaper />
                                     <FieldLabel>"Colors from the wallpaper"</FieldLabel>
                                 </Field>
                                 // Plain text: a FieldDescription needs to sit inside a Field.
                                 <p class="-mt-2 text-sm text-muted-foreground">
-                                    "The app takes its colors from the wallpaper on your first monitor, the "
-                                    "way Noctalia makes them (needs Noctalia installed). Save to apply."
+                                    "The app takes its colors from a monitor's wallpaper, the way Noctalia "
+                                    "makes them (needs Noctalia installed). Save to apply."
                                 </p>
+                                <Show when=move || theme_from_wallpaper.get() && ctx.monitors.with(|m| m.len() > 1)>
+                                    <ColorsMonitor model=theme_monitor />
+                                </Show>
                                 <NoctaliaColorsField />
                                 <Field orientation=Orientation::Horizontal>
                                     <Switch checked=ctx.backdrop />
@@ -789,5 +809,95 @@ fn NoctaliaColorsField() -> impl IntoView {
                 }}
             </p>
         </Show>
+    }
+}
+
+/// The color themes, as swatches; applies at once (stored like dark mode).
+/// Wallpaper colors win while they're on.
+#[component]
+fn ColorThemes(following: RwSignal<bool>) -> impl IntoView {
+    let theme = use_theme();
+    view! {
+        <div class="flex flex-col gap-2">
+            <span class="text-sm font-bold">"Color theme"</span>
+            <div class=move || {
+                format!(
+                    "grid grid-cols-3 gap-2 transition-opacity {}",
+                    if following.get() { "opacity-50" } else { "" },
+                )
+            }>
+                {COLOR_THEMES
+                    .iter()
+                    .map(|&(name, label, colors)| {
+                        let picked = move || theme.color.with(|c| c == name);
+                        let swatch = move || {
+                            let (bg, accent) = if theme.is_dark() { (colors[2], colors[3]) } else { (colors[0], colors[1]) };
+                            format!("background: {bg}; --swatch: {accent};")
+                        };
+                        view! {
+                            <button
+                                type="button"
+                                on:click=move |_| theme.set_color(name)
+                                class=move || {
+                                    format!(
+                                        "flex items-center gap-2.5 rounded-2xl border-2 p-2 text-left text-sm font-bold transition duration-200 ease-bounce hover:-translate-y-0.5 {}",
+                                        if picked() { "border-primary bg-primary/10" } else { "border-border hover:border-primary/40" },
+                                    )
+                                }
+                            >
+                                <span
+                                    class="flex size-8 shrink-0 items-center justify-center rounded-xl shadow-inner ring-1 ring-foreground/10"
+                                    style=swatch
+                                >
+                                    <span class="size-4 rounded-full bg-(--swatch) shadow-[0_2px_0_0_rgb(0_0_0/0.15)]" />
+                                </span>
+                                {label}
+                            </button>
+                        }
+                    })
+                    .collect_view()}
+            </div>
+            <p class="text-sm text-muted-foreground">
+                {move || {
+                    if following.get() {
+                        "Colors from the wallpaper are on, so this one shows when they're off."
+                    } else {
+                        "Applies right away, light and dark."
+                    }
+                }}
+            </p>
+        </div>
+    }
+}
+
+/// Which monitor's wallpaper the colors come from ("" is the first one).
+#[component]
+fn ColorsMonitor(model: RwSignal<String>) -> impl IntoView {
+    let ctx = expect_context::<Ctx>();
+    // A Button's variant is fixed, so each pill is rebuilt when the choice changes.
+    let pill = move |value: String, label: String| {
+        move || {
+            let variant = if model.with(|m| *m == value) { ButtonVariant::Default } else { ButtonVariant::Outline };
+            let value = value.clone();
+            let label = label.clone();
+            view! {
+                <Button size=ButtonSize::Sm variant=variant on_click=move |_| model.set(value.clone())>
+                    {label.clone()}
+                </Button>
+            }
+        }
+    };
+    view! {
+        <div class="flex flex-wrap items-center gap-2">
+            <span class="text-sm font-bold">"From"</span>
+            {pill(String::new(), "First monitor".into())}
+            {move || {
+                ctx.monitors
+                    .get()
+                    .into_iter()
+                    .map(|m| pill(m.name.clone(), m.name).into_any())
+                    .collect_view()
+            }}
+        </div>
     }
 }

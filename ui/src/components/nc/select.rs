@@ -62,12 +62,12 @@ pub fn SelectContent(
     view! {
         <SelectContentRoot class=move || {
             cn!(
-                "z-50 overflow-hidden rounded-2xl border-2 bg-popover p-1 text-popover-foreground shadow-xl pointer-events-auto data-[state=closed]:pointer-events-none",
+                "z-50 min-w-max overflow-hidden rounded-2xl border-2 bg-popover p-1 text-popover-foreground shadow-xl pointer-events-auto data-[state=closed]:pointer-events-none",
                 "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2",
                 class.get()
             )
         }>
-            <div class="p-1 w-full max-h-96 overflow-y-auto">{children()}</div>
+            <div class="p-1 w-full max-h-96 overflow-x-hidden overflow-y-auto">{children()}</div>
         </SelectContentRoot>
     }
 }
@@ -83,7 +83,7 @@ pub fn SelectItem(
             value=value
             class=move || {
                 cn!(
-                    "group relative flex w-full cursor-default select-none items-center rounded-xl py-1.5 font-medium pl-8 pr-2 text-sm outline-none hover:bg-accent hover:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50",
+                    "group relative flex w-full cursor-default select-none items-center whitespace-nowrap rounded-xl py-1.5 font-medium pl-8 pr-3 text-sm outline-none hover:bg-accent hover:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50",
                     class.get()
                 )
             }

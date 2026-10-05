@@ -101,6 +101,8 @@ pub struct Settings {
     /// The app's colors come from the current wallpaper (through Noctalia's
     /// palette generator, when it's installed).
     pub theme_from_wallpaper: bool,
+    /// The monitor whose wallpaper the colors come from; None: the first one.
+    pub theme_monitor: Option<String>,
     /// Noctalia's color scheme before "follow the wallpaper" was turned on
     /// ("community Garnet"), to go back to.
     pub noctalia_previous_scheme: Option<String>,
@@ -127,6 +129,7 @@ impl Default for Settings {
             slideshow: Slideshow::default(),
             close_to_tray: true,
             theme_from_wallpaper: true,
+            theme_monitor: None,
             noctalia_previous_scheme: None,
             thumb_width: 360,
         }
@@ -179,6 +182,7 @@ impl Settings {
             .wallhaven_username
             .map(|u| u.trim().to_string())
             .filter(|u| crate::wallhaven::is_valid_username(u));
+        self.theme_monitor = self.theme_monitor.map(|m| m.trim().to_string()).filter(|m| !m.is_empty());
         self
     }
 }

@@ -63,8 +63,9 @@ fn block(selector: &str, colors: &BTreeMap<String, String>) -> String {
     format!("{selector}{{{vars}}}")
 }
 
+/// Over everything else, the color themes' `[data-theme=…].dark` included.
 fn css(p: &Palette) -> String {
-    format!("{}{}", block(":root", &p.light), block(".dark", &p.dark))
+    format!("{}{}", block(":root:root:root", &p.light), block(":root:root.dark", &p.dark))
 }
 
 /// Put `css` in (or take it out, with None).
@@ -110,18 +111,21 @@ pub(crate) fn install(ctx: Ctx) {
     });
 }
 
-/// The current wallpaper behind the app: the first monitor's (its cached
-/// thumbnail, blurred and dimmed), under a wash of the background color.
+/// The current wallpaper behind the app: the colors' monitor's, else the
+/// first one's (its cached thumbnail, blurred and dimmed), under a wash of
+/// the background color.
 #[component]
 pub(crate) fn Backdrop() -> impl IntoView {
     let ctx = expect_context::<Ctx>();
     Effect::new(move |_| crate::prefs::set("ui.backdrop", if ctx.backdrop.get() { "1" } else { "0" }));
     let src = RwSignal::new(None::<String>);
     Effect::new(move |_| {
+        let chosen = ctx.settings.with(|s| s.as_ref().and_then(|s| s.theme_monitor.clone()));
         let first = ctx.monitors.with(|ms| ms.first().map(|m| m.name.clone()));
         let path = ctx.state.with(|s| {
-            first
+            chosen
                 .and_then(|m| s.current.get(&m).cloned())
+                .or_else(|| first.and_then(|m| s.current.get(&m).cloned()))
                 .or_else(|| s.current.values().next().cloned())
         });
         let Some(path) = path else {

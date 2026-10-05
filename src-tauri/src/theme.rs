@@ -46,14 +46,15 @@ fn only_colors(v: &serde_json::Value) -> BTreeMap<String, String> {
         .unwrap_or_default()
 }
 
-/// The wallpaper the palette comes from: the first connected monitor's, or
-/// any monitor's that still exists.
-fn source_image(store: &Store) -> Option<PathBuf> {
+/// The wallpaper the palette comes from: the chosen monitor's, else the
+/// first connected monitor's, else any monitor's that still exists.
+fn source_image(store: &Store, monitor: Option<&str>) -> Option<PathBuf> {
     let state = store.load_state().ok()?;
     let monitors = hyprpaper::list_monitors(&SystemRunner).unwrap_or_default();
-    monitors
-        .iter()
-        .filter_map(|m| state.current.get(&m.name))
+    monitor
+        .and_then(|m| state.current.get(m))
+        .into_iter()
+        .chain(monitors.iter().filter_map(|m| state.current.get(&m.name)))
         .chain(state.current.values())
         .find(|p| p.is_file())
         .cloned()
@@ -66,7 +67,7 @@ pub fn palette(store: &Store) -> Result<Option<Palette>, String> {
     if !settings.theme_from_wallpaper {
         return Ok(None);
     }
-    let Some(image) = source_image(store) else { return Ok(None) };
+    let Some(image) = source_image(store, settings.theme_monitor.as_deref()) else { return Ok(None) };
     let scheme = noctalia::wallpaper_scheme_on_disk().unwrap_or_else(|| "m3-tonal-spot".into());
     let modified = image
         .metadata()
