@@ -26,6 +26,27 @@ in Settings.
 - [ ] Daily-image feeds, not searchable: Bing's daily wallpaper, NASA's Astronomy Picture of the
   Day.
 
+## The app and the plugin: who does what
+
+Decided 2026-10-05: they stop chasing feature parity. The plugin is the quick picker (always
+there on SUPER+W, nearly free, native to the shell); the app is the library manager (real
+dialogs, wrapping layouts, easier to build and test).
+
+- [ ] **Plugin = quick picker.** Keep it to applying, random / previous, favorites, search and
+  online browsing. Heavy features stay out (duplicates, tag editing beyond the basics, slideshow
+  setup, collections management); if one is already there and costly to keep, consider moving
+  it out.
+- [ ] **App first for new features.** Blacklist, export / import, spanning across monitors and
+  the like land in the app; the plugin gets them only if they fit a quick picker.
+- [ ] **"Open in wallpicker" in the plugin**: a button (header, and in the menus where a task
+  belongs to the app: "Find duplicates", "Edit tags…") that runs `wallpicker --toggle`, maybe
+  with what to open (`--toggle --tab collections`, `--toggle --duplicates`), so the panel hands
+  bigger jobs off.
+- [ ] **Autostart optional.** The app needs to run only while managing the library (it uses
+  ~214 MB, plus WebKit helpers). A setting or install-script choice for starting it at login
+  (`wallpicker --tray` in Hyprland's startup), off by default once the plugin can open it; the
+  slideshow keeps running from the plugin's service either way.
+
 ## Noctalia
 
 - [x] Wallpaper backend setting: hyprpaper or Noctalia (`noctalia msg wallpaper-set`).
