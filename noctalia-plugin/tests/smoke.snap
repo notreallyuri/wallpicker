@@ -19,6 +19,7 @@ column align=stretch flexGrow=1 gap=12
     button glyph=layout-grid key=layout text=Flat tooltip=Show everything at once, or browse folder by folder variant=outline on:onClick
     button glyph=copy key=duplicates tooltip=Duplicates variant=ghost on:onClick
     button enabled=true glyph=device-desktop key=now_toggle tooltip=Show what each monitor is showing variant=ghost on:onClick
+    button enabled=true glyph=history key=previous tooltip=Back to the wallpaper before variant=ghost on:onClick
     button enabled=true glyph=arrows-shuffle key=random text=Random tooltip=Apply a random one of those shown (Ctrl+R) variant=outline on:onClick
   row align=center gap=6
     button controlSize=sm fontSize=12 key=tag_mode text=All of tooltip=With several tags on: wallpapers with all of them, or any of them variant=ghost on:onClick
@@ -88,6 +89,7 @@ column align=stretch flexGrow=1 gap=12
     button glyph=layout-grid key=layout text=Flat tooltip=Show everything at once, or browse folder by folder variant=outline on:onClick
     button glyph=copy key=duplicates tooltip=Duplicates variant=ghost on:onClick
     button enabled=true glyph=device-desktop key=now_toggle tooltip=Show what each monitor is showing variant=ghost on:onClick
+    button enabled=true glyph=history key=previous tooltip=Back to the wallpaper before variant=ghost on:onClick
     button enabled=true glyph=arrows-shuffle key=random text=Random tooltip=Apply a random one of those shown (Ctrl+R) variant=outline on:onClick
   row align=center gap=6
     button controlSize=sm fontSize=12 key=tag_mode text=All of tooltip=With several tags on: wallpapers with all of them, or any of them variant=ghost on:onClick
@@ -133,6 +135,7 @@ column align=stretch flexGrow=1 gap=12
     button glyph=layout-grid key=layout text=Flat tooltip=Show everything at once, or browse folder by folder variant=outline on:onClick
     button glyph=copy key=duplicates tooltip=Duplicates variant=ghost on:onClick
     button enabled=true glyph=device-desktop key=now_toggle tooltip=Show what each monitor is showing variant=ghost on:onClick
+    button enabled=true glyph=history key=previous tooltip=Back to the wallpaper before variant=ghost on:onClick
     button enabled=true glyph=arrows-shuffle key=random text=Random tooltip=Apply a random one of those shown (Ctrl+R) variant=outline on:onClick
   row align=center gap=6
     button controlSize=sm fontSize=12 key=tag_mode text=All of tooltip=With several tags on: wallpapers with all of them, or any of them variant=ghost on:onClick
@@ -181,6 +184,7 @@ column align=stretch flexGrow=1 gap=12
     button glyph=layout-grid key=layout text=Flat tooltip=Show everything at once, or browse folder by folder variant=outline on:onClick
     button glyph=copy key=duplicates tooltip=Duplicates variant=ghost on:onClick
     button enabled=true glyph=device-desktop key=now_toggle tooltip=Show what each monitor is showing variant=ghost on:onClick
+    button enabled=true glyph=history key=previous tooltip=Back to the wallpaper before variant=ghost on:onClick
     button enabled=true glyph=arrows-shuffle key=random text=Random tooltip=Apply a random one of those shown (Ctrl+R) variant=outline on:onClick
   column align=start gap=6
     row align=center gap=6
@@ -258,6 +262,7 @@ column align=stretch flexGrow=1 gap=12
     button glyph=layout-grid key=layout text=Flat tooltip=Show everything at once, or browse folder by folder variant=outline on:onClick
     button glyph=copy key=duplicates tooltip=Duplicates variant=ghost on:onClick
     button enabled=true glyph=device-desktop key=now_toggle tooltip=Show what each monitor is showing variant=ghost on:onClick
+    button enabled=true glyph=history key=previous tooltip=Back to the wallpaper before variant=ghost on:onClick
     button enabled=true glyph=arrows-shuffle key=random text=Random tooltip=Apply a random one of those shown (Ctrl+R) variant=outline on:onClick
   row align=center gap=6
     button controlSize=sm fontSize=12 key=tag_mode text=All of tooltip=With several tags on: wallpapers with all of them, or any of them variant=ghost on:onClick
@@ -325,6 +330,7 @@ column align=stretch flexGrow=1 gap=12
     button glyph=layout-grid key=layout text=Flat tooltip=Show everything at once, or browse folder by folder variant=outline on:onClick
     button glyph=copy key=duplicates tooltip=Duplicates variant=ghost on:onClick
     button enabled=true glyph=device-desktop key=now_toggle tooltip=Show what each monitor is showing variant=ghost on:onClick
+    button enabled=true glyph=history key=previous tooltip=Back to the wallpaper before variant=ghost on:onClick
     button enabled=true glyph=arrows-shuffle key=random text=Random tooltip=Apply a random one of those shown (Ctrl+R) variant=outline on:onClick
   row align=center gap=6
     button controlSize=sm fontSize=12 key=tag_mode text=All of tooltip=With several tags on: wallpapers with all of them, or any of them variant=ghost on:onClick
@@ -371,6 +377,7 @@ column align=stretch flexGrow=1 gap=12
     button glyph=layout-grid key=layout text=Flat tooltip=Show everything at once, or browse folder by folder variant=outline on:onClick
     button glyph=copy key=duplicates tooltip=Duplicates variant=ghost on:onClick
     button enabled=true glyph=device-desktop key=now_toggle tooltip=Show what each monitor is showing variant=ghost on:onClick
+    button enabled=true glyph=history key=previous tooltip=Back to the wallpaper before variant=ghost on:onClick
     button enabled=true glyph=arrows-shuffle key=random text=Random tooltip=Apply a random one of those shown (Ctrl+R) variant=outline on:onClick
   row align=center gap=6
     button controlSize=sm fontSize=12 key=tag_mode text=Any of tooltip=With several tags on: wallpapers with all of them, or any of them variant=ghost on:onClick
@@ -425,6 +432,7 @@ column align=stretch flexGrow=1 gap=12
     button glyph=layout-grid key=layout text=Flat tooltip=Show everything at once, or browse folder by folder variant=outline on:onClick
     button glyph=copy key=duplicates tooltip=Duplicates variant=ghost on:onClick
     button enabled=true glyph=device-desktop key=now_toggle tooltip=Show what each monitor is showing variant=ghost on:onClick
+    button enabled=true glyph=history key=previous tooltip=Back to the wallpaper before variant=ghost on:onClick
     button enabled=true glyph=arrows-shuffle key=random text=Random tooltip=Apply a random one of those shown (Ctrl+R) variant=outline on:onClick
   row align=center gap=6
     button controlSize=sm fontSize=12 key=tag_mode text=All of tooltip=With several tags on: wallpapers with all of them, or any of them variant=ghost on:onClick
@@ -492,6 +500,7 @@ column align=stretch flexGrow=1 gap=12
     button glyph=layout-grid key=layout text=Flat tooltip=Show everything at once, or browse folder by folder variant=outline on:onClick
     button glyph=copy key=duplicates tooltip=Duplicates variant=ghost on:onClick
     button enabled=true glyph=device-desktop key=now_toggle tooltip=Hide what each monitor is showing variant=secondary on:onClick
+    button enabled=true glyph=history key=previous tooltip=Back to the wallpaper before variant=ghost on:onClick
     button enabled=true glyph=arrows-shuffle key=random text=Random tooltip=Apply a random one of those shown (Ctrl+R) variant=outline on:onClick
   row align=center gap=6
     button controlSize=sm fontSize=12 key=tag_mode text=All of tooltip=With several tags on: wallpapers with all of them, or any of them variant=ghost on:onClick
@@ -566,6 +575,7 @@ column align=stretch flexGrow=1 gap=12
     button glyph=layout-grid key=layout text=Flat tooltip=Show everything at once, or browse folder by folder variant=outline on:onClick
     button glyph=copy key=duplicates tooltip=Duplicates variant=ghost on:onClick
     button enabled=true glyph=device-desktop key=now_toggle tooltip=Hide what each monitor is showing variant=secondary on:onClick
+    button enabled=true glyph=history key=previous tooltip=Back to the wallpaper before variant=ghost on:onClick
     button enabled=true glyph=arrows-shuffle key=random text=Random tooltip=Apply a random one of those shown (Ctrl+R) variant=outline on:onClick
   row align=center gap=6
     button controlSize=sm fontSize=12 key=tag_mode text=All of tooltip=With several tags on: wallpapers with all of them, or any of them variant=ghost on:onClick
@@ -640,6 +650,7 @@ column align=stretch flexGrow=1 gap=12
     button glyph=folders key=layout text=Folders tooltip=Show everything at once, or browse folder by folder variant=outline on:onClick
     button glyph=copy key=duplicates tooltip=Duplicates variant=ghost on:onClick
     button enabled=true glyph=device-desktop key=now_toggle tooltip=Show what each monitor is showing variant=ghost on:onClick
+    button enabled=true glyph=history key=previous tooltip=Back to the wallpaper before variant=ghost on:onClick
     button enabled=true glyph=arrows-shuffle key=random text=Random tooltip=Apply a random one of those shown (Ctrl+R) variant=outline on:onClick
   row align=center gap=6
     button controlSize=sm fontSize=12 key=tag_mode text=All of tooltip=With several tags on: wallpapers with all of them, or any of them variant=ghost on:onClick
@@ -705,6 +716,7 @@ column align=stretch flexGrow=1 gap=12
     button glyph=folders key=layout text=Folders tooltip=Show everything at once, or browse folder by folder variant=outline on:onClick
     button glyph=copy key=duplicates tooltip=Duplicates variant=ghost on:onClick
     button enabled=true glyph=device-desktop key=now_toggle tooltip=Show what each monitor is showing variant=ghost on:onClick
+    button enabled=true glyph=history key=previous tooltip=Back to the wallpaper before variant=ghost on:onClick
     button enabled=true glyph=arrows-shuffle key=random text=Random tooltip=Apply a random one of those shown (Ctrl+R) variant=outline on:onClick
   row align=center gap=6
     button controlSize=sm fontSize=12 key=tag_mode text=All of tooltip=With several tags on: wallpapers with all of them, or any of them variant=ghost on:onClick
@@ -759,6 +771,7 @@ column align=stretch flexGrow=1 gap=12
     button glyph=folders key=layout text=Folders tooltip=Show everything at once, or browse folder by folder variant=outline on:onClick
     button glyph=copy key=duplicates tooltip=Duplicates variant=ghost on:onClick
     button enabled=true glyph=device-desktop key=now_toggle tooltip=Show what each monitor is showing variant=ghost on:onClick
+    button enabled=true glyph=history key=previous tooltip=Back to the wallpaper before variant=ghost on:onClick
     button enabled=true glyph=arrows-shuffle key=random text=Random tooltip=Apply a random one of those shown (Ctrl+R) variant=outline on:onClick
   row align=center gap=6
     button controlSize=sm fontSize=12 key=tag_mode text=All of tooltip=With several tags on: wallpapers with all of them, or any of them variant=ghost on:onClick
@@ -811,6 +824,7 @@ column align=stretch flexGrow=1 gap=12
     button glyph=folders key=layout text=Folders tooltip=Show everything at once, or browse folder by folder variant=outline on:onClick
     button glyph=copy key=duplicates tooltip=Duplicates variant=ghost on:onClick
     button enabled=true glyph=device-desktop key=now_toggle tooltip=Show what each monitor is showing variant=ghost on:onClick
+    button enabled=true glyph=history key=previous tooltip=Back to the wallpaper before variant=ghost on:onClick
     button enabled=true glyph=arrows-shuffle key=random text=Random tooltip=Apply a random one of those shown (Ctrl+R) variant=outline on:onClick
   row align=center gap=6
     button controlSize=sm fontSize=12 key=tag_mode text=All of tooltip=With several tags on: wallpapers with all of them, or any of them variant=ghost on:onClick
@@ -865,6 +879,7 @@ column align=stretch flexGrow=1 gap=12
     button glyph=folders key=layout text=Folders tooltip=Show everything at once, or browse folder by folder variant=outline on:onClick
     button glyph=copy key=duplicates tooltip=Duplicates variant=ghost on:onClick
     button enabled=true glyph=device-desktop key=now_toggle tooltip=Show what each monitor is showing variant=ghost on:onClick
+    button enabled=true glyph=history key=previous tooltip=Back to the wallpaper before variant=ghost on:onClick
     button enabled=true glyph=arrows-shuffle key=random text=Random tooltip=Apply a random one of those shown (Ctrl+R) variant=outline on:onClick
   row align=center gap=6
     button controlSize=sm fontSize=12 key=tag_mode text=All of tooltip=With several tags on: wallpapers with all of them, or any of them variant=ghost on:onClick
@@ -930,6 +945,7 @@ column align=stretch flexGrow=1 gap=12
     button glyph=folders key=layout text=Folders tooltip=Show everything at once, or browse folder by folder variant=outline on:onClick
     button glyph=copy key=duplicates tooltip=Duplicates variant=ghost on:onClick
     button enabled=true glyph=device-desktop key=now_toggle tooltip=Show what each monitor is showing variant=ghost on:onClick
+    button enabled=true glyph=history key=previous tooltip=Back to the wallpaper before variant=ghost on:onClick
     button enabled=true glyph=arrows-shuffle key=random text=Random tooltip=Apply a random one of those shown (Ctrl+R) variant=outline on:onClick
   row align=center gap=6
     button controlSize=sm fontSize=12 key=tag_mode text=All of tooltip=With several tags on: wallpapers with all of them, or any of them variant=ghost on:onClick
@@ -979,6 +995,7 @@ column align=stretch flexGrow=1 gap=12
     button glyph=layout-grid key=layout text=Flat tooltip=Show everything at once, or browse folder by folder variant=outline on:onClick
     button glyph=copy key=duplicates tooltip=Duplicates variant=ghost on:onClick
     button enabled=true glyph=device-desktop key=now_toggle tooltip=Show what each monitor is showing variant=ghost on:onClick
+    button enabled=true glyph=history key=previous tooltip=Back to the wallpaper before variant=ghost on:onClick
     button enabled=true glyph=arrows-shuffle key=random text=Random tooltip=Apply a random one of those shown (Ctrl+R) variant=outline on:onClick
   row align=center gap=6
     button controlSize=sm fontSize=12 key=tag_mode text=All of tooltip=With several tags on: wallpapers with all of them, or any of them variant=ghost on:onClick
@@ -1067,6 +1084,7 @@ column align=stretch flexGrow=1 gap=12
     button glyph=layout-grid key=layout text=Flat tooltip=Show everything at once, or browse folder by folder variant=outline on:onClick
     button glyph=copy key=duplicates tooltip=Duplicates variant=ghost on:onClick
     button enabled=true glyph=device-desktop key=now_toggle tooltip=Show what each monitor is showing variant=ghost on:onClick
+    button enabled=true glyph=history key=previous tooltip=Back to the wallpaper before variant=ghost on:onClick
     button enabled=true glyph=arrows-shuffle key=random text=Random tooltip=Apply a random one of those shown (Ctrl+R) variant=outline on:onClick
   row align=center gap=6
     button controlSize=sm fontSize=12 key=tag_mode text=All of tooltip=With several tags on: wallpapers with all of them, or any of them variant=ghost on:onClick
@@ -1139,6 +1157,7 @@ column align=stretch flexGrow=1 gap=12
     button glyph=layout-grid key=layout text=Flat tooltip=Show everything at once, or browse folder by folder variant=outline on:onClick
     button glyph=copy key=duplicates tooltip=Duplicates variant=ghost on:onClick
     button enabled=true glyph=device-desktop key=now_toggle tooltip=Show what each monitor is showing variant=ghost on:onClick
+    button enabled=true glyph=history key=previous tooltip=Back to the wallpaper before variant=ghost on:onClick
     button enabled=true glyph=arrows-shuffle key=random text=Random tooltip=Apply a random one of those shown (Ctrl+R) variant=outline on:onClick
   row align=center gap=6
     button controlSize=sm fontSize=12 key=tag_mode text=All of tooltip=With several tags on: wallpapers with all of them, or any of them variant=ghost on:onClick
@@ -1215,6 +1234,7 @@ column align=stretch flexGrow=1 gap=12
     button glyph=layout-grid key=layout text=Flat tooltip=Show everything at once, or browse folder by folder variant=outline on:onClick
     button glyph=copy key=duplicates tooltip=Duplicates variant=ghost on:onClick
     button enabled=true glyph=device-desktop key=now_toggle tooltip=Show what each monitor is showing variant=ghost on:onClick
+    button enabled=true glyph=history key=previous tooltip=Back to the wallpaper before variant=ghost on:onClick
     button enabled=true glyph=arrows-shuffle key=random text=Random tooltip=Apply a random one of those shown (Ctrl+R) variant=outline on:onClick
   row align=center gap=6
     button controlSize=sm fontSize=12 key=tag_mode text=All of tooltip=With several tags on: wallpapers with all of them, or any of them variant=ghost on:onClick
@@ -1266,6 +1286,77 @@ wallpicker apply /w/anime/mitsu/c.jpg --monitor DP-2
 wallpicker list --json --thumbs
 --- notes
 notify wallpicker: Wallpaper applied
+=== local: previous (on the target monitor)
+column align=stretch flexGrow=1 gap=12
+  row align=center gap=8
+    label color=on_surface fontSize=16 fontWeight=bold text=wallpicker
+    row align=center flexGrow=1 gap=4
+      button key=mode_local onClick=onModeLocal text=Local variant=primary
+      button key=mode_online onClick=onModeOnline text=Online variant=ghost
+      button key=mode_collections onClick=onModeCollections text=Collections variant=ghost
+    label color=on_surface_variant fontSize=12 text=Monitor
+    select key=monitor onChange=onMonitorChange options=[All monitors|DP-1|DP-2] selectedIndex=2 width=160
+    button enabled=true glyph=refresh onClick=onRefresh tooltip=Refresh variant=ghost
+    button onClick=onOpenApp text=Open wallpicker variant=outline
+    button glyph=settings tooltip=Settings variant=ghost on:onClick
+    button glyph=close onClick=onCloseClicked variant=ghost
+  row align=center gap=8
+    input flexGrow=1 focus=false key=filter_0 onChange=onFilterChange onSubmit=onFilterChange placeholder=Filter by name or tag value=
+    button glyph=star key=favorites onClick=onToggleFavorites text=Favorites variant=outline
+    select key=local_sort options=[Newest|Oldest|Name|Random order] selectedIndex=0 width=130 on:onChange
+    button glyph=layout-grid key=layout text=Flat tooltip=Show everything at once, or browse folder by folder variant=outline on:onClick
+    button glyph=copy key=duplicates tooltip=Duplicates variant=ghost on:onClick
+    button enabled=true glyph=device-desktop key=now_toggle tooltip=Show what each monitor is showing variant=ghost on:onClick
+    button enabled=true glyph=history key=previous tooltip=Back to the wallpaper before variant=ghost on:onClick
+    button enabled=true glyph=arrows-shuffle key=random text=Random tooltip=Apply a random one of those shown (Ctrl+R) variant=outline on:onClick
+  row align=center gap=6
+    button controlSize=sm fontSize=12 key=tag_mode text=All of tooltip=With several tags on: wallpapers with all of them, or any of them variant=ghost on:onClick
+    button controlSize=sm fontSize=12 key=chip_dark text=dark  2 variant=outline on:onClick
+    button controlSize=sm fontSize=12 key=chip_Mitsu text=Mitsu  2 variant=outline on:onClick
+    button controlSize=sm fontSize=12 key=chip_landscape text=landscape  1 variant=outline on:onClick
+    button controlSize=sm fontSize=12 key=chip_night text=night  1 variant=outline on:onClick
+    button controlSize=sm fontSize=12 key=chip_cityscape text=cityscape  1 variant=outline on:onClick
+    button controlSize=sm fontSize=12 key=chip_minimalist text=minimalist  1 variant=outline on:onClick
+    button controlSize=sm fontSize=12 key=tags_expand text=Expand (+8) variant=ghost on:onClick
+  box height=0
+  scroll flexGrow=1 gap=12 key=scroll_local_10
+    column align=stretch gap=12
+      row align=start gap=12
+        column align=center flexGrow=1 gap=4 key=/w/anime/b.jpg
+          image border=outline borderWidth=1 fit=cover height=130 opacity=1 path=/c/b.jpg radius=12 width=209 on:onClick
+          button contentAlign=center controlSize=sm fontSize=11 text=★ b.jpg variant=ghost width=209 on:onClick,onRightClick
+          row align=center gap=8 justify=center
+            label color=on_surface_variant fontSize=11 maxLines=1 text=3840×2160
+            label color=primary fontSize=11 maxLines=1 text=On DP-1
+        column align=center flexGrow=1 gap=4 key=/w/a.jpg
+          image border=primary borderWidth=3 fit=cover height=130 opacity=1 path=/c/a.jpg radius=12 width=209 on:onClick
+          button contentAlign=center controlSize=sm fontSize=11 text=a.jpg variant=secondary width=209 on:onClick,onRightClick
+          row align=center gap=8 justify=center
+            label color=on_surface_variant fontSize=11 maxLines=1 text=1920×1080
+            label color=primary fontSize=11 maxLines=1 text=On DP-2
+        column align=center flexGrow=1 gap=4 key=/w/anime/mitsu/c.jpg
+          image border=outline borderWidth=1 fit=cover height=130 opacity=1 path=/c/c.jpg radius=12 width=209 on:onClick
+          button contentAlign=center controlSize=sm fontSize=11 text=c.jpg variant=ghost width=209 on:onClick,onRightClick
+          box height=0
+        column align=center flexGrow=1 gap=4 key=/w/wallpicker/d.png
+          box border=outline borderWidth=1 fill=surface_variant height=130 opacity=1 radius=12 width=209 on:onClick
+          button contentAlign=center controlSize=sm fontSize=11 text=d.png variant=ghost width=209 on:onClick,onRightClick
+          box height=0
+      row align=start gap=12
+        column align=center flexGrow=1 gap=4 key=/w/e.jpg
+          image border=outline borderWidth=1 fit=cover height=130 opacity=1 path=/c/e.jpg radius=12 width=209 on:onClick
+          button contentAlign=center controlSize=sm fontSize=11 text=e.jpg variant=ghost width=209 on:onClick,onRightClick
+          box height=0
+        column align=center flexGrow=1 gap=4 key=/w/image-5.uhdpaper.com_wallpaper_anime-girl-blonde-short-hair-hd-wallpaper-uhdpaper.com-933@5@l.jpg
+          image border=outline borderWidth=1 fit=cover height=130 opacity=1 path=/c/long.jpg radius=12 width=209 on:onClick
+          button contentAlign=center controlSize=sm fontSize=11 text=image-5.uhdpaper.com_wallpa… variant=ghost width=209 on:onClick,onRightClick
+          box height=0
+        box height=130 opacity=0 width=209
+        box height=130 opacity=0 width=209
+  box height=0
+--- ran
+wallpicker previous --monitor DP-2
+wallpicker list --json --thumbs
 === local: ctrl+r
 column align=stretch flexGrow=1 gap=12
   row align=center gap=8
@@ -1287,6 +1378,7 @@ column align=stretch flexGrow=1 gap=12
     button glyph=layout-grid key=layout text=Flat tooltip=Show everything at once, or browse folder by folder variant=outline on:onClick
     button glyph=copy key=duplicates tooltip=Duplicates variant=ghost on:onClick
     button enabled=true glyph=device-desktop key=now_toggle tooltip=Show what each monitor is showing variant=ghost on:onClick
+    button enabled=true glyph=history key=previous tooltip=Back to the wallpaper before variant=ghost on:onClick
     button enabled=true glyph=arrows-shuffle key=random text=Random tooltip=Apply a random one of those shown (Ctrl+R) variant=outline on:onClick
   row align=center gap=6
     button controlSize=sm fontSize=12 key=tag_mode text=All of tooltip=With several tags on: wallpapers with all of them, or any of them variant=ghost on:onClick
@@ -1359,6 +1451,7 @@ column align=stretch flexGrow=1 gap=12
     button glyph=layout-grid key=layout text=Flat tooltip=Show everything at once, or browse folder by folder variant=outline on:onClick
     button glyph=copy key=duplicates tooltip=Duplicates variant=ghost on:onClick
     button enabled=true glyph=device-desktop key=now_toggle tooltip=Show what each monitor is showing variant=ghost on:onClick
+    button enabled=true glyph=history key=previous tooltip=Back to the wallpaper before variant=ghost on:onClick
     button enabled=true glyph=arrows-shuffle key=random text=Random tooltip=Apply a random one of those shown (Ctrl+R) variant=outline on:onClick
   box height=0
   box height=0
@@ -1420,6 +1513,7 @@ column align=stretch flexGrow=1 gap=12
     button glyph=layout-grid key=layout text=Flat tooltip=Show everything at once, or browse folder by folder variant=outline on:onClick
     button glyph=copy key=duplicates tooltip=Duplicates variant=ghost on:onClick
     button enabled=true glyph=device-desktop key=now_toggle tooltip=Show what each monitor is showing variant=ghost on:onClick
+    button enabled=true glyph=history key=previous tooltip=Back to the wallpaper before variant=ghost on:onClick
     button enabled=true glyph=arrows-shuffle key=random text=Random tooltip=Apply a random one of those shown (Ctrl+R) variant=outline on:onClick
   box height=0
   box height=0
@@ -1484,6 +1578,7 @@ column align=stretch flexGrow=1 gap=12
     button glyph=layout-grid key=layout text=Flat tooltip=Show everything at once, or browse folder by folder variant=outline on:onClick
     button glyph=copy key=duplicates tooltip=Duplicates variant=ghost on:onClick
     button enabled=true glyph=device-desktop key=now_toggle tooltip=Show what each monitor is showing variant=ghost on:onClick
+    button enabled=true glyph=history key=previous tooltip=Back to the wallpaper before variant=ghost on:onClick
     button enabled=true glyph=arrows-shuffle key=random text=Random tooltip=Apply a random one of those shown (Ctrl+R) variant=outline on:onClick
   box height=0
   box height=0
@@ -1548,6 +1643,7 @@ column align=stretch flexGrow=1 gap=12
     button glyph=layout-grid key=layout text=Flat tooltip=Show everything at once, or browse folder by folder variant=outline on:onClick
     button glyph=copy key=duplicates tooltip=Duplicates variant=ghost on:onClick
     button enabled=true glyph=device-desktop key=now_toggle tooltip=Show what each monitor is showing variant=ghost on:onClick
+    button enabled=true glyph=history key=previous tooltip=Back to the wallpaper before variant=ghost on:onClick
     button enabled=true glyph=arrows-shuffle key=random text=Random tooltip=Apply a random one of those shown (Ctrl+R) variant=outline on:onClick
   box height=0
   box height=0
@@ -1612,6 +1708,7 @@ column align=stretch flexGrow=1 gap=12
     button glyph=layout-grid key=layout text=Flat tooltip=Show everything at once, or browse folder by folder variant=outline on:onClick
     button glyph=copy key=duplicates tooltip=Duplicates variant=ghost on:onClick
     button enabled=true glyph=device-desktop key=now_toggle tooltip=Show what each monitor is showing variant=ghost on:onClick
+    button enabled=true glyph=history key=previous tooltip=Back to the wallpaper before variant=ghost on:onClick
     button enabled=true glyph=arrows-shuffle key=random text=Random tooltip=Apply a random one of those shown (Ctrl+R) variant=outline on:onClick
   box height=0
   box height=0
@@ -1674,6 +1771,7 @@ column align=stretch flexGrow=1 gap=12
     button glyph=layout-grid key=layout text=Flat tooltip=Show everything at once, or browse folder by folder variant=outline on:onClick
     button glyph=copy key=duplicates tooltip=Duplicates variant=ghost on:onClick
     button enabled=true glyph=device-desktop key=now_toggle tooltip=Show what each monitor is showing variant=ghost on:onClick
+    button enabled=true glyph=history key=previous tooltip=Back to the wallpaper before variant=ghost on:onClick
     button enabled=true glyph=arrows-shuffle key=random text=Random tooltip=Apply a random one of those shown (Ctrl+R) variant=outline on:onClick
   row align=center gap=6
     button controlSize=sm fontSize=12 key=tag_mode text=All of tooltip=With several tags on: wallpapers with all of them, or any of them variant=ghost on:onClick
@@ -1741,6 +1839,7 @@ column align=stretch flexGrow=1 gap=12
     button glyph=layout-grid key=layout text=Flat tooltip=Show everything at once, or browse folder by folder variant=outline on:onClick
     button glyph=copy key=duplicates tooltip=Duplicates variant=secondary on:onClick
     button enabled=true glyph=device-desktop key=now_toggle tooltip=Show what each monitor is showing variant=ghost on:onClick
+    button enabled=true glyph=history key=previous tooltip=Back to the wallpaper before variant=ghost on:onClick
     button enabled=true glyph=arrows-shuffle key=random text=Random tooltip=Apply a random one of those shown (Ctrl+R) variant=outline on:onClick
   box height=0
   box height=0
@@ -1792,6 +1891,7 @@ column align=stretch flexGrow=1 gap=12
     button glyph=layout-grid key=layout text=Flat tooltip=Show everything at once, or browse folder by folder variant=outline on:onClick
     button glyph=copy key=duplicates tooltip=Duplicates variant=secondary on:onClick
     button enabled=true glyph=device-desktop key=now_toggle tooltip=Show what each monitor is showing variant=ghost on:onClick
+    button enabled=true glyph=history key=previous tooltip=Back to the wallpaper before variant=ghost on:onClick
     button enabled=true glyph=arrows-shuffle key=random text=Random tooltip=Apply a random one of those shown (Ctrl+R) variant=outline on:onClick
   box height=0
   box height=0
@@ -1841,6 +1941,7 @@ column align=stretch flexGrow=1 gap=12
     button glyph=layout-grid key=layout text=Flat tooltip=Show everything at once, or browse folder by folder variant=outline on:onClick
     button glyph=copy key=duplicates tooltip=Duplicates variant=secondary on:onClick
     button enabled=true glyph=device-desktop key=now_toggle tooltip=Show what each monitor is showing variant=ghost on:onClick
+    button enabled=true glyph=history key=previous tooltip=Back to the wallpaper before variant=ghost on:onClick
     button enabled=true glyph=arrows-shuffle key=random text=Random tooltip=Apply a random one of those shown (Ctrl+R) variant=outline on:onClick
   box height=0
   box height=0
@@ -1878,6 +1979,7 @@ column align=stretch flexGrow=1 gap=12
     button glyph=layout-grid key=layout text=Flat tooltip=Show everything at once, or browse folder by folder variant=outline on:onClick
     button glyph=copy key=duplicates tooltip=Duplicates variant=ghost on:onClick
     button enabled=true glyph=device-desktop key=now_toggle tooltip=Show what each monitor is showing variant=ghost on:onClick
+    button enabled=true glyph=history key=previous tooltip=Back to the wallpaper before variant=ghost on:onClick
     button enabled=true glyph=arrows-shuffle key=random text=Random tooltip=Apply a random one of those shown (Ctrl+R) variant=outline on:onClick
   box height=0
   box height=0
@@ -3672,6 +3774,7 @@ column align=stretch flexGrow=1 gap=12
     button glyph=layout-grid key=layout text=Flat tooltip=Show everything at once, or browse folder by folder variant=outline on:onClick
     button glyph=copy key=duplicates tooltip=Duplicates variant=ghost on:onClick
     button enabled=true glyph=device-desktop key=now_toggle tooltip=Show what each monitor is showing variant=ghost on:onClick
+    button enabled=true glyph=history key=previous tooltip=Back to the wallpaper before variant=ghost on:onClick
     button enabled=true glyph=arrows-shuffle key=random text=Random tooltip=Apply a random one of those shown (Ctrl+R) variant=outline on:onClick
   row align=center gap=6
     button controlSize=sm fontSize=12 key=tag_mode text=All of tooltip=With several tags on: wallpapers with all of them, or any of them variant=ghost on:onClick
@@ -3741,6 +3844,7 @@ column align=stretch flexGrow=1 gap=12
     button glyph=layout-grid key=layout text=Flat tooltip=Show everything at once, or browse folder by folder variant=outline on:onClick
     button glyph=copy key=duplicates tooltip=Duplicates variant=ghost on:onClick
     button enabled=true glyph=device-desktop key=now_toggle tooltip=Show what each monitor is showing variant=ghost on:onClick
+    button enabled=true glyph=history key=previous tooltip=Back to the wallpaper before variant=ghost on:onClick
     button enabled=true glyph=arrows-shuffle key=random text=Random tooltip=Apply a random one of those shown (Ctrl+R) variant=outline on:onClick
   row align=center gap=6
     button controlSize=sm fontSize=12 key=tag_mode text=All of tooltip=With several tags on: wallpapers with all of them, or any of them variant=ghost on:onClick
@@ -3778,6 +3882,7 @@ column align=stretch flexGrow=1 gap=12
     button glyph=layout-grid key=layout text=Flat tooltip=Show everything at once, or browse folder by folder variant=outline on:onClick
     button glyph=copy key=duplicates tooltip=Duplicates variant=ghost on:onClick
     button enabled=true glyph=device-desktop key=now_toggle tooltip=Show what each monitor is showing variant=ghost on:onClick
+    button enabled=true glyph=history key=previous tooltip=Back to the wallpaper before variant=ghost on:onClick
     button enabled=true glyph=arrows-shuffle key=random text=Random tooltip=Apply a random one of those shown (Ctrl+R) variant=outline on:onClick
   row align=center gap=6
     button controlSize=sm fontSize=12 key=tag_mode text=All of tooltip=With several tags on: wallpapers with all of them, or any of them variant=ghost on:onClick

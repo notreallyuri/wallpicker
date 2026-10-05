@@ -1,6 +1,6 @@
 id = "wallpicker/wallpicker"
 name = "wallpicker"
-version = "0.14.0"
+version = "0.15.0"
 # runAsync with an argv table needs API 24; right-click menus (panel.openContextMenu) need 28.
 plugin_api = 28
 author = "wallpicker"

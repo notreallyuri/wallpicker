@@ -144,20 +144,58 @@ impl Store {
     /// `--restore` doesn't go looking for it.
     pub fn forget_current(&self, path: &Path) -> Result<()> {
         let mut state = self.load_state()?;
-        let before = state.current.len();
+        let before = state.clone();
         state.current.retain(|_, p| p != path);
-        if state.current.len() != before {
+        // Nothing to go back to either.
+        for h in state.history.values_mut() {
+            h.retain(|p| p != path);
+        }
+        if state != before {
             self.save_state(&state)?;
         }
         Ok(())
     }
 
-    /// Remember that `monitor` now shows `path`.
+    /// Remember that `monitor` now shows `path`; what it showed before goes
+    /// into its history.
     pub fn set_current(&self, monitor: &str, path: &Path) -> Result<()> {
         let mut state = self.load_state()?;
+        if let Some(old) = state.current.get(monitor).cloned()
+            && old != path
+        {
+            let h = state.history.entry(monitor.to_string()).or_default();
+            h.retain(|p| *p != old);
+            h.push(old);
+            if h.len() > crate::settings::HISTORY_LEN {
+                h.remove(0);
+            }
+        }
         state
             .current
             .insert(monitor.to_string(), path.to_path_buf());
+        self.save_state(&state)
+    }
+
+    /// What `monitor` showed before, skipping files that are gone.
+    pub fn previous(&self, monitor: &str) -> Result<Option<PathBuf>> {
+        Ok(self
+            .load_state()?
+            .history
+            .get(monitor)
+            .and_then(|h| h.iter().rev().find(|p| p.is_file()).cloned()))
+    }
+
+    /// `monitor` went back to `path` (from [`Store::previous`]): it leaves the
+    /// history (with any newer, gone files), and nothing new is recorded, so
+    /// going back again goes further back.
+    pub fn went_back(&self, monitor: &str, path: &Path) -> Result<()> {
+        let mut state = self.load_state()?;
+        if let Some(h) = state.history.get_mut(monitor)
+            && let Some(i) = h.iter().rposition(|p| p == path)
+        {
+            h.truncate(i);
+        }
+        state.current.insert(monitor.to_string(), path.to_path_buf());
         self.save_state(&state)
     }
 }

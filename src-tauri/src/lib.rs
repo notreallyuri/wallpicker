@@ -167,6 +167,17 @@ async fn apply_wallpaper(
     .await
 }
 
+/// Back to what each of `monitors` showed before.
+#[tauri::command]
+async fn previous_wallpaper(state: tauri::State<'_, AppState>, monitors: Vec<String>) -> CmdResult<ApplyReport> {
+    let store = state.store.clone();
+    blocking(move || {
+        let backend = store.load_settings()?.wallpaper_backend;
+        hyprpaper::apply_previous(&SystemRunner, &store, backend, &monitors)
+    })
+    .await
+}
+
 /// Move a wallpaper to the trash (recoverable from the file manager), and
 /// forget its favorite, tags and any monitor's "current" entry for it. Only
 /// images inside the wallpaper or download folders are accepted.
@@ -993,6 +1004,7 @@ pub fn run(start_hidden: bool) {
             slideshow_status,
             slideshow_now,
             find_duplicates,
+            previous_wallpaper,
             wallhaven_collections,
             tag_suggestions,
             wallhaven_collection,

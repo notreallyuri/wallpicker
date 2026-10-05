@@ -238,6 +238,47 @@ pub fn apply(args: &[String]) -> i32 {
 }
 
 
+/// `wallpicker previous [--monitor NAME]...`: back to what each monitor
+/// showed before (default: every connected monitor).
+pub fn previous(args: &[String]) -> i32 {
+    let mut monitors = Vec::new();
+    let mut rest = args.iter();
+    while let Some(a) = rest.next() {
+        match a.as_str() {
+            "--monitor" | "-m" => match rest.next() {
+                Some(m) => monitors.push(m.clone()),
+                None => return fail(&"--monitor needs a monitor name"),
+            },
+            other => return fail(&format!("previous: unknown option {other}")),
+        }
+    }
+    let store = Store::new(Dirs::from_env());
+    let settings = match store.load_settings() {
+        Ok(s) => s,
+        Err(e) => return fail(&e),
+    };
+    if monitors.is_empty() {
+        match hyprpaper::list_monitors(&SystemRunner) {
+            Ok(ms) => monitors = ms.into_iter().map(|m| m.name).collect(),
+            Err(e) => return fail(&e),
+        }
+    }
+    match hyprpaper::apply_previous(&SystemRunner, &store, settings.wallpaper_backend, &monitors) {
+        Ok(report) => {
+            let state = store.load_state().unwrap_or_default();
+            for m in &report.applied {
+                println!("{m}: back to {}", state.current.get(m).map_or(String::new(), |p| p.display().to_string()));
+            }
+            for (m, why) in &report.failed {
+                eprintln!("{m}: {why}");
+            }
+            // Nothing went back anywhere: a failure; some did: fine.
+            i32::from(report.applied.is_empty())
+        }
+        Err(e) => fail(&e),
+    }
+}
+
 /// A value and its label, for the plugin's selects.
 #[derive(Serialize)]
 struct Choice {

@@ -201,7 +201,13 @@ pub struct State {
     /// When the slideshow last changed the wallpaper (seconds since the Unix
     /// epoch; 0: never).
     pub slideshow_changed: u64,
+    /// What each monitor showed before, oldest first (see
+    /// [`HISTORY_LEN`]): `wallpicker previous` goes back through it.
+    pub history: BTreeMap<String, Vec<PathBuf>>,
 }
+
+/// Wallpapers remembered per monitor for going back.
+pub const HISTORY_LEN: usize = 30;
 
 /// Change the wallpaper every few minutes, picking at random like
 /// `wallpicker random`. Something has to call `wallpicker slideshow tick`

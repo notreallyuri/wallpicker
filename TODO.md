@@ -47,12 +47,12 @@ in Settings.
 
 ## Library
 
-- [ ] History per monitor: `wallpicker previous`, "Previous" in the tray and the panel.
+- [x] History per monitor: `wallpicker previous`, "Previous" in the app, tray and panel.
 - [ ] Export / import favorites, tags and fits (one file), for backups and moving machines.
 - [ ] Wallhaven: skip what your account blacklists (tags and uploaders, from `/api/v1/settings`).
 
 ## Project
 
-- [ ] Version control (`git init`): there's no history yet.
+- [x] Version control (`git init`).
 - [ ] Packaging: an AUR PKGBUILD or install script; a systemd user service for
   `wallpicker slideshow run` when Noctalia isn't running.

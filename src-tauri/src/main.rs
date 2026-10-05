@@ -11,6 +11,7 @@ fn main() {
         Some("filters") => std::process::exit(wallpicker_lib::cli::filters(&args[1..])),
         Some("settings") => std::process::exit(wallpicker_lib::cli::settings(&args[1..])),
         Some("slideshow") => std::process::exit(wallpicker_lib::cli::slideshow(&args[1..])),
+        Some("previous") => std::process::exit(wallpicker_lib::cli::previous(&args[1..])),
         Some("random") => std::process::exit(wallpicker_lib::cli::random(&args[1..])),
         Some("favorite") => std::process::exit(wallpicker_lib::cli::favorite(&args[1..])),
         Some("tag") => std::process::exit(wallpicker_lib::cli::tag(&args[1..])),
@@ -49,6 +50,7 @@ fn main() {
              download and apply a result from `search --json`\n  \
              wallpicker random [--favorites] [--tag T]... [--any] [--folder DIR] [--monitor NAME]... [--each]\n                                     \
              apply a random wallpaper (for keybinds)\n  \
+             wallpicker previous [--monitor NAME]...  back to the wallpaper before (every monitor by default)\n  \
              wallpicker slideshow tick|run|status  change it every few minutes (Settings → Slideshow)\n  \
              wallpicker favorite <image> [--off]  pin to the top, or unpin\n  \
              wallpicker tag <image> add|remove <tag>\n  \

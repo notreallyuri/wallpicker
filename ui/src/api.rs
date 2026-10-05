@@ -246,6 +246,15 @@ pub async fn resolve_duplicates(keep: &str, others: &[String]) -> Result<Resolve
     call("resolve_duplicates", &Args { keep, others }).await
 }
 
+/// Back to what each of `monitors` showed before.
+pub async fn previous_wallpaper(monitors: &[String]) -> Result<ApplyReport, String> {
+    #[derive(Serialize)]
+    struct Args<'a> {
+        monitors: &'a [String],
+    }
+    call("previous_wallpaper", &Args { monitors }).await
+}
+
 /// Open the file manager on a library image, selected when it can do that.
 pub async fn show_in_folder(path: &str) -> Result<(), String> {
     #[derive(Serialize)]

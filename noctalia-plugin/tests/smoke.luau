@@ -101,6 +101,8 @@ step("local: menu all, copy, show, favorite")
 
 mock.fire(mock.byKey("random"), "onClick")
 step("local: random")
+mock.fire(mock.byKey("previous"), "onClick")
+step("local: previous (on the target monitor)")
 onKey("ctrl+r", true)
 step("local: ctrl+r")
 

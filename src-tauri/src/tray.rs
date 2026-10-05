@@ -59,9 +59,10 @@ pub fn hides_on_close(app: &AppHandle) -> bool {
 pub fn setup(app: &AppHandle) -> tauri::Result<()> {
     let toggle_item = MenuItem::with_id(app, "toggle", "Show / hide wallpicker", true, None::<&str>)?;
     let random = MenuItem::with_id(app, "random", "Random wallpaper", true, None::<&str>)?;
+    let previous = MenuItem::with_id(app, "previous", "Previous wallpaper", true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "Quit wallpicker", true, None::<&str>)?;
     let separator = PredefinedMenuItem::separator(app)?;
-    let menu = Menu::with_items(app, &[&toggle_item, &random, &separator, &quit])?;
+    let menu = Menu::with_items(app, &[&toggle_item, &random, &previous, &separator, &quit])?;
     let mut tray = TrayIconBuilder::with_id("main")
         .tooltip("wallpicker")
         .menu(&menu)
@@ -70,6 +71,10 @@ pub fn setup(app: &AppHandle) -> tauri::Result<()> {
             // Like `wallpicker random`: every monitor, avoiding what's on.
             "random" => {
                 std::thread::spawn(|| crate::cli::random(&[]));
+            }
+            // Like `wallpicker previous`: every monitor.
+            "previous" => {
+                std::thread::spawn(|| crate::cli::previous(&[]));
             }
             "quit" => app.exit(0),
             _ => {}

@@ -11,7 +11,8 @@ A Noctalia v5 plugin: a bar icon that opens wallpicker in a panel.
   - **Tag chips**: click your tags to filter; "All of" / "Any of" decides how several combine.
     One line (selected first), with **Expand** for the rest.
   - **Now showing** (the monitor button): what each monitor shows; click one to make it the target.
-  - **Random**: applies a random one of the wallpapers shown.
+  - **Random**: applies a random one of the wallpapers shown. The history button goes back to
+    the wallpaper before.
   - Sort, layout and All/Any are remembered.
 - **Online**: Wallhaven, Konachan or yande.re, with a sort and paging, and each provider's other
   filters as saved in the app. Already-downloaded results show ✓; the border shows the rating:

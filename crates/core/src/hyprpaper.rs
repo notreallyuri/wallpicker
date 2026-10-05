@@ -279,6 +279,32 @@ pub fn apply_and_remember_with(
     Ok(report)
 }
 
+/// Put back what each of `monitors` showed before ([`Store::previous`]),
+/// with its fit; monitors with nothing earlier are reported as failed.
+pub fn apply_previous(runner: &dyn Runner, store: &Store, backend: WallpaperBackend, monitors: &[String]) -> Result<ApplyReport> {
+    let fits = Fits::load(store);
+    let noctalia_enabled = match backend {
+        WallpaperBackend::Noctalia => crate::noctalia::wallpaper_enabled_on_disk(),
+        WallpaperBackend::Hyprpaper => None,
+    };
+    let mut report = ApplyReport::default();
+    for m in monitors {
+        let Some(path) = store.previous(m)? else {
+            report.failed.push((m.clone(), "nothing earlier to go back to".into()));
+            continue;
+        };
+        let applied = match backend {
+            WallpaperBackend::Hyprpaper => apply(runner, m, &path, fits.of(m, &path)),
+            WallpaperBackend::Noctalia => crate::noctalia::apply(runner, m, &path, noctalia_enabled),
+        };
+        match applied.and_then(|()| store.went_back(m, &path)) {
+            Ok(()) => report.applied.push(m.clone()),
+            Err(e) => report.failed.push((m.clone(), e.to_string())),
+        }
+    }
+    Ok(report)
+}
+
 /// Outcome of [`restore`].
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize)]
 pub struct RestoreReport {
@@ -672,6 +698,42 @@ mod tests {
         let report = reapply(&mock, &store, &|m, _| m == "DP-1").unwrap();
         assert_eq!(report.applied, ["DP-1"]);
         assert_eq!(mock.calls()[1], format!("hyprctl hyprpaper wallpaper DP-1,{p},tile"));
+    }
+
+    #[test]
+    fn previous_goes_back_through_the_history() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = Store::new(Dirs::under(tmp.path()));
+        let (a, b, c) = (temp_image(tmp.path(), "a.png"), temp_image(tmp.path(), "b.png"), temp_image(tmp.path(), "c.png"));
+        let m = vec!["DP-1".to_string()];
+        for p in [&a, &b, &c] {
+            apply_and_remember(&Mock::new(vec![]), &store, &m, p).unwrap();
+        }
+        assert_eq!(store.load_state().unwrap().history["DP-1"], vec![a.clone(), b.clone()]);
+
+        // Back to b, then to a: going back doesn't record.
+        let mock = Mock::new(vec![]);
+        let r = apply_previous(&mock, &store, WallpaperBackend::Hyprpaper, &m).unwrap();
+        assert_eq!(r.applied, ["DP-1"]);
+        assert_eq!(mock.calls(), [format!("hyprctl hyprpaper wallpaper DP-1,{}", b.display())]);
+        assert_eq!(store.load_state().unwrap().current["DP-1"], b);
+        apply_previous(&Mock::new(vec![]), &store, WallpaperBackend::Hyprpaper, &m).unwrap();
+        assert_eq!(store.load_state().unwrap().current["DP-1"], a);
+        // Nothing earlier: reported, nothing run.
+        let mock = Mock::new(vec![]);
+        let r = apply_previous(&mock, &store, WallpaperBackend::Hyprpaper, &m).unwrap();
+        assert!(r.applied.is_empty() && r.failed[0].1.contains("nothing earlier"));
+        assert!(mock.calls().is_empty());
+
+        // A new apply records again; a file that's gone is skipped; a
+        // trashed one leaves the history.
+        apply_and_remember(&Mock::new(vec![]), &store, &m, &c).unwrap();
+        apply_and_remember(&Mock::new(vec![]), &store, &m, &b).unwrap();
+        assert_eq!(store.load_state().unwrap().history["DP-1"], vec![a.clone(), c.clone()]);
+        fs::remove_file(&c).unwrap();
+        assert_eq!(store.previous("DP-1").unwrap(), Some(a.clone()));
+        store.forget_current(&a).unwrap();
+        assert_eq!(store.previous("DP-1").unwrap(), None);
     }
 
     const MONITORS_JSON: &str = r#"[

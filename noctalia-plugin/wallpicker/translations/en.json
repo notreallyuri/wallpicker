@@ -104,6 +104,8 @@
   "open_app": "Open wallpicker",
   "open_page": "Open page",
   "path_copied": "Path copied",
+  "previous_none": "Nothing earlier to go back to",
+  "previous_tooltip": "Back to the wallpaper before",
   "private": "private",
   "random": "Random",
   "random_tooltip": "Apply a random one of those shown (Ctrl+R)",

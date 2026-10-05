@@ -83,6 +83,24 @@ pub(crate) fn MonitorBar() -> impl IntoView {
                         </ToggleGroupItem>
                     </Show>
                 </ToggleGroup>
+                <Button
+                    class="ml-auto"
+                    variant=ButtonVariant::Ghost
+                    attr:title="Back to the wallpaper before, on the selected monitors"
+                    on_click=move |_| {
+                        let targets = ctx.targets.get_untracked();
+                        spawn_local(async move {
+                            match api::previous_wallpaper(&targets).await {
+                                Ok(r) if !r.applied.is_empty() => ctx.info(format!("Back on {}", r.applied.join(", "))),
+                                Ok(_) => ctx.info("Nothing earlier to go back to"),
+                                Err(e) => ctx.error_with("Could not go back", &e),
+                            }
+                            ctx.refresh_state().await;
+                        });
+                    }
+                >
+                    "↶ Previous"
+                </Button>
             </Show>
         </div>
     }

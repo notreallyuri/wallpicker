@@ -491,6 +491,29 @@ return function(app)
     app.apply(from[math.random(#from)].path)
   end
 
+  -- Back to what the target monitor (or every monitor) showed before.
+  function app.previousWallpaper()
+    local cmd = app.command()
+    if cmd == nil or S.applyingPath ~= "" then
+      return
+    end
+    local argv = { cmd, "previous" }
+    local target = app.targetMonitor()
+    if target ~= nil then
+      table.insert(argv, "--monitor")
+      table.insert(argv, target)
+    end
+    S.applyingPath = "*previous*"
+    app.render()
+    noctalia.runAsync(argv, function(res)
+      S.applyingPath = ""
+      if res == nil or res.exitCode ~= 0 then
+        noctalia.notify(app.tr("title"), app.tr("previous_none"))
+      end
+      app.loadLibrary()
+    end, app.LIST_TIMEOUT_MS)
+  end
+
   function app.localControls()
     local nested = S.prefs.layout == "nested"
     return ui.row({ gap = 8, align = "center" }, {
@@ -567,6 +590,14 @@ return function(app)
           Library.savePrefs(noctalia, S.prefs)
           app.render()
         end,
+      }),
+      ui.button({
+        key = "previous",
+        glyph = "history",
+        tooltip = app.tr("previous_tooltip"),
+        variant = "ghost",
+        enabled = S.applyingPath == "",
+        onClick = app.previousWallpaper,
       }),
       ui.button({
         key = "random",

@@ -63,6 +63,8 @@ manager (Settings → General → Wallpaper backend).
   brings the window back instead of starting a second app; `wallpicker --toggle` shows or hides it
   (for a keybind), and `wallpicker --tray` starts with only the tray icon (for an autostart).
   The tray needs a tray host in the bar (Noctalia has one) and libappindicator.
+- **Previous**: each monitor remembers its last 30 wallpapers; **↶ Previous** (in the monitor
+  bar, the tray menu, the panel, or `wallpicker previous` for a keybind) goes back through them.
 - **Saved choices**: every applied wallpaper is written to `state.json`, and
   `wallpicker --restore` re-applies them at login.
 - **Settings**: the cog at the top right.
@@ -117,6 +119,7 @@ wallpicker random --each                    # a different one on each monitor
 wallpicker random --favorites -m DP-1       # a random favorite on DP-1
 wallpicker random --tag mitsu --tag dark    # with both tags (add --any for either)
 wallpicker random --folder ~/Pictures/wpp/anime
+wallpicker previous                         # back to the wallpaper before (-m DP-1 for one monitor)
 ```
 
 It avoids what's already showing when there's anything else to pick.
