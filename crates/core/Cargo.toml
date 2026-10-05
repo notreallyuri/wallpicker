@@ -1,0 +1,22 @@
+[package]
+name = "wallpicker-core"
+description = "Logic shared by the wallpicker backend and UI: monitors, hyprpaper, settings, Wallhaven"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[features]
+# `native` pulls in everything that touches the OS (processes, files, images).
+# The wasm UI depends on this crate with default-features = false and only
+# gets the plain data types.
+default = ["native"]
+native = ["dep:image"]
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp"], optional = true }
+
+[dev-dependencies]
+tempfile = "3"

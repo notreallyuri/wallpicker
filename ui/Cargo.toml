@@ -1,0 +1,19 @@
+[package]
+name = "wallpicker-ui"
+description = "Leptos (CSR) frontend for wallpicker, built with trunk"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+# Only the plain data types; no filesystem or process code in the browser.
+wallpicker-core = { path = "../crates/core", default-features = false }
+leptos = { version = "0.8", features = ["csr"] }
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+serde = { version = "1", features = ["derive"] }
+serde-wasm-bindgen = "0.6"
+console_error_panic_hook = "0.1"
+js-sys = "0.3"
+web-sys = { version = "0.3", features = ["Document", "Element", "HtmlElement", "KeyboardEvent", "NodeList", "Storage", "Window"] }
+nocomponents = { version = "0.1.0", features = ["badge", "button", "card", "checkbox", "context_menu", "dialog", "dropdown_menu", "empty", "field", "icons", "input", "label", "native_select", "pagination", "primitives", "select", "separator", "sheet", "sidebar", "skeleton", "spinner", "switch", "tabs", "textarea", "theme", "toast", "toggle", "toggle_group", "tooltip"] }

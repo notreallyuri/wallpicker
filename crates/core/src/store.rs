@@ -1,0 +1,407 @@
+use std::fs;
+use std::io::Write;
+use std::path::{Path, PathBuf};
+
+use crate::catalog::Catalog;
+use crate::error::Result;
+use crate::settings::{Settings, State};
+use crate::online::OnlineFilters;
+use crate::wallhaven::SearchQuery;
+
+/// Where wallpicker keeps its files (XDG base directories).
+#[derive(Debug, Clone)]
+pub struct Dirs {
+    /// `config.json`
+    pub config: PathBuf,
+    /// `state.json`
+    pub state: PathBuf,
+    /// `library.json` (favorites and tags): user data, unlike the state.
+    pub data: PathBuf,
+    /// Thumbnails
+    pub cache: PathBuf,
+}
+
+impl Dirs {
+    pub fn from_env() -> Dirs {
+        Dirs::from_lookup(|k| std::env::var_os(k).map(PathBuf::from))
+    }
+
+    /// `lookup` returns an environment variable. Per the XDG spec, relative
+    /// values are ignored.
+    pub fn from_lookup(lookup: impl Fn(&str) -> Option<PathBuf>) -> Dirs {
+        let home = lookup("HOME").unwrap_or_else(|| PathBuf::from("."));
+        let pick = |var: &str, fallback: &[&str]| -> PathBuf {
+            let base = lookup(var)
+                .filter(|p| p.is_absolute())
+                .unwrap_or_else(|| fallback.iter().fold(home.clone(), |p, s| p.join(s)));
+            base.join("wallpicker")
+        };
+        Dirs {
+            config: pick("XDG_CONFIG_HOME", &[".config"]),
+            state: pick("XDG_STATE_HOME", &[".local", "state"]),
+            data: pick("XDG_DATA_HOME", &[".local", "share"]),
+            cache: pick("XDG_CACHE_HOME", &[".cache"]),
+        }
+    }
+
+    /// Everything under one root. Used by tests.
+    pub fn under(root: &Path) -> Dirs {
+        Dirs {
+            config: root.join("config"),
+            state: root.join("state"),
+            data: root.join("data"),
+            cache: root.join("cache"),
+        }
+    }
+}
+
+/// Loads and saves `Settings`, `State` and the `Catalog`.
+#[derive(Debug, Clone)]
+pub struct Store {
+    dirs: Dirs,
+}
+
+impl Store {
+    pub fn new(dirs: Dirs) -> Store {
+        Store { dirs }
+    }
+
+    pub fn dirs(&self) -> &Dirs {
+        &self.dirs
+    }
+
+    fn settings_path(&self) -> PathBuf {
+        self.dirs.config.join("config.json")
+    }
+
+    fn state_path(&self) -> PathBuf {
+        self.dirs.state.join("state.json")
+    }
+
+    fn online_filters_path(&self) -> PathBuf {
+        self.dirs.state.join("online.json")
+    }
+
+    /// Where the Wallhaven filters were kept before there were providers.
+    fn old_wallhaven_filters_path(&self) -> PathBuf {
+        self.dirs.state.join("wallhaven.json")
+    }
+
+    /// The hyprpaper config wallpicker keeps for `source =`.
+    pub fn hyprpaper_conf_path(&self) -> PathBuf {
+        self.dirs.state.join("hyprpaper.conf")
+    }
+
+    /// Rewrite the hyprpaper config from the saved state and fit mode.
+    pub fn write_hyprpaper_conf(&self) -> Result<()> {
+        let state = self.load_state()?;
+        // Each monitor with its fit: the wallpaper's, the monitor's, or the
+        // general one.
+        let fits = crate::hyprpaper::Fits::load(self);
+        let text = crate::hyprpaper::config_for(&state, &|m, p| fits.of(m, p));
+        atomic_write(&self.hyprpaper_conf_path(), text.as_bytes(), false)
+    }
+
+    fn catalog_path(&self) -> PathBuf {
+        self.dirs.data.join("library.json")
+    }
+
+    /// A missing file means defaults. A file that exists but can't be parsed is
+    /// an error, so a typo never silently resets the user's config.
+    pub fn load_settings(&self) -> Result<Settings> {
+        match fs::read_to_string(self.settings_path()) {
+            Ok(text) => Ok(serde_json::from_str::<Settings>(&text)?.sanitized()),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(Settings::default()),
+            Err(e) => Err(e.into()),
+        }
+    }
+
+    pub fn save_settings(&self, settings: &Settings) -> Result<()> {
+        let text = serde_json::to_string_pretty(&settings.clone().sanitized())?;
+        // The file may hold an API key, so keep it private to the user.
+        atomic_write(&self.settings_path(), text.as_bytes(), true)?;
+        // The fit mode is part of the hyprpaper config.
+        self.write_hyprpaper_conf()
+    }
+
+    pub fn load_state(&self) -> Result<State> {
+        match fs::read_to_string(self.state_path()) {
+            Ok(text) => Ok(serde_json::from_str(&text)?),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(State::default()),
+            Err(e) => Err(e.into()),
+        }
+    }
+
+    pub fn save_state(&self, state: &State) -> Result<()> {
+        let text = serde_json::to_string_pretty(state)?;
+        atomic_write(&self.state_path(), text.as_bytes(), false)?;
+        // Every change to what's applied goes through here, so the hyprpaper
+        // config can't fall out of step with it.
+        self.write_hyprpaper_conf()
+    }
+
+    /// Forget `path` as any monitor's current wallpaper (it was deleted), so
+    /// `--restore` doesn't go looking for it.
+    pub fn forget_current(&self, path: &Path) -> Result<()> {
+        let mut state = self.load_state()?;
+        let before = state.current.len();
+        state.current.retain(|_, p| p != path);
+        if state.current.len() != before {
+            self.save_state(&state)?;
+        }
+        Ok(())
+    }
+
+    /// Remember that `monitor` now shows `path`.
+    pub fn set_current(&self, monitor: &str, path: &Path) -> Result<()> {
+        let mut state = self.load_state()?;
+        state
+            .current
+            .insert(monitor.to_string(), path.to_path_buf());
+        self.save_state(&state)
+    }
+}
+
+impl Store {
+    /// The online filters from last time, or the defaults. Without
+    /// `online.json`, the older `wallhaven.json` (Wallhaven filters only) is
+    /// carried over.
+    pub fn load_online_filters(&self) -> Result<OnlineFilters> {
+        match fs::read_to_string(self.online_filters_path()) {
+            Ok(text) => return Ok(serde_json::from_str::<OnlineFilters>(&text)?.filters_only()),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+            Err(e) => return Err(e.into()),
+        }
+        match fs::read_to_string(self.old_wallhaven_filters_path()) {
+            Ok(text) => Ok(OnlineFilters {
+                wallhaven: serde_json::from_str::<SearchQuery>(&text)?,
+                ..OnlineFilters::default()
+            }
+            .filters_only()),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(OnlineFilters::default()),
+            Err(e) => Err(e.into()),
+        }
+    }
+
+    pub fn save_online_filters(&self, filters: &OnlineFilters) -> Result<()> {
+        let text = serde_json::to_string_pretty(&filters.clone().filters_only())?;
+        atomic_write(&self.online_filters_path(), text.as_bytes(), false)
+    }
+
+    /// Like the settings, a file that can't be parsed is an error rather than
+    /// an empty catalog, so a bad edit never wipes the user's tags.
+    pub fn load_catalog(&self) -> Result<Catalog> {
+        match fs::read_to_string(self.catalog_path()) {
+            Ok(text) => Ok(serde_json::from_str(&text)?),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(Catalog::default()),
+            Err(e) => Err(e.into()),
+        }
+    }
+
+    /// Load, change and save the catalog, returning the saved version. Callers
+    /// that can run concurrently must serialize calls themselves.
+    pub fn update_catalog(&self, change: impl FnOnce(&mut Catalog)) -> Result<Catalog> {
+        let mut catalog = self.load_catalog()?;
+        change(&mut catalog);
+        let text = serde_json::to_string_pretty(&catalog)?;
+        atomic_write(&self.catalog_path(), text.as_bytes(), false)?;
+        // A wallpaper's own fit is part of the hyprpaper config. Best effort:
+        // a tag edit shouldn't fail over it, and the next apply rewrites it.
+        let _ = self.write_hyprpaper_conf();
+        Ok(catalog)
+    }
+}
+
+/// Write to a temporary file in the same directory, then rename over the
+/// target, so a crash can't leave a half-written file.
+fn atomic_write(path: &Path, bytes: &[u8], private: bool) -> Result<()> {
+    let dir = path.parent().unwrap_or_else(|| Path::new("."));
+    fs::create_dir_all(dir)?;
+
+    let tmp = path.with_extension("json.tmp");
+    let mut opts = fs::OpenOptions::new();
+    opts.write(true).create(true).truncate(true);
+    #[cfg(unix)]
+    if private {
+        use std::os::unix::fs::OpenOptionsExt;
+        opts.mode(0o600);
+    }
+    #[cfg(not(unix))]
+    let _ = private;
+
+    let mut file = opts.open(&tmp)?;
+    file.write_all(bytes)?;
+    file.sync_all()?;
+    drop(file);
+    fs::rename(&tmp, path)?;
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+
+    #[test]
+    fn xdg_defaults_and_overrides() {
+        let env: HashMap<&str, &str> = HashMap::from([("HOME", "/home/u")]);
+        let d = Dirs::from_lookup(|k| env.get(k).map(PathBuf::from));
+        assert_eq!(d.config, PathBuf::from("/home/u/.config/wallpicker"));
+        assert_eq!(d.state, PathBuf::from("/home/u/.local/state/wallpicker"));
+        assert_eq!(d.cache, PathBuf::from("/home/u/.cache/wallpicker"));
+        assert_eq!(d.data, PathBuf::from("/home/u/.local/share/wallpicker"));
+
+        let env: HashMap<&str, &str> = HashMap::from([
+            ("HOME", "/home/u"),
+            ("XDG_CONFIG_HOME", "/cfg"),
+            ("XDG_CACHE_HOME", "relative/ignored"),
+        ]);
+        let d = Dirs::from_lookup(|k| env.get(k).map(PathBuf::from));
+        assert_eq!(d.config, PathBuf::from("/cfg/wallpicker"));
+        assert_eq!(d.cache, PathBuf::from("/home/u/.cache/wallpicker"));
+    }
+
+    #[test]
+    fn settings_round_trip_and_defaults() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = Store::new(Dirs::under(tmp.path()));
+
+        assert_eq!(store.load_settings().unwrap(), Settings::default());
+
+        let s = Settings {
+            recursive: false,
+            wallhaven_api_key: Some("secret".into()),
+            ..Settings::default()
+        };
+        store.save_settings(&s).unwrap();
+        assert_eq!(store.load_settings().unwrap(), s);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn settings_file_is_private() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempfile::tempdir().unwrap();
+        let store = Store::new(Dirs::under(tmp.path()));
+        store.save_settings(&Settings::default()).unwrap();
+        let mode = fs::metadata(store.settings_path())
+            .unwrap()
+            .permissions()
+            .mode();
+        assert_eq!(mode & 0o777, 0o600);
+    }
+
+    #[test]
+    fn corrupt_settings_are_an_error_not_a_reset() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = Store::new(Dirs::under(tmp.path()));
+        fs::create_dir_all(&store.dirs().config).unwrap();
+        fs::write(store.settings_path(), "{ nope").unwrap();
+        assert!(store.load_settings().is_err());
+    }
+
+    #[test]
+    fn state_remembers_each_monitor() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = Store::new(Dirs::under(tmp.path()));
+        assert!(store.load_state().unwrap().current.is_empty());
+
+        store.set_current("DP-1", Path::new("/a.png")).unwrap();
+        store.set_current("DP-2", Path::new("/b.png")).unwrap();
+        store.set_current("DP-1", Path::new("/c.png")).unwrap();
+
+        let state = store.load_state().unwrap();
+        assert_eq!(state.current.len(), 2);
+        assert_eq!(state.current["DP-1"], PathBuf::from("/c.png"));
+        assert_eq!(state.current["DP-2"], PathBuf::from("/b.png"));
+
+        // The hyprpaper config follows the state.
+        let conf = fs::read_to_string(store.hyprpaper_conf_path()).unwrap();
+        assert!(conf.contains("monitor = DP-1\n    path = /c.png"));
+        assert!(conf.contains("monitor = DP-2\n    path = /b.png"));
+
+        store.forget_current(Path::new("/b.png")).unwrap();
+        let conf = fs::read_to_string(store.hyprpaper_conf_path()).unwrap();
+        assert!(!conf.contains("/b.png"));
+        let state = store.load_state().unwrap();
+        assert_eq!(state.current.len(), 1);
+        assert!(state.current.contains_key("DP-1"));
+    }
+
+    #[test]
+    fn online_filters_round_trip_without_text_or_paging() {
+        use crate::moebooru::{MoebooruQuery, MoebooruSort};
+        use crate::online::Provider;
+        use crate::wallhaven::Sorting;
+        let tmp = tempfile::tempdir().unwrap();
+        let store = Store::new(Dirs::under(tmp.path()));
+        assert_eq!(store.load_online_filters().unwrap(), OnlineFilters::default());
+
+        let f = OnlineFilters {
+            provider: Provider::Konachan,
+            wallhaven: SearchQuery {
+                q: "forest".into(),
+                page: 4,
+                sorting: Sorting::Favorites,
+                ..SearchQuery::default()
+            },
+            konachan: MoebooruQuery {
+                tags: "night".into(),
+                sorting: MoebooruSort::Score,
+                ..MoebooruQuery::default()
+            },
+            yandere: MoebooruQuery {
+                sorting: MoebooruSort::Random,
+                ..MoebooruQuery::default()
+            },
+        };
+        store.save_online_filters(&f).unwrap();
+        let loaded = store.load_online_filters().unwrap();
+        assert_eq!(loaded.provider, Provider::Konachan);
+        assert_eq!(loaded.wallhaven.sorting, Sorting::Favorites);
+        assert_eq!((loaded.wallhaven.q.as_str(), loaded.wallhaven.page), ("", 1));
+        assert_eq!(loaded.konachan.sorting, MoebooruSort::Score);
+        assert_eq!(loaded.yandere.sorting, MoebooruSort::Random);
+        assert_eq!(loaded.konachan.tags, "");
+    }
+
+    #[test]
+    fn old_wallhaven_filters_are_carried_over() {
+        use crate::wallhaven::Sorting;
+        let tmp = tempfile::tempdir().unwrap();
+        let store = Store::new(Dirs::under(tmp.path()));
+        fs::create_dir_all(&store.dirs().state).unwrap();
+        let old = SearchQuery {
+            sorting: Sorting::Views,
+            ..SearchQuery::default()
+        };
+        fs::write(
+            store.old_wallhaven_filters_path(),
+            serde_json::to_string(&old).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(store.load_online_filters().unwrap().wallhaven.sorting, Sorting::Views);
+    }
+
+    #[test]
+    fn catalog_round_trips_and_corruption_is_an_error() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = Store::new(Dirs::under(tmp.path()));
+        assert_eq!(store.load_catalog().unwrap(), Catalog::default());
+
+        let saved = store
+            .update_catalog(|c| {
+                c.set_favorite(Path::new("/a.png"), true);
+                c.add_tag(Path::new("/a.png"), "dark");
+            })
+            .unwrap();
+        assert_eq!(store.load_catalog().unwrap(), saved);
+        assert!(saved.is_favorite(Path::new("/a.png")));
+
+        fs::write(store.catalog_path(), "{ nope").unwrap();
+        assert!(store.load_catalog().is_err());
+        // A failed load must not be "fixed" by saving over it.
+        assert!(store.update_catalog(|_| {}).is_err());
+        assert_eq!(fs::read_to_string(store.catalog_path()).unwrap(), "{ nope");
+    }
+}

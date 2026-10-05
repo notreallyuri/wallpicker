@@ -1,0 +1,5 @@
+[style]
+css = "styles/globals.css"
+
+[paths]
+components = "src/components/nc"

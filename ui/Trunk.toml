@@ -1,0 +1,10 @@
+[build]
+target = "index.html"
+dist = "dist"
+
+[watch]
+# Also rebuild when the shared types change.
+watch = ["src", "index.html", "styles", "../crates/core/src"]
+
+[tools]
+tailwindcss = "4.3.0"
