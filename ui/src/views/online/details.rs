@@ -11,6 +11,7 @@ use super::tile::{RemoteTiles, likes_label};
 use crate::api;
 use crate::components::nc::prelude::*;
 use crate::ctx::Ctx;
+use crate::components::tip::Tip;
 
 /// Details of the wallpaper with this key, once loaded.
 type Loaded = Option<(String, Result<Details, String>)>;
@@ -149,14 +150,20 @@ fn DetailsBody(w: OnlineWallpaper, info: RwSignal<Loaded>) -> impl IntoView {
                             .map(|url| {
                                 let title = url.clone();
                                 view! {
-                                    <Button
-                                        size=ButtonSize::Xs
-                                        variant=ButtonVariant::Outline
-                                        attr:title=title
-                                        on_click=move |_| open(url.clone())
-                                    >
-                                        "Open source"
-                                    </Button>
+                                    <Tip text=title>
+                                        {
+                                            let url = url.clone();
+                                            view! {
+                                                <Button
+                                                    size=ButtonSize::Xs
+                                                    variant=ButtonVariant::Outline
+                                                    on_click=move |_| open(url.clone())
+                                                >
+                                                    "Open source"
+                                                </Button>
+                                            }
+                                        }
+                                    </Tip>
                                 }
                             })}
                     </div>
@@ -168,17 +175,24 @@ fn DetailsBody(w: OnlineWallpaper, info: RwSignal<Loaded>) -> impl IntoView {
                             tags.into_iter()
                                 .map(|t| {
                                     let q = t.query.clone();
+                                    let name = t.name.clone();
                                     view! {
                                         // The category, where the provider has one,
                                         // shows on hover.
-                                        <Button
-                                            size=ButtonSize::Xs
-                                            variant=ButtonVariant::Secondary
-                                            attr:title=t.category.clone()
-                                            on_click=move |_| search(q.clone())
-                                        >
-                                            {t.name.clone()}
-                                        </Button>
+                                        <Tip text=t.category.clone()>
+                                            {
+                                                let (q, name) = (q.clone(), name.clone());
+                                                view! {
+                                                    <Button
+                                                        size=ButtonSize::Xs
+                                                        variant=ButtonVariant::Secondary
+                                                        on_click=move |_| search(q.clone())
+                                                    >
+                                                        {name.clone()}
+                                                    </Button>
+                                                }
+                                            }
+                                        </Tip>
                                     }
                                 })
                                 .collect_view()

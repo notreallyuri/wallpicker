@@ -13,6 +13,7 @@ use crate::api;
 use crate::components::nc::prelude::*;
 use crate::ctx::Ctx;
 use crate::views::Choice;
+use crate::components::tip::Tip;
 
 
 const SECTION_GENERAL: &str = "general";
@@ -1220,9 +1221,9 @@ fn BackupPane() -> impl IntoView {
                 </p>
                 <div class="flex flex-wrap items-center gap-2 text-sm">
                     <span class="text-muted-foreground">"Saved in"</span>
-                    <code class="max-w-full truncate rounded-lg bg-muted px-2 py-1 text-xs" title=move || folder.get()>
-                        {move || folder.get()}
-                    </code>
+                    <Tip text=folder class="min-w-0 max-w-full">
+                        <code class="block truncate rounded-lg bg-muted px-2 py-1 text-xs">{move || folder.get()}</code>
+                    </Tip>
                     <Button size=ButtonSize::Sm variant=ButtonVariant::Outline disabled=busy on_click=move |_| move_folder(false)>
                         "Change…"
                     </Button>

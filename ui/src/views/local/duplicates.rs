@@ -151,10 +151,15 @@ fn CopyTile(item: DuplicateItem, index: usize, keep: RwSignal<usize>) -> impl In
     });
     let kept = move || keep.get() == index;
     let name = file_name(&item);
+    let folder = item
+        .path
+        .parent()
+        .and_then(|p| p.file_name())
+        .map(|f| format!("in {}", f.to_string_lossy()))
+        .unwrap_or_default();
     view! {
         <button
             type="button"
-            title=item.path.display().to_string()
             on:click=move |_| keep.set(index)
             class=move || {
                 format!(
@@ -173,6 +178,8 @@ fn CopyTile(item: DuplicateItem, index: usize, keep: RwSignal<usize>) -> impl In
                 }>{move || if kept() { "Keep" } else { "Trash" }}</span>
             </div>
             <span class="truncate">{name}</span>
+            // Copies often share a name: where each one is.
+            <span class="truncate text-muted-foreground">{folder}</span>
             <span class="text-muted-foreground">{format!("{}×{} · {}", item.width, item.height, megabytes(item.size))}</span>
         </button>
     }

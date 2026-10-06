@@ -12,6 +12,7 @@ use super::Online;
 use crate::api;
 use crate::components::nc::prelude::*;
 use crate::ctx::Ctx;
+use crate::components::tip::Tip;
 
 /// Download state of online wallpapers, by [`OnlineWallpaper::key`]. Kept
 /// above the tiles so the grid's right-click menu and the details dialog
@@ -140,10 +141,12 @@ pub(super) fn RemoteTile(w: OnlineWallpaper) -> impl IntoView {
                 </div>
                 <div class="absolute top-2 left-2 flex gap-1">
                     <Show when=move || saved.get()>
-                        <Badge variant=BadgeVariant::Secondary attr:title="Already in your download folder">
-                            <Check />
-                            "Downloaded"
-                        </Badge>
+                        <Tip text="Already in your download folder">
+                            <Badge variant=BadgeVariant::Secondary>
+                                <Check />
+                                "Downloaded"
+                            </Badge>
+                        </Tip>
                     </Show>
                     {not_sfw.then(|| view! { <Badge variant=BadgeVariant::Destructive>{purity.clone()}</Badge> })}
                 </div>

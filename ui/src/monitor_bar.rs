@@ -11,6 +11,7 @@ use crate::api;
 use crate::components::nc::prelude::*;
 use crate::ctx::{ALL_MONITORS, Ctx};
 use crate::views::local::folders::Lucide;
+use crate::components::tip::Tip;
 
 #[component]
 pub(crate) fn MonitorBar() -> impl IntoView {
@@ -65,18 +66,24 @@ pub(crate) fn MonitorBar() -> impl IntoView {
                             let size = format!("{}×{}", m.width, m.height);
                             let label = m.name.clone();
                             // The name, its size, and the file it's showing.
-                            let tip = move || format!("{label} · {size}\nShowing {}", current.get());
+                            let tip = Signal::derive(move || format!("{label} · {size}\nShowing {}", current.get()));
+                            // Copyable: the tooltip may draw its contents again.
+                            let name = StoredValue::new(m.name.clone());
+                            let (width, height) = (m.width, m.height);
                             view! {
-                                <ToggleGroupItem value=m.name.clone() class=CARD attr:title=tip>
-                                    <MiniScreen path=shown width=m.width height=m.height />
-                                    <span class="font-extrabold">{m.name.clone()}</span>
-                                    <Picked />
-                                </ToggleGroupItem>
+                                <Tip text=tip>
+                                    <ToggleGroupItem value=name.get_value() class=CARD>
+                                        <MiniScreen path=shown width=width height=height />
+                                        <span class="font-extrabold">{name.get_value()}</span>
+                                        <Picked />
+                                    </ToggleGroupItem>
+                                </Tip>
                             }
                         }
                     />
                     <Show when=move || ctx.monitors.with(|m| m.len() > 1)>
-                        <ToggleGroupItem value=ALL_MONITORS class=CARD attr:title="Every monitor">
+                        <Tip text="Every monitor">
+                        <ToggleGroupItem value=ALL_MONITORS class=CARD>
                             // Two little screens side by side, on one stand.
                             <span class="flex shrink-0 flex-col items-center" aria-hidden="true">
                                 <span class="flex h-5 items-end gap-0.5">
@@ -89,13 +96,14 @@ pub(crate) fn MonitorBar() -> impl IntoView {
                             <span class="font-extrabold">"All"</span>
                             <Picked />
                         </ToggleGroupItem>
+                        </Tip>
                     </Show>
                 </ToggleGroup>
+                <Tip text="Back to the wallpaper before, on the selected monitors">
                 <Button
                     variant=ButtonVariant::Ghost
                     size=ButtonSize::Icon
                     attr:aria-label="Previous wallpaper"
-                    attr:title="Back to the wallpaper before, on the selected monitors"
                     on_click=move |_| {
                         let targets = ctx.targets.get_untracked();
                         spawn_local(async move {
@@ -114,6 +122,7 @@ pub(crate) fn MonitorBar() -> impl IntoView {
                         <path d="M12 7v5l4 2" />
                     </Lucide>
                 </Button>
+                </Tip>
             </Show>
         </div>
     }

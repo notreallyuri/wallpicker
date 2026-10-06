@@ -30,7 +30,23 @@ fn press(selector: &str) {
     }
 }
 
+/// No browser right-click menu (Back, Reload, Inspect…): wallpicker has its
+/// own where they mean something. Text fields keep theirs (cut, copy,
+/// paste). Elements with their own menus still get the event first.
+fn no_browser_menu() {
+    let _ = window_event_listener(ev::contextmenu, |e: ev::MouseEvent| {
+        let in_text = e
+            .target()
+            .and_then(|t| t.dyn_into::<web_sys::Element>().ok())
+            .is_some_and(|el| el.closest("input, textarea, [contenteditable]").ok().flatten().is_some());
+        if !in_text {
+            e.prevent_default();
+        }
+    });
+}
+
 pub(crate) fn install() {
+    no_browser_menu();
     // Lives as long as the window: never removed.
     let _ = window_event_listener(ev::keydown, |e: ev::KeyboardEvent| {
         if !on_screen("[role=dialog]").is_empty() {

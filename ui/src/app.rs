@@ -17,6 +17,7 @@ use crate::views::local::LocalView;
 use crate::views::settings::SettingsDialog;
 use crate::views::online::OnlineView;
 use crate::views::online::collections::CollectionsView;
+use crate::components::tip::Tip;
 
 const TAB_LOCAL: &str = "local";
 pub(crate) const TAB_ONLINE: &str = "online";
@@ -87,15 +88,16 @@ fn Shell() -> impl IntoView {
                     <TabsTrigger value=TAB_COLLECTIONS>"Collections"</TabsTrigger>
                 </TabsList>
                 <MonitorBar />
-                <Button
-                    variant=ButtonVariant::Ghost
-                    size=ButtonSize::Icon
-                    attr:aria-label="Settings"
-                    attr:title="Settings"
-                    on_click=move |_| settings_open.set(true)
-                >
-                    <CogIcon />
-                </Button>
+                <Tip text="Settings">
+                    <Button
+                        variant=ButtonVariant::Ghost
+                        size=ButtonSize::Icon
+                        attr:aria-label="Settings"
+                        on_click=move |_| settings_open.set(true)
+                    >
+                        <CogIcon />
+                    </Button>
+                </Tip>
             </header>
             // Every panel stays mounted (inactive ones are only hidden), so
             // switching tabs keeps search results and scroll position.

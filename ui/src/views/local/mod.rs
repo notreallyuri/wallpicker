@@ -22,6 +22,7 @@ use crate::components::nc::prelude::*;
 use crate::ctx::Ctx;
 use crate::tile_menu::{MenuTarget, TileMenu};
 use crate::views::{Choice, fit_from};
+use crate::components::tip::Tip;
 
 use duplicates::DuplicatesDialog;
 use folders::{Breadcrumb, FolderCard, Lucide};
@@ -383,14 +384,13 @@ pub(crate) fn LocalView() -> impl IntoView {
         // Wraps only in a narrow window, rather than pushing buttons off the edge.
         <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
             // A fixed width: the row's other parts (the count) change, the box doesn't.
-            <div class="relative w-64 shrink-0 lg:w-80">
+            <div class="relative w-64 shrink-0 xl:w-80">
                 <SearchIcon class="pointer-events-none absolute top-2 left-2.5 text-muted-foreground" />
                 <Input
                     model=filter
                     class="pl-8"
                     attr:placeholder="Filter by name or tag"
                     attr:data-shortcut="search"
-                    attr:title="Filter (Ctrl+F)"
                 />
             </div>
             // Rebuilt when toggled: a Button's variant is fixed once drawn.
@@ -409,9 +409,9 @@ pub(crate) fn LocalView() -> impl IntoView {
             }}
             <Choice items=SORTS.to_vec() model=sort class="w-36" />
             <colors::ColorPicker color=color loading=profiles_loading />
+            <Tip text="Show everything at once, or browse folder by folder">
             <Button
                 variant=ButtonVariant::Outline
-                attr:title="Show everything at once, or browse folder by folder"
                 on_click=move |_| layout.update(|l| *l = if l == "folders" { "flat".into() } else { "folders".into() })
             >
                 {move || {
@@ -437,9 +437,10 @@ pub(crate) fn LocalView() -> impl IntoView {
                     }
                 }}
             </Button>
+            </Tip>
+            <Tip text="Apply a random one of those shown (Ctrl+R)">
             <Button
                 variant=ButtonVariant::Outline
-                attr:title="Apply a random one of those shown (Ctrl+R)"
                 attr:data-shortcut="random"
                 disabled=Signal::derive(move || ctx.applying.get().is_some() || shown.with(|s| s.images.is_empty()))
                 on_click=random
@@ -453,6 +454,7 @@ pub(crate) fn LocalView() -> impl IntoView {
                 </Lucide>
                 "Random"
             </Button>
+            </Tip>
             <span class="min-w-24 shrink-0 text-sm whitespace-nowrap text-muted-foreground tabular-nums">
                 {move || {
                     if loading.get() {
@@ -466,12 +468,11 @@ pub(crate) fn LocalView() -> impl IntoView {
                 }}
             </span>
             // Icons, with their names in tooltips: the row stays one line.
+            <Tip text="Duplicates: copies and the same picture at other sizes" class="ml-auto">
             <Button
-                class="ml-auto"
                 variant=ButtonVariant::Ghost
                 size=ButtonSize::Icon
                 attr:aria-label="Duplicates"
-                attr:title="Duplicates: copies and the same picture at other sizes"
                 on_click=move |_| duplicates_open.set(true)
             >
                 <Lucide class="size-4">
@@ -479,11 +480,12 @@ pub(crate) fn LocalView() -> impl IntoView {
                     <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
                 </Lucide>
             </Button>
+            </Tip>
+            <Tip text="Rescan the wallpaper folders">
             <Button
                 variant=ButtonVariant::Outline
                 size=ButtonSize::Icon
                 attr:aria-label="Rescan"
-                attr:title="Rescan the wallpaper folders"
                 disabled=loading
                 on_click=move |_| ctx.library_rev.update(|r| *r += 1)
             >
@@ -494,6 +496,7 @@ pub(crate) fn LocalView() -> impl IntoView {
                     <path d="M8 16H3v5" />
                 </Lucide>
             </Button>
+            </Tip>
         </div>
 
         <TagFilterRow filter=tag_filter counts=counts />

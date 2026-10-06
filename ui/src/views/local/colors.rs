@@ -13,6 +13,7 @@ use wallpicker_core::colors::{HUES, TONES};
 use wasm_bindgen::JsCast;
 
 use crate::components::nc::prelude::*;
+use crate::components::tip::Tip;
 
 /// What a swatch looks like (CSS background), by key.
 fn swatch(key: &str) -> &'static str {
@@ -73,9 +74,9 @@ pub(super) fn ColorPicker(color: RwSignal<String>, #[prop(into)] loading: Signal
 
     view! {
         <div node_ref=root class="relative">
+            <Tip text="Show the wallpapers with a color">
             <Button
                 variant=ButtonVariant::Outline
-                attr:title="Show the wallpapers with a color"
                 attr:aria-expanded=move || open.get().to_string()
                 on_click=move |_| open.update(|o| *o = !*o)
             >
@@ -108,6 +109,7 @@ pub(super) fn ColorPicker(color: RwSignal<String>, #[prop(into)] loading: Signal
                     <Spinner class="size-3.5" />
                 </Show>
             </Button>
+            </Tip>
             <Show when=move || open.get()>
                 <div class="absolute top-full left-0 z-30 mt-2 w-72 rounded-2xl border-2 bg-popover p-3 shadow-xl">
                     <div class="grid grid-cols-4 gap-2">
@@ -117,7 +119,6 @@ pub(super) fn ColorPicker(color: RwSignal<String>, #[prop(into)] loading: Signal
                                 view! {
                                     <button
                                         type="button"
-                                        title=name
                                         on:click=move |_| pick(key)
                                         class=move || {
                                             format!(

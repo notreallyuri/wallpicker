@@ -9,6 +9,7 @@ use wallpicker_core::library::LocalImage;
 use crate::api;
 use crate::components::nc::prelude::*;
 use crate::ctx::Ctx;
+use crate::components::tip::Tip;
 
 #[component]
 pub(super) fn LocalTile(img: LocalImage) -> impl IntoView {
@@ -74,7 +75,6 @@ pub(super) fn LocalTile(img: LocalImage) -> impl IntoView {
         <div data-menu-key=menu_key class="group relative">
             <button
                 type="button"
-                title=path
                 on:click=move |_| spawn_local(ctx.apply(click_path.clone()))
                 // Delete asks to move it to the trash, as the menu does.
                 on:keydown=move |e| {
@@ -124,7 +124,16 @@ pub(super) fn LocalTile(img: LocalImage) -> impl IntoView {
                     <div class="flex min-w-0 items-baseline justify-between gap-2">
                         <span class="truncate text-muted-foreground">{img.name.clone()}</span>
                         {size.map(|size| {
+                            let hint = Signal::derive(move || {
+                                let small = too_small_for.get();
+                                if small.is_empty() {
+                                    String::new()
+                                } else {
+                                    format!("Smaller than {} (it would be scaled up)", small.join(", "))
+                                }
+                            });
                             view! {
+                                <Tip text=hint class="shrink-0">
                                 <span
                                     class=move || {
                                         if too_small_for.with(Vec::is_empty) {
@@ -133,17 +142,10 @@ pub(super) fn LocalTile(img: LocalImage) -> impl IntoView {
                                             "shrink-0 text-[10px] text-amber-500"
                                         }
                                     }
-                                    title=move || {
-                                        let small = too_small_for.get();
-                                        if small.is_empty() {
-                                            String::new()
-                                        } else {
-                                            format!("Smaller than {} (it would be scaled up)", small.join(", "))
-                                        }
-                                    }
                                 >
-                                    {size}
+                                    {size.clone()}
                                 </span>
+                                </Tip>
                             }
                         })}
                     </div>
@@ -167,7 +169,6 @@ pub(super) fn LocalTile(img: LocalImage) -> impl IntoView {
             <button
                 type="button"
                 aria-label=move || if favorite.get() { "Remove from favorites" } else { "Add to favorites" }
-                title=move || if favorite.get() { "Remove from favorites" } else { "Add to favorites" }
                 aria-pressed=move || favorite.get().to_string()
                 on:click=move |_| spawn_local(ctx.set_favorite(star_path.clone(), !favorite.get_untracked()))
                 class=move || {

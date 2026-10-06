@@ -26,6 +26,7 @@ use crate::components::nc::prelude::*;
 use crate::ctx::Ctx;
 use crate::tile_menu::{MenuTarget, TileMenu};
 use crate::views::Choice;
+use crate::components::tip::Tip;
 
 use details::DetailsDialog;
 use moebooru::{MoebooruFilters, MoebooruForm, ratings_apply};
@@ -404,9 +405,9 @@ pub(crate) fn OnlineView() -> impl IntoView {
                     attr:data-shortcut="search"
                 />
             </div>
+            <Tip text="Sorting and filters">
             <Button
                 variant=ButtonVariant::Outline
-                attr:title="Sorting and filters"
                 on_click=move |_| filters_open.set(true)
             >
                 <FilterIcon />
@@ -417,6 +418,7 @@ pub(crate) fn OnlineView() -> impl IntoView {
                     </span>
                 </Show>
             </Button>
+            </Tip>
             <Button r#type=ButtonType::Submit disabled=loading>
                 "Search"
             </Button>
@@ -429,14 +431,12 @@ pub(crate) fn OnlineView() -> impl IntoView {
                         children=move |s: TagSuggestion| {
                             let label = format!("{}  {}", s.name, s.count);
                             let kind = s.kind.clone();
-                            let title = format!("{kind} tag");
                             let note = (kind != "general").then_some(kind);
                             view! {
                                 <Button
                                     variant=ButtonVariant::Outline
                                     size=ButtonSize::Xs
                                     class="rounded-full"
-                                    attr:title=title
                                     on_click=move |_| pick_suggestion(s.clone())
                                 >
                                     {label.clone()}

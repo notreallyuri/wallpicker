@@ -67,6 +67,7 @@ pub(crate) fn TileMenu(
     view! {
         <Provider value=MenuTarget(target)>
             <ContextMenu>
+                <CloseOnScroll />
                 <ContextMenuTrigger>
                     <div
                         class=GRID
@@ -148,4 +149,30 @@ pub(crate) fn TileMenu(
             </ContextMenu>
         </Provider>
     }
+}
+
+/// Scrolling closes the menu: it stays where the right-click was while the
+/// tile it was for moves away. A scroll inside the menu itself doesn't.
+#[component]
+fn CloseOnScroll() -> impl IntoView {
+    use wasm_bindgen::closure::Closure;
+    let menu = nocomponents::primitives::context_menu::use_context_menu();
+    let on_scroll = Closure::<dyn Fn(web_sys::Event)>::new(move |e: web_sys::Event| {
+        if !menu.is_open.get_untracked() {
+            return;
+        }
+        let inside = menu
+            .content_ref
+            .get_untracked()
+            .zip(e.target().and_then(|t| t.dyn_into::<web_sys::Node>().ok()))
+            .is_some_and(|(content, target)| content.contains(Some(&target)));
+        if !inside {
+            menu.is_open.set(false);
+        }
+    });
+    // Scroll events don't bubble: listen while they go down (capture), so
+    // any scroll area counts. The grids live as long as the window, so the
+    // listener does too.
+    let _ = window().add_event_listener_with_callback_and_bool("scroll", on_scroll.as_ref().unchecked_ref(), true);
+    on_scroll.forget();
 }

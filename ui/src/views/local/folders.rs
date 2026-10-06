@@ -6,6 +6,7 @@ use wallpicker_core::library::{self, Place, Subfolder};
 
 use crate::api;
 use crate::components::nc::prelude::*;
+use crate::components::tip::Tip;
 
 /// A subfolder: its first wallpaper as the cover, its name and how many are
 /// in it (or below). Opens on click.
@@ -21,7 +22,6 @@ pub(super) fn FolderCard(sub: Subfolder, cover: String, on_open: Callback<Option
     view! {
         <button
             type="button"
-            title=sub.name.clone()
             on:click=move |_| on_open.run(Some(place.get_value()))
             class="group flex w-full flex-col overflow-hidden rounded-3xl bg-card/80 p-1.5 text-left shadow-md shadow-black/10 ring-1 ring-foreground/5 transition duration-300 ease-bounce hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 hover:ring-2 hover:ring-primary/70 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         >
@@ -59,11 +59,11 @@ pub(super) fn Breadcrumb(
     let steps = move || root_names.with(|names| library::trail(place.get().as_ref(), names, "All folders"));
     view! {
         <div class="flex flex-wrap items-center gap-1 text-sm">
+            <Tip text="Up a folder (Alt+Up)">
             <Button
                 variant=ButtonVariant::Ghost
                 size=ButtonSize::IconSm
                 attr:aria-label="Up a folder"
-                attr:title="Up a folder (Alt+Up)"
                 attr:data-shortcut="folder-up"
                 disabled=Signal::derive(move || up().is_none())
                 on_click=move |_| {
@@ -77,6 +77,7 @@ pub(super) fn Breadcrumb(
                     <path d="M20 20h-7a4 4 0 0 1-4-4V4" />
                 </Lucide>
             </Button>
+            </Tip>
             {move || {
                 let all = steps();
                 let last = all.len().saturating_sub(1);

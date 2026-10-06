@@ -11,6 +11,7 @@ use wallpicker_core::catalog::{TagMatch, normalize_tag};
 
 use crate::components::nc::prelude::*;
 use crate::ctx::Ctx;
+use crate::components::tip::Tip;
 
 const MATCH_ALL: &str = "all";
 const MATCH_ANY: &str = "any";
@@ -117,12 +118,12 @@ pub(super) fn TagFilterRow(
                         size=ToggleSize::Sm
                         value=filter.mode
                     >
-                        <ToggleGroupItem value=MATCH_ALL attr:title="Wallpapers with every selected tag">
-                            "All"
-                        </ToggleGroupItem>
-                        <ToggleGroupItem value=MATCH_ANY attr:title="Wallpapers with any selected tag">
-                            "Any"
-                        </ToggleGroupItem>
+                        <Tip text="Wallpapers with every selected tag">
+                            <ToggleGroupItem value=MATCH_ALL>"All"</ToggleGroupItem>
+                        </Tip>
+                        <Tip text="Wallpapers with any selected tag">
+                            <ToggleGroupItem value=MATCH_ANY>"Any"</ToggleGroupItem>
+                        </Tip>
                     </ToggleGroup>
                 </Show>
                 <Show when=move || filter.selected.with(|s| !s.is_empty())>
