@@ -157,7 +157,7 @@ pub fn search(args: &[String]) -> i32 {
 
     let state = AppState::new(store.clone());
     let result = tauri::async_runtime::block_on(async {
-        let page = crate::search(&state, online_query).await?;
+        let page = crate::commands::online::search(&state, online_query).await?;
         let thumbs = if want_thumbs {
             fetch_thumbs(&state, &page.items).await
         } else {
@@ -169,7 +169,7 @@ pub fn search(args: &[String]) -> i32 {
         Ok(r) => r,
         Err(e) => return fail(&e),
     };
-    let downloaded = crate::downloaded_keys(&store).unwrap_or_default();
+    let downloaded = crate::commands::online::downloaded_keys(&store).unwrap_or_default();
 
     let out = SearchOutput {
         provider: provider.as_str(),
@@ -323,7 +323,7 @@ pub fn tags(args: &[String]) -> i32 {
     };
     let text = words.iter().map(|w| w.as_str()).collect::<Vec<_>>().join(" ");
     let state = AppState::new(Store::new(Dirs::from_env()));
-    match tauri::async_runtime::block_on(crate::tag_suggestions_for(&state, provider, &text)) {
+    match tauri::async_runtime::block_on(crate::commands::online::tag_suggestions_for(&state, provider, &text)) {
         Ok(list) if json => {
             // Each with the search it makes, and whether what's typed already
             // ends in a real tag (then there's nothing to suggest).
@@ -355,7 +355,7 @@ pub fn tags(args: &[String]) -> i32 {
 pub fn collections(args: &[String]) -> i32 {
     let json = args.iter().any(|a| a == "--json");
     let state = AppState::new(Store::new(Dirs::from_env()));
-    match tauri::async_runtime::block_on(crate::wallhaven_collections_of(&state)) {
+    match tauri::async_runtime::block_on(crate::commands::online::wallhaven_collections_of(&state)) {
         Ok(list) if json => print_json(&list),
         Ok(list) => {
             for c in &list {
@@ -403,7 +403,7 @@ pub fn collection(args: &[String]) -> i32 {
     let store = Store::new(Dirs::from_env());
     let state = AppState::new(store.clone());
     let result = tauri::async_runtime::block_on(async {
-        let page = crate::wallhaven_collection_page(&state, id, page).await?;
+        let page = crate::commands::online::wallhaven_collection_page(&state, id, page).await?;
         let thumbs = if want_thumbs { fetch_thumbs(&state, &page.items).await } else { Vec::new() };
         Ok::<_, String>((page, thumbs))
     });
@@ -411,7 +411,7 @@ pub fn collection(args: &[String]) -> i32 {
         Ok(r) => r,
         Err(e) => return fail(&e),
     };
-    let downloaded = crate::downloaded_keys(&store).unwrap_or_default();
+    let downloaded = crate::commands::online::downloaded_keys(&store).unwrap_or_default();
     let out = CollectionOutput {
         id,
         page: page.page,
@@ -569,14 +569,14 @@ pub fn details(args: &[String]) -> i32 {
         let preview = async {
             if want_preview { fetch_preview(&state, &w).await } else { None }
         };
-        let (d, preview) = tokio::join!(crate::details(&state, &w), preview);
+        let (d, preview) = tokio::join!(crate::commands::online::details(&state, &w), preview);
         d.map(|d| (d, preview))
     });
     let (d, preview) = match result {
         Ok(r) => r,
         Err(e) => return fail(&e),
     };
-    let downloaded = crate::downloaded_keys(&store).unwrap_or_default().contains(&w.key());
+    let downloaded = crate::commands::online::downloaded_keys(&store).unwrap_or_default().contains(&w.key());
 
     let mut stats = vec![likes_label(&w)];
     stats.extend(w.views.map(|v| format!("{v} views")));
@@ -655,7 +655,7 @@ pub fn apply_online(args: &[String]) -> i32 {
         Err(e) => return fail(&e),
     };
     let state = AppState::new(store.clone());
-    let path = match tauri::async_runtime::block_on(crate::download_and_tag(&state, &wallpaper)) {
+    let path = match tauri::async_runtime::block_on(crate::commands::online::download_and_tag(&state, &wallpaper)) {
         Ok(p) => PathBuf::from(p),
         Err(e) => return fail(&e),
     };

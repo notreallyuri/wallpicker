@@ -124,7 +124,7 @@ pub(super) fn apply_random(store: &Store, settings: &Settings, choice: &Choice) 
     let candidates: Vec<PathBuf> = match &choice.color {
         None => candidates,
         Some(c) => {
-            let profiles = crate::color_profiles(store).map_err(|e| e.to_string())?;
+            let profiles = crate::commands::library::color_profiles(store).map_err(|e| e.to_string())?;
             candidates
                 .into_iter()
                 .filter(|p| profiles.get(p).is_some_and(|cp| wallpicker_core::colors::matches(cp, c)))
