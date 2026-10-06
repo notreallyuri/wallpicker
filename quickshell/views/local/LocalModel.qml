@@ -14,7 +14,6 @@ QtObject {
     property bool favoritesOnly: false
     // Remembered between opens.
     property string sort: Prefs.localSort
-    onSortChanged: Prefs.localSort = sort
     property var tagFilter: []
     property int page: 1
 
@@ -39,7 +38,10 @@ QtObject {
 
     onQueryChanged: page = 1
     onFavoritesOnlyChanged: page = 1
-    onSortChanged: page = 1
+    onSortChanged: {
+        page = 1;
+        Prefs.localSort = sort;
+    }
     onTagFilterChanged: page = 1
 
     function toggleTag(name) {
