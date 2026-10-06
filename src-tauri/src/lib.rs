@@ -6,6 +6,13 @@
 pub mod backup;
 pub mod cli;
 mod commands;
+mod serve;
+
+/// `wallpicker serve` (the Quickshell UI's backend).
+pub fn serve() -> i32 {
+    serve::run()
+}
+mod service;
 pub mod open;
 pub mod theme;
 mod tray;

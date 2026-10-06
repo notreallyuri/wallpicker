@@ -10,7 +10,7 @@ use wallpicker_core::store::Store;
 use wallpicker_core::wallhaven::{self, API_SEARCH_URL, API_WALLPAPER_URL};
 
 use crate::cli;
-use crate::commands::library::update_catalog;
+use crate::service::library::update_catalog;
 use crate::{AppState, CmdResult, blocking, err};
 
 /// Largest Wallhaven download we accept. Wallpapers are a few MB; this only

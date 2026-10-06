@@ -9,51 +9,24 @@ use wallpicker_core::monitors::Monitor;
 use wallpicker_core::settings::{State as SavedState, WallpaperBackend};
 use wallpicker_core::store::Store;
 
-use crate::commands::library::update_catalog;
+use crate::service::{self, library::update_catalog};
 use crate::{AppState, CmdResult, blocking, err, wallpaper_path};
 
 #[tauri::command]
 pub(crate) async fn list_monitors() -> CmdResult<Vec<Monitor>> {
-    blocking(|| hyprpaper::list_monitors(&SystemRunner)).await
+    service::wallpapers::monitors().await
 }
 
 /// Apply `path` to the given monitors and remember it for `--restore`.
 #[tauri::command]
-pub(crate) async fn apply_wallpaper(
-    state: tauri::State<'_, AppState>,
-    monitors: Vec<String>,
-    path: String,
-) -> CmdResult<ApplyReport> {
-    let store = state.store.clone();
-    blocking(move || {
-        let settings = store.load_settings()?;
-        let report = hyprpaper::apply_and_remember_with(
-            &SystemRunner,
-            &store,
-            settings.wallpaper_backend,
-            &monitors,
-            &PathBuf::from(path),
-        )?;
-        wallpicker_core::workspaces::remember_shown(&SystemRunner, &store, &report.applied);
-        Ok(report)
-    })
-    .await
+pub(crate) async fn apply_wallpaper(state: tauri::State<'_, AppState>, monitors: Vec<String>, path: String) -> CmdResult<ApplyReport> {
+    service::wallpapers::apply(&state, monitors, path).await
 }
 
 /// Back to what each of `monitors` showed before.
 #[tauri::command]
-pub(crate) async fn previous_wallpaper(
-    state: tauri::State<'_, AppState>,
-    monitors: Vec<String>,
-) -> CmdResult<ApplyReport> {
-    let store = state.store.clone();
-    blocking(move || {
-        let backend = store.load_settings()?.wallpaper_backend;
-        let report = hyprpaper::apply_previous(&SystemRunner, &store, backend, &monitors)?;
-        wallpicker_core::workspaces::remember_shown(&SystemRunner, &store, &report.applied);
-        Ok(report)
-    })
-    .await
+pub(crate) async fn previous_wallpaper(state: tauri::State<'_, AppState>, monitors: Vec<String>) -> CmdResult<ApplyReport> {
+    service::wallpapers::previous(&state, monitors).await
 }
 
 /// Hyprland's workspaces and those with a wallpaper, for Settings.

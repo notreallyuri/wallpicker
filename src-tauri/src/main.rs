@@ -20,6 +20,7 @@ fn main() {
         Some("colors") => std::process::exit(wallpicker_lib::cli::colors(&args[1..])),
         Some("backup") => std::process::exit(wallpicker_lib::cli::backup(&args[1..])),
         Some("duplicates") => std::process::exit(wallpicker_lib::cli::duplicates(&args[1..])),
+        Some("serve") => std::process::exit(wallpicker_lib::serve()),
         Some("workspaces") => std::process::exit(wallpicker_lib::cli::workspaces(&args[1..])),
         Some("adjust") => std::process::exit(wallpicker_lib::cli::adjust(&args[1..])),
         Some("show-in-folder") => std::process::exit(wallpicker_lib::cli::show_in_folder(&args[1..])),

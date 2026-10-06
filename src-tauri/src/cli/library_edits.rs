@@ -35,7 +35,7 @@ pub fn favorite(args: &[String]) -> i32 {
     let p = path.clone();
     run_edit(
         async move {
-            crate::commands::library::update_catalog(&state, move |c| c.set_favorite(&p, !off)).await?;
+            crate::service::library::update_catalog(&state, move |c| c.set_favorite(&p, !off)).await?;
             Ok(())
         },
         format!("{} {}", if off { "unfavorited" } else { "favorited" }, path.display()),
@@ -67,7 +67,7 @@ pub fn tag(args: &[String]) -> i32 {
     let (p, t) = (path.clone(), tag.clone());
     run_edit(
         async move {
-            crate::commands::library::update_catalog(&state, move |c| {
+            crate::service::library::update_catalog(&state, move |c| {
                 if add {
                     c.add_tag(&p, &t);
                 } else {

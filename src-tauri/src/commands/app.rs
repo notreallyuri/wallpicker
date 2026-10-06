@@ -5,6 +5,7 @@ use wallpicker_core::cmd::SystemRunner;
 use wallpicker_core::hyprpaper::{self};
 use wallpicker_core::settings::{Settings, State as SavedState, WallpaperBackend};
 
+use crate::service;
 use crate::{AppState, CmdResult, blocking, err};
 use crate::{cli, open, theme, tray, usage};
 
@@ -27,8 +28,7 @@ pub(crate) fn open_timing(report: String) {
 
 #[tauri::command]
 pub(crate) async fn get_settings(state: tauri::State<'_, AppState>) -> CmdResult<Settings> {
-    let store = state.store.clone();
-    blocking(move || store.load_settings()).await
+    service::app::settings(&state).await
 }
 
 #[tauri::command]
@@ -66,8 +66,7 @@ pub(crate) async fn save_settings(
 
 #[tauri::command]
 pub(crate) async fn get_state(state: tauri::State<'_, AppState>) -> CmdResult<SavedState> {
-    let store = state.store.clone();
-    blocking(move || store.load_state()).await
+    service::app::saved_state(&state).await
 }
 
 /// The interface's background color now, for the next window to start in.
@@ -92,13 +91,8 @@ pub(crate) fn take_open_request() -> Option<open::Place> {
 
 /// The app's colors, from the current wallpaper (None: its own).
 #[tauri::command]
-pub(crate) async fn wallpaper_palette(
-    state: tauri::State<'_, AppState>,
-) -> CmdResult<Option<theme::Palette>> {
-    let store = state.store.clone();
-    tauri::async_runtime::spawn_blocking(move || theme::palette(&store))
-        .await
-        .map_err(err)?
+pub(crate) async fn wallpaper_palette(state: tauri::State<'_, AppState>) -> CmdResult<Option<theme::Palette>> {
+    service::app::palette(&state).await
 }
 
 #[tauri::command]

@@ -8,72 +8,30 @@ use wallpicker_core::duplicates::DuplicateGroup;
 use wallpicker_core::hyprpaper::{self};
 use wallpicker_core::library::{self, LocalImage};
 use wallpicker_core::store::Store;
-use wallpicker_core::thumbs;
 
 use crate::commands::wallpapers::trash_path;
+use crate::service::{self, library::update_catalog};
 use crate::{AppState, CmdResult, blocking, err, wallpaper_path};
 
 #[tauri::command]
 pub(crate) async fn scan_local(state: tauri::State<'_, AppState>) -> CmdResult<Vec<LocalImage>> {
-    let store = state.store.clone();
-    blocking(move || {
-        let s = store.load_settings()?;
-        Ok(library::with_cached_thumbs(library::scan(&s.folders, s.recursive), &store.dirs().cache, s.thumb_width))
-    })
-    .await
+    service::library::scan(&state).await
 }
 
 /// Returns the path of a cached thumbnail for `path`.
 #[tauri::command]
-pub(crate) async fn thumbnail(
-    state: tauri::State<'_, AppState>,
-    path: String,
-) -> CmdResult<String> {
-    let _permit = state.thumb_gate.acquire().await.map_err(err)?;
-    let store = state.store.clone();
-    blocking(move || {
-        let width = store.load_settings()?.thumb_width;
-        let src = PathBuf::from(path);
-        if !library::is_supported_image(&src) {
-            return Err(wallpicker_core::Error::Invalid(
-                "unsupported image type".into(),
-            ));
-        }
-        let out = thumbs::ensure_thumb(&store.dirs().cache, &src, width)?;
-        Ok(out.to_string_lossy().into_owned())
-    })
-    .await
-}
-
-/// Change the catalog under the lock and return the saved version.
-pub(crate) async fn update_catalog(
-    state: &AppState,
-    change: impl FnOnce(&mut Catalog) + Send + 'static,
-) -> CmdResult<Catalog> {
-    let store = state.store.clone();
-    let lock = state.catalog_lock.clone();
-    blocking(move || {
-        // A panic elsewhere while holding the lock doesn't make the file bad.
-        let _guard = lock.lock().unwrap_or_else(|p| p.into_inner());
-        store.update_catalog(change)
-    })
-    .await
+pub(crate) async fn thumbnail(state: tauri::State<'_, AppState>, path: String) -> CmdResult<String> {
+    service::library::thumbnail(&state, path).await
 }
 
 #[tauri::command]
 pub(crate) async fn get_catalog(state: tauri::State<'_, AppState>) -> CmdResult<Catalog> {
-    let store = state.store.clone();
-    blocking(move || store.load_catalog()).await
+    service::library::catalog(&state).await
 }
 
 #[tauri::command]
-pub(crate) async fn set_favorite(
-    state: tauri::State<'_, AppState>,
-    path: String,
-    favorite: bool,
-) -> CmdResult<Catalog> {
-    let path = wallpaper_path(&path)?;
-    update_catalog(&state, move |c| c.set_favorite(&path, favorite)).await
+pub(crate) async fn set_favorite(state: tauri::State<'_, AppState>, path: String, favorite: bool) -> CmdResult<Catalog> {
+    service::library::set_favorite(&state, path, favorite).await
 }
 
 /// The library's duplicate groups, best first in each.
