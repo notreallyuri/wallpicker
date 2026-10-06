@@ -75,7 +75,7 @@ pub(crate) fn MonitorBar() -> impl IntoView {
                             view! {
                                 <Tip text=tip>
                                     <ToggleGroupItem value=name.get_value() class=CARD>
-                                        <MiniScreen path=shown width=width height=height />
+                                        <Screen path=shown width=width height=height size=ScreenSize::Pill />
                                         <span class="font-extrabold">{name.get_value()}</span>
                                         <Picked />
                                     </ToggleGroupItem>
@@ -169,18 +169,24 @@ fn Picked() -> impl IntoView {
     }
 }
 
-/// A little monitor showing what it shows (its library thumbnail, in the
-/// monitor's own proportions), on a stand; an empty screen when wallpicker
-/// hasn't set anything there.
+/// How big a [`Screen`] is drawn.
+#[derive(Clone, Copy, PartialEq)]
+enum ScreenSize {
+    /// In a pill of the top bar.
+    Pill,
+    /// A monitor's card in the drawer.
+    Card,
+    /// One of several on the All card's desk: no base of its own (the desk
+    /// draws one under all of them).
+    Desk,
+}
+
+/// A monitor: a dark bezel with a thin chin around the screen, which shows
+/// its wallpaper (the library thumbnail, in the monitor's own proportions)
+/// under a faint glare, on a tapered neck and a base. An empty screen when
+/// wallpicker hasn't set anything there.
 #[component]
-fn MiniScreen(
-    path: Signal<Option<String>>,
-    width: u32,
-    height: u32,
-    /// The drawer's big screen instead of the pill's little one.
-    #[prop(optional)]
-    big: bool,
-) -> impl IntoView {
+fn Screen(path: Signal<Option<String>>, width: u32, height: u32, size: ScreenSize) -> impl IntoView {
     let src = RwSignal::new(None::<String>);
     Effect::new(move |_| {
         let Some(p) = path.get() else {
@@ -194,18 +200,42 @@ fn MiniScreen(
         });
     });
     let ratio = if width > 0 && height > 0 { format!("aspect-ratio: {width} / {height}") } else { "aspect-ratio: 16 / 9".into() };
-    let (screen, neck, base) = if big {
-        ("block h-28 overflow-hidden rounded-xl bg-muted shadow-md ring-[3px] ring-foreground/20", "block h-2 w-4 bg-foreground/20", "block h-1 w-16 rounded-full bg-foreground/20")
-    } else {
-        ("block h-5 overflow-hidden rounded-[4px] bg-muted ring-[1.5px] ring-foreground/25", "block h-0.5 w-1.5 bg-foreground/25", "block h-0.5 w-4 rounded-full bg-foreground/25")
+    // (bezel, screen, neck, base); the bezel's extra bottom padding is the chin.
+    let (bezel, screen, neck, base) = match size {
+        ScreenSize::Pill => (
+            "rounded-[4px] bg-zinc-900 p-px pb-0.5 ring-1 ring-white/10",
+            "h-[15px] rounded-[3px]",
+            "h-1 w-2.5",
+            "h-0.5 w-5",
+        ),
+        ScreenSize::Card => (
+            "rounded-[10px] bg-zinc-900 p-1 pb-2 shadow-lg ring-1 ring-white/10",
+            "h-24 rounded-[6px]",
+            "h-3.5 w-8",
+            "h-1.5 w-24 shadow-[0_3px_6px_rgb(0_0_0/0.35)]",
+        ),
+        ScreenSize::Desk => (
+            "rounded-[8px] bg-zinc-900 p-[3px] pb-1.5 shadow-lg ring-1 ring-white/10",
+            "h-14 rounded-[5px]",
+            "h-2.5 w-6",
+            "",
+        ),
     };
     view! {
         <span class="flex shrink-0 flex-col items-center" aria-hidden="true">
-            <span class=screen style=ratio>
-                {move || src.get().map(|s| view! { <img src=s alt="" class="size-full object-cover" /> })}
+            <span class=format!("block {bezel}")>
+                <span class=format!("relative block overflow-hidden bg-zinc-800 {screen}") style=ratio>
+                    {move || src.get().map(|s| view! { <img src=s alt="" class="size-full object-cover" /> })}
+                    // Glass.
+                    <span class="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/15 via-transparent to-transparent" />
+                </span>
             </span>
-            <span class=neck />
-            <span class=base />
+            // A neck that widens toward the base.
+            <span class=format!(
+                "block bg-gradient-to-b from-zinc-700 to-zinc-800 [clip-path:polygon(28%_0,72%_0,100%_100%,0_100%)] {neck}",
+            ) />
+            {(size != ScreenSize::Desk)
+                .then(|| view! { <span class=format!("block rounded-full bg-gradient-to-b from-zinc-600 to-zinc-800 {base}") /> })}
         </span>
     }
 }
@@ -270,7 +300,7 @@ pub(crate) fn MonitorDrawer() -> impl IntoView {
                                         )
                                     }
                                 >
-                                    <MiniScreen path=shown width=m.width height=m.height big=true />
+                                    <Screen path=shown width=m.width height=m.height size=ScreenSize::Card />
                                     <div class="flex w-full items-center gap-2">
                                         <div class="flex min-w-0 flex-1 flex-col leading-tight">
                                             <span class="flex items-center gap-1.5 font-extrabold">
@@ -308,7 +338,7 @@ pub(crate) fn MonitorDrawer() -> impl IntoView {
                             on:click=move |_| ctx.selection.set(vec![ALL_MONITORS.to_string()])
                             class=move || {
                                 format!(
-                                    "flex w-56 cursor-pointer flex-col items-center gap-2 rounded-3xl border-2 p-3 transition duration-300 ease-bounce hover:-translate-y-0.5 {}",
+                                    "flex w-72 cursor-pointer flex-col items-center gap-2 rounded-3xl border-2 p-3 transition duration-300 ease-bounce hover:-translate-y-0.5 {}",
                                     if ctx.selection.with(|s| s.iter().any(|v| v == ALL_MONITORS)) {
                                         "border-primary bg-primary/12 shadow-[0_3px_0_0_color-mix(in_oklab,var(--primary)_45%,transparent)]"
                                     } else {
@@ -317,14 +347,23 @@ pub(crate) fn MonitorDrawer() -> impl IntoView {
                                 )
                             }
                         >
-                            // Every monitor, side by side, on one stand.
-                            <span class="flex flex-col items-center" aria-hidden="true">
-                                <span class="flex h-28 items-end gap-1.5">
-                                    <span class="block h-16 w-24 rounded-xl bg-gradient-to-br from-primary/60 to-primary/25 ring-[3px] ring-foreground/20" />
-                                    <span class="block h-16 w-24 rounded-xl bg-gradient-to-br from-primary/40 to-primary/15 ring-[3px] ring-foreground/20" />
+                            // Every monitor, with what it shows, side by side on one desk.
+                            <span class="flex h-32 flex-col items-center justify-end" aria-hidden="true">
+                                <span class="flex items-end gap-2">
+                                    <For
+                                        each=move || ctx.monitors.get()
+                                        key=|m| m.name.clone()
+                                        children=move |m: Monitor| {
+                                            let name = m.name.clone();
+                                            let shown = Signal::derive(move || {
+                                                ctx.state.with(|s| s.current.get(&name).map(|p| p.to_string_lossy().into_owned()))
+                                            });
+                                            view! { <Screen path=shown width=m.width height=m.height size=ScreenSize::Desk /> }
+                                        }
+                                    />
                                 </span>
-                                <span class="block h-2 w-4 bg-foreground/20" />
-                                <span class="block h-1 w-24 rounded-full bg-foreground/20" />
+                                // The desk.
+                                <span class="block h-1.5 w-full rounded-full bg-gradient-to-b from-zinc-600 to-zinc-800 shadow-[0_3px_6px_rgb(0_0_0/0.35)]" />
                             </span>
                             <div class="flex w-full flex-col leading-tight">
                                 <span class="font-extrabold">"All"</span>
