@@ -69,7 +69,9 @@ or **Noctalia**'s wallpaper manager (Settings → General → Wallpaper backend)
   workspace that has a wallpaper, it goes on that monitor. With **Remember what I put on each
   workspace**, applying a wallpaper is all it takes: it becomes the wallpaper of the workspace its
   monitor shows (Random and the slideshow don't change them). Switching doesn't go into the
-  history, so Previous still means the one you chose before. wallpicker follows the workspaces
+  history, so Previous still means the one you chose before. Or pick one per workspace right
+  there: **Choose** (or its picture) opens your library in place, searchable by name and tag.
+  wallpicker follows the workspaces
   while it runs (the tray is enough); without it, `wallpicker workspaces run`. Also
   `wallpicker workspaces list | on | off | set 3 image.png | clear 3`.
 - **Tray**: closing the window keeps wallpicker in the tray (Settings → General). The window is
