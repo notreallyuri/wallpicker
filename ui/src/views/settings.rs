@@ -14,7 +14,6 @@ use crate::components::nc::prelude::*;
 use crate::ctx::Ctx;
 use crate::views::Choice;
 
-const FIT_MODES: &[(&str, &str)] = &settings::FIT_MODES;
 
 const SECTION_GENERAL: &str = "general";
 const SECTION_APPEARANCE: &str = "appearance";
@@ -431,11 +430,18 @@ fn SettingsForm(on_saved: Callback<()>) -> impl IntoView {
                                     <Show when=move || backend.get() != WallpaperBackend::Noctalia.as_str()>
                                         <Field>
                                             <FieldLabel>"Fit mode"</FieldLabel>
-                                            <Choice items=FIT_MODES.to_vec() model=fit />
+                                            // Labels as the picked backend does them.
+                                            {move || {
+                                                let b = match backend.get().as_str() {
+                                                    "awww" => WallpaperBackend::Awww,
+                                                    _ => WallpaperBackend::Hyprpaper,
+                                                };
+                                                view! { <Choice items=settings::fit_modes(b).to_vec() model=fit /> }
+                                            }}
                                             <FieldDescription>
                                                 {move || {
                                                     if backend.get() == WallpaperBackend::Awww.as_str() {
-                                                        "For every monitor, unless it has its own below; a wallpaper's own fit (right-click → Fit) wins over both. awww can't tile: Tile shows the image centered at its own size."
+                                                        "For every monitor, unless it has its own below; a wallpaper's own fit (right-click → Fit) wins over both."
                                                     } else {
                                                         "For every monitor, unless it has its own below; a wallpaper's own fit (right-click → Fit) wins over both. Needs a newer hyprpaper: leave it on default if applying fails."
                                                     }

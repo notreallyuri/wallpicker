@@ -46,7 +46,7 @@
   "fit_contain": "Contain",
   "fit_cover": "Cover",
   "fit_fill": "Fill",
-  "fit_hint": "On every monitor. Automatic uses the monitor's fit (Settings). hyprpaper only.",
+  "fit_hint": "On every monitor. Automatic uses the monitor's fit (Settings). Not with Noctalia (it has its own).",
   "fit_tile": "Tile",
   "folder_up": "Up a folder (Alt+Up)",
   "layout_flat": "Flat",

@@ -95,7 +95,7 @@ pub struct Settings {
     /// doesn't say whose key it is).
     pub wallhaven_username: Option<String>,
     pub wallpaper_backend: WallpaperBackend,
-    /// The fit for every monitor (None: hyprpaper's default).
+    /// The fit for every monitor (None: the backend's default).
     pub fit_mode: Option<FitMode>,
     /// A monitor's own fit (by name), over `fit_mode`. A wallpaper's own fit
     /// (in the catalog) wins over both; see [`Settings::fit_for`].
@@ -197,14 +197,15 @@ impl Settings {
     }
 }
 
-/// Fit modes ("" is hyprpaper's default), with labels.
-pub const FIT_MODES: [(&str, &str); 5] = [
-    ("", "hyprpaper default"),
-    ("cover", "Cover"),
-    ("contain", "Contain"),
-    ("tile", "Tile"),
-    ("fill", "Fill"),
-];
+/// Fit modes with labels, as `backend` does them: "" is its own default
+/// (awww's crops, which is Cover), and awww can't tile (it centers).
+pub fn fit_modes(backend: WallpaperBackend) -> [(&'static str, &'static str); 5] {
+    let (default, tile) = match backend {
+        WallpaperBackend::Awww => ("awww's default (Cover)", "Centered (awww can't tile)"),
+        WallpaperBackend::Hyprpaper | WallpaperBackend::Noctalia => ("hyprpaper's default", "Tile"),
+    };
+    [("", default), ("cover", "Cover"), ("contain", "Contain"), ("tile", tile), ("fill", "Fill")]
+}
 
 pub const BACKENDS: [(&str, &str); 3] =
     [("hyprpaper", "hyprpaper"), ("awww", "awww (swww)"), ("noctalia", "Noctalia")];

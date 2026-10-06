@@ -14,6 +14,7 @@ use leptos::prelude::*;
 use leptos::task::spawn_local;
 use nocomponents::icons::search::Search as SearchIcon;
 use wallpicker_core::library::{self, LocalImage, Place, Subfolder};
+use wallpicker_core::settings::WallpaperBackend;
 
 use crate::api;
 use crate::components::nc::prelude::*;
@@ -560,14 +561,20 @@ fn LocalMenuItems() -> impl IntoView {
                                     }
                                 })
                             >
-                                {label}
+                                // awww can't tile: it centers.
+                                {move || {
+                                    let awww = ctx.settings.with(|s| {
+                                        s.as_ref().is_some_and(|s| s.wallpaper_backend == WallpaperBackend::Awww)
+                                    });
+                                    if awww && value == "tile" { "Centered" } else { label }
+                                }}
                             </ContextMenuCheckboxItem>
                         }
                     })
                     .collect_view()}
                 <ContextMenuSeparator />
                 <p class="max-w-56 px-2 py-1 text-xs text-muted-foreground">
-                    "Automatic uses the monitor's fit (Settings). hyprpaper only."
+                    "Automatic uses the monitor's fit (Settings). Not with Noctalia (it has its own)."
                 </p>
             </ContextMenuSubContent>
         </ContextMenuSub>

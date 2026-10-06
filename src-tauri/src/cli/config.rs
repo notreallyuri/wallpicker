@@ -238,7 +238,7 @@ struct SettingsOutput {
     download_dir: String,
     recursive: bool,
     backend: &'static str,
-    /// "" is hyprpaper's default.
+    /// "" is the backend's default.
     fit_mode: &'static str,
     /// Monitor name -> its own fit, over `fit_mode`.
     monitor_fits: std::collections::BTreeMap<String, &'static str>,
@@ -333,7 +333,7 @@ fn print_settings(s: &Settings) -> i32 {
         noctalia_wallpaper_enabled,
         options: SettingsOptions {
             backends: choices(&settings::BACKENDS),
-            fit_modes: choices(&settings::FIT_MODES),
+            fit_modes: choices(&settings::fit_modes(s.wallpaper_backend)),
             transitions: choices(&settings::TRANSITIONS),
             konachan_sites: choices(&settings::KONACHAN_SITES),
         },

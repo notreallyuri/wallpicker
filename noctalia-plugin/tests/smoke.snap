@@ -1466,7 +1466,7 @@ column align=stretch flexGrow=1 gap=12
       row align=center gap=8
         label color=on_surface_variant fontSize=12 text=Fit width=60
         select enabled=true key=fit_/w/anime/b.jpg options=[Automatic|Cover|Contain|Tile|Fill] selectedIndex=0 width=180 on:onChange
-        label color=on_surface_variant flexGrow=1 fontSize=11 maxLines=2 text=On every monitor. Automatic uses the monitor's fit (Settings). hyprpaper only.
+        label color=on_surface_variant flexGrow=1 fontSize=11 maxLines=2 text=On every monitor. Automatic uses the monitor's fit (Settings). Not with Noctalia (it has its own).
       row align=center gap=8
         label color=on_surface_variant flexGrow=1 fontSize=12 text=Tags
         button controlSize=sm glyph=external-link text=Edit in wallpicker variant=outline on:onClick
@@ -1515,7 +1515,7 @@ column align=stretch flexGrow=1 gap=12
       row align=center gap=8
         label color=on_surface_variant fontSize=12 text=Fit width=60
         select enabled=true key=fit_/w/anime/b.jpg options=[Automatic|Cover|Contain|Tile|Fill] selectedIndex=0 width=180 on:onChange
-        label color=on_surface_variant flexGrow=1 fontSize=11 maxLines=2 text=On every monitor. Automatic uses the monitor's fit (Settings). hyprpaper only.
+        label color=on_surface_variant flexGrow=1 fontSize=11 maxLines=2 text=On every monitor. Automatic uses the monitor's fit (Settings). Not with Noctalia (it has its own).
       row align=center gap=8
         label color=on_surface_variant flexGrow=1 fontSize=12 text=Tags
         button controlSize=sm glyph=external-link text=Edit in wallpicker variant=outline on:onClick
@@ -1567,7 +1567,7 @@ column align=stretch flexGrow=1 gap=12
       row align=center gap=8
         label color=on_surface_variant fontSize=12 text=Fit width=60
         select enabled=true key=fit_/w/anime/b.jpg options=[Automatic|Cover|Contain|Tile|Fill] selectedIndex=0 width=180 on:onChange
-        label color=on_surface_variant flexGrow=1 fontSize=11 maxLines=2 text=On every monitor. Automatic uses the monitor's fit (Settings). hyprpaper only.
+        label color=on_surface_variant flexGrow=1 fontSize=11 maxLines=2 text=On every monitor. Automatic uses the monitor's fit (Settings). Not with Noctalia (it has its own).
       row align=center gap=8
         label color=on_surface_variant flexGrow=1 fontSize=12 text=Tags
         button controlSize=sm glyph=external-link text=Edit in wallpicker variant=outline on:onClick
@@ -1618,7 +1618,7 @@ column align=stretch flexGrow=1 gap=12
       row align=center gap=8
         label color=on_surface_variant fontSize=12 text=Fit width=60
         select enabled=true key=fit_/w/anime/b.jpg options=[Automatic|Cover|Contain|Tile|Fill] selectedIndex=0 width=180 on:onChange
-        label color=on_surface_variant flexGrow=1 fontSize=11 maxLines=2 text=On every monitor. Automatic uses the monitor's fit (Settings). hyprpaper only.
+        label color=on_surface_variant flexGrow=1 fontSize=11 maxLines=2 text=On every monitor. Automatic uses the monitor's fit (Settings). Not with Noctalia (it has its own).
       row align=center gap=8
         label color=on_surface_variant flexGrow=1 fontSize=12 text=Tags
         button controlSize=sm glyph=external-link text=Edit in wallpicker variant=outline on:onClick
@@ -1876,7 +1876,7 @@ column align=stretch flexGrow=1 gap=12
       row align=center gap=8
         label color=on_surface_variant fontSize=12 text=Fit width=60
         select enabled=true key=fit_/w/e.jpg options=[Automatic|Cover|Contain|Tile|Fill] selectedIndex=0 width=180 on:onChange
-        label color=on_surface_variant flexGrow=1 fontSize=11 maxLines=2 text=On every monitor. Automatic uses the monitor's fit (Settings). hyprpaper only.
+        label color=on_surface_variant flexGrow=1 fontSize=11 maxLines=2 text=On every monitor. Automatic uses the monitor's fit (Settings). Not with Noctalia (it has its own).
       row align=center gap=8
         label color=on_surface_variant flexGrow=1 fontSize=12 text=Tags
         button controlSize=sm glyph=external-link text=Edit in wallpicker variant=outline on:onClick
