@@ -1102,9 +1102,24 @@ fn require_dev_server(context: &tauri::Context) {
     }
 }
 
+/// glibc's malloc keeps freed memory for reuse: big blocks once its dynamic
+/// mmap threshold has grown (to 32 MB), and one pool per thread (the app has
+/// dozens). After a few full-size images that's hundreds of MB held while the
+/// app sits in the tray. A fixed 1 MB threshold sends big blocks straight
+/// back to the system when freed, and two pools are plenty for a UI.
+fn tune_malloc() {
+    #[cfg(all(target_os = "linux", target_env = "gnu"))]
+    // SAFETY: mallopt only adjusts allocator parameters; called once at startup.
+    unsafe {
+        libc::mallopt(libc::M_MMAP_THRESHOLD, 1024 * 1024);
+        libc::mallopt(libc::M_ARENA_MAX, 2);
+    }
+}
+
 /// The app. `start_hidden` (`wallpicker --tray`): only the tray icon at
 /// first, for an autostart.
 pub fn run(start_hidden: bool) {
+    tune_malloc();
     let context = tauri::generate_context!();
     #[cfg(dev)]
     require_dev_server(&context);

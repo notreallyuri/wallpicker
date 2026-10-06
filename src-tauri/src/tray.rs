@@ -88,6 +88,7 @@ pub fn show(app: &AppHandle) {
 fn put_away(app: &AppHandle, w: &WebviewWindow) {
     if hides_on_close(app) {
         let _ = w.destroy();
+        give_memory_back();
     } else {
         let _ = w.hide();
     }
@@ -111,6 +112,20 @@ pub fn second_launch(app: &AppHandle, argv: &[String], cwd: &std::path::Path) {
     } else if !argv.iter().any(|a| a == "--tray") {
         show(app);
     }
+}
+
+/// Once the window has gone (its teardown takes a moment), hand freed memory
+/// back to the system: glibc keeps it for reuse otherwise, and the window
+/// leaves a lot behind (image buffers). The tray then costs what it should.
+pub fn give_memory_back() {
+    std::thread::spawn(|| {
+        std::thread::sleep(std::time::Duration::from_secs(2));
+        #[cfg(all(target_os = "linux", target_env = "gnu"))]
+        // SAFETY: malloc_trim only releases free memory; any thread may call it.
+        unsafe {
+            libc::malloc_trim(0);
+        }
+    });
 }
 
 /// Closing goes to the tray (the app keeps running, the window is destroyed)
