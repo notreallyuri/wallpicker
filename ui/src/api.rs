@@ -98,6 +98,11 @@ pub async fn backup_restore(id: &str) -> Result<Catalog, String> {
     call("backup_restore", &Args { id }).await
 }
 
+/// Every library image's colors, by path (computed once, then cached).
+pub async fn image_colors() -> Result<std::collections::BTreeMap<std::path::PathBuf, wallpicker_core::colors::ColorProfile>, String> {
+    call("image_colors", &NoArgs {}).await
+}
+
 /// Where `wallpicker --open` asked the window to go: a tab, "settings",
 /// "duplicates", or "tags" with the image.
 #[derive(Debug, Clone, PartialEq, Deserialize)]

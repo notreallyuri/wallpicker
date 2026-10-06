@@ -2,6 +2,7 @@
 //! pinned first, a tag filter, a sort, and a Flat or Folders layout.
 
 mod duplicates;
+mod colors;
 pub(crate) mod folders;
 mod tags;
 mod tile;
@@ -89,6 +90,33 @@ pub(crate) fn LocalView() -> impl IntoView {
     let limit = RwSignal::new(PAGE);
     let favorites_only = RwSignal::new(false);
     let duplicates_open = RwSignal::new(false);
+    // The color filter: a hue, "dark", "light" or "muted"; "" is none.
+    let color = RwSignal::new(String::new());
+    // Every image's colors, read when a color is first picked (and again
+    // after a rescan while one is).
+    let profiles = RwSignal::new(None::<std::collections::BTreeMap<PathBuf, wallpicker_core::colors::ColorProfile>>);
+    let profiles_loading = RwSignal::new(false);
+    Effect::new(move |seen: Option<u32>| {
+        let rev = ctx.library_rev.get();
+        let wanted = color.with(|c| !c.is_empty());
+        if !wanted {
+            return seen.unwrap_or(u32::MAX);
+        }
+        let stale = profiles.with_untracked(Option::is_none) || seen.is_some_and(|s| s != rev);
+        if stale && !profiles_loading.get_untracked() {
+            profiles_loading.set(true);
+            spawn_local(async move {
+                match api::image_colors().await {
+                    Ok(p) => {
+                        profiles.try_set(Some(p));
+                    }
+                    Err(e) => ctx.error_with("Could not read the wallpapers' colors", &e),
+                }
+                profiles_loading.try_set(false);
+            });
+        }
+        rev
+    });
     let sort = RwSignal::new(remembered("local.sort", &["newest", "oldest", "name", "random"]));
     let layout = RwSignal::new(remembered("local.layout", &["flat", "folders"]));
     Effect::new(move |_| crate::prefs::set("local.sort", &sort.get()));
@@ -194,6 +222,7 @@ pub(crate) fn LocalView() -> impl IntoView {
         filter.track();
         tag_filter.selected.track();
         favorites_only.track();
+        color.track();
         sort.track();
         layout.track();
         place.track();
@@ -221,7 +250,10 @@ pub(crate) fn LocalView() -> impl IntoView {
     });
 
     let filtering = Signal::derive(move || {
-        favorites_only.get() || !filter.with(String::is_empty) || tag_filter.selected.with(|t| !t.is_empty())
+        favorites_only.get()
+            || !filter.with(String::is_empty)
+            || tag_filter.selected.with(|t| !t.is_empty())
+            || color.with(|c| !c.is_empty())
     });
 
     // Favorites first, then the chosen order.
@@ -267,22 +299,38 @@ pub(crate) fn LocalView() -> impl IntoView {
                     images: direct.into_iter().map(|i| all[i].img.clone()).collect(),
                 };
             }
-            ctx.catalog.with(|c| Shown {
-                folders: Vec::new(),
-                images: all
-                    .iter()
-                    .filter(|p| !folders_layout || library::place_inside(&p.place, here.as_ref()))
-                    .filter(|p| !favorites || c.is_favorite(&p.img.path))
-                    .filter(|p| {
-                        // The text filter matches file names and tags.
-                        text.is_empty()
-                            || p.img.name.to_lowercase().contains(&text)
-                            || c.tags(&p.img.path).iter().any(|t| t.to_lowercase().contains(&text))
-                    })
-                    .filter(|p| c.matches(&p.img.path, &selected, mode))
-                    .map(|p| p.img.clone())
-                    .collect(),
-            })
+            let hue = color.get();
+            let mut images: Vec<LocalImage> = ctx.catalog.with(|c| {
+                profiles.with(|prof| {
+                    all.iter()
+                        .filter(|p| !folders_layout || library::place_inside(&p.place, here.as_ref()))
+                        .filter(|p| !favorites || c.is_favorite(&p.img.path))
+                        .filter(|p| {
+                            // The text filter matches file names and tags.
+                            text.is_empty()
+                                || p.img.name.to_lowercase().contains(&text)
+                                || c.tags(&p.img.path).iter().any(|t| t.to_lowercase().contains(&text))
+                        })
+                        .filter(|p| c.matches(&p.img.path, &selected, mode))
+                        // Until the colors are read, nothing matches a color.
+                        .filter(|p| {
+                            hue.is_empty()
+                                || prof.as_ref().and_then(|m| m.get(&p.img.path)).is_some_and(|cp| wallpicker_core::colors::matches(cp, &hue))
+                        })
+                        .map(|p| p.img.clone())
+                        .collect()
+                })
+            });
+            // With a color: the most of it first.
+            if !hue.is_empty() {
+                profiles.with(|prof| {
+                    if let Some(m) = prof {
+                        let score = |i: &LocalImage| m.get(&i.path).map_or(0.0, |cp| wallpicker_core::colors::score(cp, &hue));
+                        images.sort_by(|a, b| score(b).total_cmp(&score(a)));
+                    }
+                });
+            }
+            Shown { folders: Vec::new(), images }
         })
     });
 
@@ -360,6 +408,7 @@ pub(crate) fn LocalView() -> impl IntoView {
                 }
             }}
             <Choice items=SORTS.to_vec() model=sort class="w-36" />
+            <colors::ColorPicker color=color loading=profiles_loading />
             <Button
                 variant=ButtonVariant::Outline
                 attr:title="Show everything at once, or browse folder by folder"

@@ -6,6 +6,7 @@
 
 pub mod backup;
 pub mod catalog;
+pub mod colors;
 pub mod duplicates;
 pub mod error;
 pub mod library;

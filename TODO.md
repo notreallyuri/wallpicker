@@ -75,8 +75,9 @@ What stands between "my tool" and one others can install (2026-10-05):
 
 - [x] **Backup**: export / import the library (favorites, tags, fits) as one file, finding moved
   wallpapers; daily automatic snapshots (14 kept) with restore.
-- [ ] **Filter by color**: the duplicates fingerprint already has a 4×4 color grid per image;
-  reuse it for "show me blue / dark / warm" in Local.
+- [x] **Filter by color**: a profile per image (share of eight hues, lightness, how colorful),
+  from the thumbnail, cached; Local's Color button; `wallpicker colors`. (The duplicates grid was
+  too coarse: a 4×4 average loses small colored subjects.)
 - [ ] **Day and night sets**: the slideshow picks from a different set by time of day.
 
 ## Planned (each needs a plan before starting)

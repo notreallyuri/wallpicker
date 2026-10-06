@@ -197,3 +197,53 @@ pub fn show_in_folder(args: &[String]) -> i32 {
         Err(e) => fail(&e),
     }
 }
+
+/// `wallpicker colors [COLOR] [--json]`: the library's colors, or the images
+/// that are COLOR (a hue, dark, light or muted), strongest first.
+pub fn colors(args: &[String]) -> i32 {
+    use wallpicker_core::colors::{self, HUES, TONES};
+    let store = Store::new(Dirs::from_env());
+    let json = args.iter().any(|a| a == "--json");
+    let key = args.iter().find(|a| !a.starts_with("--")).map(String::as_str);
+    let known: Vec<&str> = HUES.iter().chain(TONES.iter()).map(|(k, _)| *k).collect();
+    if let Some(k) = key
+        && !known.contains(&k)
+    {
+        return fail(&format!("colors: {k}? one of {}", known.join(", ")));
+    }
+    let profiles = match crate::color_profiles(&store) {
+        Ok(p) => p,
+        Err(e) => return fail(&e),
+    };
+    match key {
+        None if json => super::print_json(&profiles),
+        None => {
+            for (path, p) in &profiles {
+                let mut tops: Vec<(f32, &str)> =
+                    HUES.iter().enumerate().map(|(i, (k, _))| (p.hues[i], *k)).filter(|(s, _)| *s >= colors::HUE_SHARE).collect();
+                tops.sort_by(|a, b| b.0.total_cmp(&a.0));
+                let tones: Vec<&str> = TONES.iter().map(|(k, _)| *k).filter(|k| colors::matches(p, k)).collect();
+                let hues: Vec<String> = tops.iter().map(|(s, k)| format!("{k} {:.0}%", s * 100.0)).collect();
+                println!(
+                    "{}  {}{}",
+                    path.file_name().map_or_else(String::new, |n| n.to_string_lossy().into_owned()),
+                    hues.join(", "),
+                    if tones.is_empty() { String::new() } else { format!("  [{}]", tones.join(", ")) }
+                );
+            }
+            0
+        }
+        Some(k) => {
+            let mut hits: Vec<(&std::path::PathBuf, f32)> =
+                profiles.iter().filter(|(_, p)| colors::matches(p, k)).map(|(path, p)| (path, colors::score(p, k))).collect();
+            hits.sort_by(|a, b| b.1.total_cmp(&a.1));
+            if json {
+                return super::print_json(&hits.iter().map(|(p, _)| p).collect::<Vec<_>>());
+            }
+            for (path, s) in hits {
+                println!("{:>4.0}%  {}", s * 100.0, path.display());
+            }
+            0
+        }
+    }
+}

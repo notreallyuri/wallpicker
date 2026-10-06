@@ -439,6 +439,23 @@ async fn duplicates(state: &AppState) -> CmdResult<Vec<DuplicateGroup>> {
     .await
 }
 
+/// Every library image's colors (computed once, cached), by path.
+pub fn color_profiles(
+    store: &Store,
+) -> wallpicker_core::error::Result<std::collections::BTreeMap<PathBuf, wallpicker_core::colors::ColorProfile>> {
+    let settings = store.load_settings()?;
+    let images = library::scan(&settings.folders, settings.recursive);
+    Ok(wallpicker_core::colors::profiles(&images, &store.dirs().cache, settings.thumb_width))
+}
+
+#[tauri::command]
+async fn image_colors(
+    state: tauri::State<'_, AppState>,
+) -> CmdResult<std::collections::BTreeMap<PathBuf, wallpicker_core::colors::ColorProfile>> {
+    let store = state.store.clone();
+    blocking(move || color_profiles(&store)).await
+}
+
 #[tauri::command]
 async fn find_duplicates(state: tauri::State<'_, AppState>) -> CmdResult<Vec<DuplicateGroup>> {
     duplicates(&state).await
@@ -1095,6 +1112,7 @@ pub fn run(start_hidden: bool) {
             slideshow_status,
             slideshow_now,
             find_duplicates,
+            image_colors,
             previous_wallpaper,
             wallpaper_palette,
             take_open_request,
