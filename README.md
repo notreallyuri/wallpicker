@@ -43,10 +43,12 @@ or **Noctalia**'s wallpaper manager (Settings → General → Wallpaper backend)
   Wallhaven's API is read-only, so collections can be browsed but not changed from here.
 - **Per monitor**: the bar at the top picks which monitors a click applies to, and shows what each
   one currently has (with a thumbnail).
-- **Fit** (hyprpaper): a general fit in Settings, a fit per monitor under it (say, Contain on a
-  4:3 screen), and a wallpaper's own fit (right-click → **Fit**), which wins over both. A change
-  is re-applied right away where it shows. With the Noctalia backend, Noctalia's own fill mode
-  applies.
+- **Fit**: a general fit in Settings, and a fit per monitor under it (say, Contain on a 4:3
+  screen). With the Noctalia backend, Noctalia's own fill mode applies.
+- **Adjust** (the monitor drawer's adjust button, or right-click a monitor pill): mirror what a
+  monitor shows (left to right, top to bottom) and give it its own fit, applied there at once.
+  Temporary: another wallpaper on that monitor goes on as it is. No backend mirrors, so
+  wallpicker makes the mirrored copy (cached). `wallpicker adjust <monitor> --flip h --fit contain`.
 - The search bar (and the tags and folder path under it) stays at the top while you scroll.
 - **Keys**: Ctrl+F search field, Ctrl+R random, Alt+Up parent folder, Alt+Left/Right online pages,
   Ctrl+1/2/3 Local/Online/Collections.

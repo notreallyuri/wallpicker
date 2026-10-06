@@ -312,16 +312,15 @@ pub async fn save_online_filters(filters: &OnlineFilters) -> Result<(), String> 
     call("save_online_filters", &Args { filters }).await
 }
 
-/// Move a local wallpaper to the trash.
-/// Give a wallpaper its own fit (None: the monitor's); re-applied where it
-/// shows.
-pub async fn set_wallpaper_fit(path: &str, fit: Option<wallpicker_core::settings::FitMode>) -> Result<Catalog, String> {
+/// Adjust what `monitor` shows (temporary: until another wallpaper goes
+/// there); the app makes the changed copy and shows it.
+pub async fn set_monitor_adjust(monitor: &str, adjust: wallpicker_core::settings::Adjust) -> Result<State, String> {
     #[derive(Serialize)]
     struct Args<'a> {
-        path: &'a str,
-        fit: Option<wallpicker_core::settings::FitMode>,
+        monitor: &'a str,
+        adjust: wallpicker_core::settings::Adjust,
     }
-    call("set_wallpaper_fit", &Args { path, fit }).await
+    call("set_monitor_adjust", &Args { monitor, adjust }).await
 }
 
 /// `{enabled, minutes, next_in}`: when the slideshow changes next.

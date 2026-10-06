@@ -24,7 +24,7 @@ local function list()
     },
     images = {
       { path = "/w/anime/b.jpg", name = "b.jpg", modified = 50, favorite = true, tags = { "Mitsu", "dark" }, thumb = "/c/b.jpg", root = 0, folder = "anime", width = 3840, height = 2160 },
-      { path = "/w/a.jpg", name = "a.jpg", modified = 40, favorite = false, tags = { "dark" }, thumb = "/c/a.jpg", root = 0, folder = "", fit = "tile", width = 1920, height = 1080 },
+      { path = "/w/a.jpg", name = "a.jpg", modified = 40, favorite = false, tags = { "dark" }, thumb = "/c/a.jpg", root = 0, folder = "", width = 1920, height = 1080 },
       { path = "/w/anime/mitsu/c.jpg", name = "c.jpg", modified = 30, favorite = false, tags = { "Mitsu" }, thumb = "/c/c.jpg", root = 0, folder = "anime/mitsu" },
       { path = "/w/wallpicker/d.png", name = "d.png", modified = 20, favorite = false, tags = {}, thumb = nil, root = 0, folder = "wallpicker" },
       { path = "/w/e.jpg", name = "e.jpg", modified = 10, favorite = false, tags = {}, thumb = "/c/e.jpg", root = 0, folder = "" },

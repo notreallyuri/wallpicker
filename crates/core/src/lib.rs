@@ -28,5 +28,7 @@ pub mod noctalia;
 pub mod store;
 #[cfg(feature = "native")]
 pub mod thumbs;
+#[cfg(feature = "native")]
+pub mod transform;
 
 pub use error::{Error, Result};

@@ -108,8 +108,6 @@ step("local: ctrl+r")
 
 mock.fire(mock.byKey("/w/anime/b.jpg").children[2], "onClick")
 step("local: b.jpg view")
-mock.fire(mock.byKey("fit_/w/anime/b.jpg"), "onChange", "2", "Contain")
-step("local: b.jpg fits as contain")
 mock.fire(mock.byText("Edit in wallpicker"), "onClick")
 step("local: edit tags hands over to the app")
 mock.fire(mock.byText("Move to trash"), "onClick")

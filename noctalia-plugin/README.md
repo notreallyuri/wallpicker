@@ -31,8 +31,8 @@ and **editing tags** (a wallpaper's view, or right-click → Edit tags in wallpi
   wallpicker" to change them) and trash, which asks first. Menus need Noctalia's plugin API 28.
 - **Filters** (next to the search box, with a count when any are on): the provider's filters,
   the same ones as the app's Filters dialog. Saved as you change them; Done searches again.
-- **Fit**: a wallpaper's own fit in its view (or right-click → Fit…); per-monitor fits in the
-  app's Settings. A change is re-applied where it shows (hyprpaper backend).
+- **Fit and mirroring** are per monitor, in the app (the monitor drawer's Adjust); the fits in the
+  app's Settings apply here too.
 - **Slideshow**: set up in the app (Settings → Slideshow). The plugin's background service asks
   wallpicker every minute whether it's time, so it runs without the app; it does nothing while
   the slideshow is off.

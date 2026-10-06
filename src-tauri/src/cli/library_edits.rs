@@ -103,27 +103,64 @@ fn absolute(path: &str) -> PathBuf {
     std::path::absolute(&p).unwrap_or(p)
 }
 
-/// `wallpicker fit <image> auto|cover|contain|tile|fill`: the wallpaper's own
-/// fit on any monitor ("auto": the monitor's or the general one). Re-applies
-/// it where it's showing.
-pub fn fit(args: &[String]) -> i32 {
-    let usage_text = "usage: wallpicker fit <image> auto|cover|contain|tile|fill";
-    let [path, mode] = args else {
-        return usage_for("fit", "an image and a fit, please", usage_text);
+/// `wallpicker adjust <monitor> [--flip h|v|both|none] [--fit F] [--reset]`: adjust
+/// what a monitor shows (wallpicker makes the changed copy), until another
+/// wallpaper goes there. Without options: what it is now.
+pub fn adjust(args: &[String]) -> i32 {
+    use wallpicker_core::settings::{Adjust, Flip};
+    let usage_text = "usage: wallpicker adjust <monitor> [--flip h|v|both|none] [--fit auto|cover|contain|tile|fill] [--reset]";
+    let Some((monitor, opts)) = args.split_first() else {
+        return usage_for("adjust", "which monitor?", usage_text);
     };
-    let fit = match mode.as_str() {
-        "auto" | "default" => None,
-        m => match serde_json::from_value(serde_json::Value::String(m.to_string())) {
-            Ok(f) => Some(f),
-            Err(_) => return usage_for("fit", &format!("{m} isn't a fit"), usage_text),
-        },
+    let store = Store::new(Dirs::from_env());
+    let mut adjust = match store.load_state() {
+        Ok(s) => s.adjust.get(monitor).copied().unwrap_or_default(),
+        Err(e) => return fail(&e),
     };
-    let path = absolute(path);
-    let state = AppState::new(Store::new(Dirs::from_env()));
-    let p = path.to_string_lossy().into_owned();
+    let mut changed = false;
+    let mut rest = opts.iter();
+    while let Some(o) = rest.next() {
+        match o.as_str() {
+            "--reset" => adjust = Adjust::default(),
+            "--flip" => {
+                adjust.flip = match rest.next().map(String::as_str) {
+                    Some("h") => Flip { h: true, v: false },
+                    Some("v") => Flip { h: false, v: true },
+                    Some("both" | "hv") => Flip { h: true, v: true },
+                    Some("none") => Flip::default(),
+                    other => return usage_for("adjust", &format!("--flip {}? use h, v, both or none", other.unwrap_or("")), usage_text),
+                }
+            }
+            "--fit" => {
+                adjust.fit = match rest.next().map(String::as_str) {
+                    Some("auto") => None,
+                    Some(m) => match serde_json::from_value(serde_json::Value::String(m.to_string())) {
+                        Ok(f) => Some(f),
+                        Err(_) => return usage_for("adjust", &format!("--fit {m}? use auto, cover, contain, tile or fill"), usage_text),
+                    },
+                    None => return usage_for("adjust", "--fit needs a fit", usage_text),
+                }
+            }
+            other => return usage_for("adjust", &format!("unknown option {other}"), usage_text),
+        }
+        changed = true;
+    }
+    let describe = move |a: Adjust| {
+        format!(
+            "{monitor}: flip {}, fit {}",
+            if a.flip.is_none() { "none" } else { a.flip.as_str() },
+            a.fit.map_or("auto", |f| f.as_str())
+        )
+    };
+    if !changed {
+        println!("{}", describe(adjust));
+        return 0;
+    }
+    let state = AppState::new(store);
+    let m = monitor.clone();
     run_edit(
-        async move { crate::set_fit(&state, &p, fit).await.map(|_| ()) },
-        format!("{} now fits as {mode}", path.display()),
+        async move { crate::set_adjust(&state, m, adjust).await.map(|_| ()) },
+        describe(adjust),
     )
 }
 

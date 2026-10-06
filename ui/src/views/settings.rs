@@ -459,9 +459,9 @@ fn SettingsForm(on_saved: Callback<()>) -> impl IntoView {
                                             <FieldDescription>
                                                 {move || {
                                                     if backend.get() == WallpaperBackend::Awww.as_str() {
-                                                        "For every monitor, unless it has its own below; a wallpaper's own fit (right-click → Fit) wins over both."
+                                                        "For every monitor, unless it has its own below; a monitor's Adjust (the drawer) wins over both, until its wallpaper changes."
                                                     } else {
-                                                        "For every monitor, unless it has its own below; a wallpaper's own fit (right-click → Fit) wins over both. Needs a newer hyprpaper: leave it on default if applying fails."
+                                                        "For every monitor, unless it has its own below; a monitor's Adjust (the drawer) wins over both, until its wallpaper changes. Needs a newer hyprpaper: leave it on default if applying fails."
                                                     }
                                                 }}
                                             </FieldDescription>

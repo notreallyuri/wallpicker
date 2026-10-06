@@ -1,5 +1,5 @@
 use std::collections::BTreeMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
@@ -97,8 +97,9 @@ pub struct Settings {
     pub wallpaper_backend: WallpaperBackend,
     /// The fit for every monitor (None: the backend's default).
     pub fit_mode: Option<FitMode>,
-    /// A monitor's own fit (by name), over `fit_mode`. A wallpaper's own fit
-    /// (in the catalog) wins over both; see [`Settings::fit_for`].
+    /// A monitor's own fit (by name), over `fit_mode`. An adjusted fit (the
+    /// Adjust dialog, until the wallpaper changes) wins over both; see
+    /// [`Settings::fit_for`].
     pub monitor_fits: BTreeMap<String, FitMode>,
     pub konachan_site: KonachanSite,
     pub slideshow: Slideshow,
@@ -154,11 +155,11 @@ impl Default for Settings {
 }
 
 impl Settings {
-    /// The fit for a wallpaper on `monitor`: the wallpaper's own (`wallpaper`,
-    /// from the catalog), else the monitor's, else the general one. None
-    /// leaves it to hyprpaper.
-    pub fn fit_for(&self, monitor: &str, wallpaper: Option<FitMode>) -> Option<FitMode> {
-        wallpaper.or_else(|| self.monitor_fits.get(monitor).copied()).or(self.fit_mode)
+    /// The fit on `monitor`: its adjusted one (`adjusted`, until the
+    /// wallpaper changes), else the monitor's, else the general one. None
+    /// leaves it to the backend.
+    pub fn fit_for(&self, monitor: &str, adjusted: Option<FitMode>) -> Option<FitMode> {
+        adjusted.or_else(|| self.monitor_fits.get(monitor).copied()).or(self.fit_mode)
     }
 }
 
@@ -290,6 +291,60 @@ pub struct State {
     /// What each monitor showed before, oldest first (see
     /// [`HISTORY_LEN`]): `wallpicker previous` goes back through it.
     pub history: BTreeMap<String, Vec<PathBuf>>,
+    /// How each monitor's current wallpaper is adjusted (mirrored...).
+    /// Temporary: another wallpaper on that monitor clears it.
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    pub adjust: BTreeMap<String, Adjust>,
+}
+
+impl State {
+    /// `monitor`'s adjustments, when it still shows `path`.
+    pub fn adjust_for(&self, monitor: &str, path: &Path) -> Adjust {
+        match self.current.get(monitor) {
+            Some(p) if p == path => self.adjust.get(monitor).copied().unwrap_or_default(),
+            _ => Adjust::default(),
+        }
+    }
+}
+
+/// Mirroring: left and right swapped (`h`), top and bottom (`v`), or both.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(default)]
+pub struct Flip {
+    pub h: bool,
+    pub v: bool,
+}
+
+impl Flip {
+    pub fn is_none(&self) -> bool {
+        !self.h && !self.v
+    }
+
+    /// "h", "v", "hv" or "" (file names, the command line).
+    pub fn as_str(&self) -> &'static str {
+        match (self.h, self.v) {
+            (true, true) => "hv",
+            (true, false) => "h",
+            (false, true) => "v",
+            (false, false) => "",
+        }
+    }
+}
+
+/// A monitor's adjustments to the wallpaper it shows (Adjust dialog). No
+/// backend can do these: wallpicker makes the changed copy (`transform`).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct Adjust {
+    pub flip: Flip,
+    /// Its own fit on this monitor, over the monitor's and the general one.
+    pub fit: Option<FitMode>,
+}
+
+impl Adjust {
+    pub fn is_none(&self) -> bool {
+        self.flip.is_none() && self.fit.is_none()
+    }
 }
 
 /// Wallpapers remembered per monitor for going back.

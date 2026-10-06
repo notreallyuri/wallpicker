@@ -27,7 +27,6 @@ use serde::Serialize;
 use crate::cmd::Runner;
 use crate::error::{Error, Result};
 use crate::monitors::{Monitor, parse_monitors};
-use crate::catalog::Catalog;
 use crate::settings::{FitMode, Settings, WallpaperBackend};
 use crate::store::Store;
 
@@ -210,11 +209,11 @@ pub fn apply_and_remember(
     apply_and_remember_with(runner, store, WallpaperBackend::Hyprpaper, monitors, path)
 }
 
-/// What decides each wallpaper's fit, read once: the settings (general and
-/// per-monitor fit) and the catalog (each wallpaper's own).
+/// What decides each monitor's fit, read once: the settings (general and
+/// per-monitor fit) and the monitor's adjustment of what it shows.
 pub struct Fits {
     settings: Settings,
-    catalog: Catalog,
+    state: crate::settings::State,
 }
 
 impl Fits {
@@ -223,12 +222,12 @@ impl Fits {
     pub fn load(store: &Store) -> Fits {
         Fits {
             settings: store.load_settings().unwrap_or_default(),
-            catalog: store.load_catalog().unwrap_or_default(),
+            state: store.load_state().unwrap_or_default(),
         }
     }
 
     pub fn of(&self, monitor: &str, path: &Path) -> Option<FitMode> {
-        self.settings.fit_for(monitor, self.catalog.fit(path))
+        self.settings.fit_for(monitor, self.state.adjust_for(monitor, path).fit)
     }
 }
 
@@ -236,6 +235,9 @@ impl Fits {
 /// once for a batch of monitors.
 pub struct Backend {
     kind: WallpaperBackend,
+    /// Each monitor's adjustments, and where changed copies are cached.
+    state: crate::settings::State,
+    cache: PathBuf,
     noctalia_enabled: Option<bool>,
     transition: crate::settings::Transition,
 }
@@ -244,6 +246,8 @@ impl Backend {
     pub fn new(kind: WallpaperBackend, store: &Store) -> Backend {
         Backend {
             kind,
+            state: store.load_state().unwrap_or_default(),
+            cache: store.dirs().cache.clone(),
             noctalia_enabled: match kind {
                 WallpaperBackend::Noctalia => crate::noctalia::wallpaper_enabled_on_disk(),
                 _ => None,
@@ -260,6 +264,10 @@ impl Backend {
     /// Show `path` on `monitor`. With Noctalia, `fit` doesn't apply: its
     /// fill mode is a setting of its own.
     pub fn apply(&self, runner: &dyn Runner, monitor: &str, path: &Path, fit: Option<FitMode>) -> Result<()> {
+        // An adjusted wallpaper is shown from its changed copy (only while
+        // the monitor still shows it: a new one goes on as it is).
+        let file = crate::transform::shown_file(&self.cache, path, self.state.adjust_for(monitor, path).flip)?;
+        let path = file.as_path();
         match self.kind {
             WallpaperBackend::Hyprpaper => apply(runner, monitor, path, fit),
             WallpaperBackend::Awww => crate::awww::apply(runner, monitor, path, fit, &self.transition),
@@ -776,10 +784,14 @@ mod tests {
         let conf = std::fs::read_to_string(store.hyprpaper_conf_path()).unwrap();
         assert!(conf.contains("monitor = DP-2\n    path = ") && conf.contains("fit_mode = contain"));
 
-        // The wallpaper's own fit wins on both; the config follows at once.
-        store.update_catalog(|c| c.set_fit(&img, Some(FitMode::Tile))).unwrap();
+        // DP-1's adjusted fit wins there (DP-2 keeps its own); the config
+        // follows once written.
+        let fit = crate::settings::Adjust { fit: Some(FitMode::Tile), ..Default::default() };
+        store.set_adjust("DP-1", fit).unwrap();
+        store.write_hyprpaper_conf().unwrap();
         let conf = std::fs::read_to_string(store.hyprpaper_conf_path()).unwrap();
-        assert_eq!(conf.matches("fit_mode = tile").count(), 2);
+        assert_eq!(conf.matches("fit_mode = tile").count(), 1);
+        assert_eq!(conf.matches("fit_mode = contain").count(), 1);
 
         // Re-applying only DP-1 (connected, file there) uses the new fit.
         let mock = Mock::new(vec![Ok(MONITORS_JSON.into())]);

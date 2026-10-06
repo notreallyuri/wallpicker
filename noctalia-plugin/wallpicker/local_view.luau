@@ -178,7 +178,6 @@ return function(app)
       { kind = "header", label = image.name or "" },
       { id = "favorite", label = if fav then app.tr("menu_unfavorite") else app.tr("menu_favorite") },
       { id = "tags", label = app.tr("menu_edit_tags") },
-      { id = "fit", label = app.tr("menu_fit") },
       { kind = "separator" },
       { kind = "header", label = app.tr("menu_apply_to") },
       { id = "apply_all", label = app.tr("all_monitors") },

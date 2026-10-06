@@ -116,6 +116,7 @@ fn Shell() -> impl IntoView {
                 </Tip>
             </header>
             <crate::monitor_bar::MonitorDrawer />
+            <crate::monitor_bar::AdjustDialog />
             // Every panel stays mounted (inactive ones are only hidden), so
             // switching tabs keeps search results and scroll position.
             // Each tab is a header floating over its own scroll area

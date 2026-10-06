@@ -1,37 +1,11 @@
 --!nonstrict
 -- A local wallpaper's own view, in place of the grid: preview, favorite,
--- fit, its tags (edited in the app) and trash, which asks first.
+-- its tags (edited in the app) and trash, which asks first. (Fit and mirroring
+-- are per monitor now, in the app's Adjust dialog.)
 
 return function(app)
   local ui, noctalia = app.ui, app.noctalia
   local S = app.state
-
-  -- The wallpaper's own fit on any monitor; Automatic uses the monitor's
-  -- (Settings). Saved and re-applied where it shows.
-  local FITS = { "", "cover", "contain", "tile", "fill" }
-  function app.fitRow(image)
-    local labels = {}
-    for _, f in ipairs(FITS) do
-      table.insert(labels, app.tr("fit_" .. (if f == "" then "auto" else f)))
-    end
-    return ui.row({ gap = 8, align = "center" }, {
-      ui.label({ text = app.tr("fit"), fontSize = 12, color = "on_surface_variant", width = 60 }),
-      ui.select({
-        key = "fit_" .. image.path,
-        options = labels,
-        selectedIndex = (table.find(FITS, image.fit or "") or 1) - 1,
-        width = 180,
-        enabled = not S.detail.busy,
-        onChange = function(index)
-          local f = FITS[(tonumber(index) or 0) + 1]
-          if f ~= nil and f ~= (image.fit or "") then
-            app.edit({ "fit", image.path, if f == "" then "auto" else f }, "edit_failed")
-          end
-        end,
-      }),
-      ui.label({ text = app.tr("fit_hint"), fontSize = 11, color = "on_surface_variant", flexGrow = 1, maxLines = 2 }),
-    })
-  end
 
   function app.openDetail(path, confirmTrash)
     S.detail.path = path
@@ -118,7 +92,6 @@ return function(app)
       }),
       -- The full image, not the grid thumbnail.
       ui.image({ path = path, width = width, height = math.floor(width * 9 / 16), fit = "contain", radius = app.TILE_RADIUS, border = "outline", borderWidth = 1 }),
-      app.fitRow(image),
       ui.row({ gap = 8, align = "center" }, {
         ui.label({ text = app.tr("tags"), fontSize = 12, color = "on_surface_variant", flexGrow = 1 }),
         ui.button({ text = app.tr("edit_tags_in_app"), glyph = "external-link", variant = "outline", controlSize = "sm", onClick = function()

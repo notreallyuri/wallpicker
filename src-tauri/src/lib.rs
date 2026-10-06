@@ -21,7 +21,7 @@ use wallpicker_core::cmd::SystemRunner;
 use wallpicker_core::hyprpaper::{self, ApplyReport};
 use wallpicker_core::library::{self, LocalImage};
 use wallpicker_core::monitors::Monitor;
-use wallpicker_core::settings::{FitMode, Settings, State as SavedState, WallpaperBackend};
+use wallpicker_core::settings::{Settings, State as SavedState, WallpaperBackend};
 use wallpicker_core::store::{Dirs, Store};
 use wallpicker_core::thumbs;
 use wallpicker_core::moebooru::{self, MoebooruQuery, Site};
@@ -499,14 +499,12 @@ async fn resolve_duplicates_with(state: &AppState, keep: &str, others: &[String]
     update_catalog(state, move |c| {
         let favorite = o.iter().any(|p| c.is_favorite(p));
         let tags: Vec<String> = o.iter().flat_map(|p| c.tags(p).to_vec()).collect();
-        let fit = c.fit(&k).or_else(|| o.iter().find_map(|p| c.fit(p)));
         if favorite {
             c.set_favorite(&k, true);
         }
         for t in &tags {
             c.add_tag(&k, t);
         }
-        c.set_fit(&k, fit);
     })
     .await?;
 
@@ -727,32 +725,35 @@ async fn slideshow_now(state: tauri::State<'_, AppState>) -> CmdResult<()> {
     }
 }
 
-/// Give a wallpaper its own fit (None: the monitor's), and re-apply it where
-/// it's showing. Shared by the app and `wallpicker fit`.
-async fn set_fit(state: &AppState, path: &str, fit: Option<FitMode>) -> CmdResult<Catalog> {
-    let path = wallpaper_path(path)?;
-    let p = path.clone();
-    let catalog = update_catalog(state, move |c| c.set_fit(&p, fit)).await?;
+/// Adjust what `monitor` shows (mirrored...), and show it there now. Every
+/// backend: the changed copy is a file of its own. Temporary: another
+/// wallpaper on that monitor clears it.
+pub(crate) async fn set_adjust(
+    state: &AppState,
+    monitor: String,
+    adjust: wallpicker_core::settings::Adjust,
+) -> CmdResult<SavedState> {
     let store = state.store.clone();
     blocking(move || {
-        if store.load_settings()?.wallpaper_backend != WallpaperBackend::Noctalia
-            && let Err(e) = hyprpaper::reapply(&SystemRunner, &store, &|_, shown| shown == path)
-        {
-            eprintln!("wallpicker: could not re-apply with the new fit: {e}");
+        let saved = store.set_adjust(&monitor, adjust)?;
+        let report = hyprpaper::reapply(&SystemRunner, &store, &|m, _| m == monitor)?;
+        if let Some((_, why)) = report.failed.first() {
+            return Err(wallpicker_core::error::Error::Invalid(format!("Could not show it on {monitor}: {why}")));
         }
-        Ok(())
+        let _ = store.write_hyprpaper_conf();
+        wallpicker_core::transform::prune(&store.dirs().cache, &saved);
+        Ok(saved)
     })
-    .await?;
-    Ok(catalog)
+    .await
 }
 
 #[tauri::command]
-async fn set_wallpaper_fit(
+async fn set_monitor_adjust(
     state: tauri::State<'_, AppState>,
-    path: String,
-    fit: Option<FitMode>,
-) -> CmdResult<Catalog> {
-    set_fit(&state, &path, fit).await
+    monitor: String,
+    adjust: wallpicker_core::settings::Adjust,
+) -> CmdResult<SavedState> {
+    set_adjust(&state, monitor, adjust).await
 }
 
 #[tauri::command]
@@ -1194,7 +1195,6 @@ pub fn run(start_hidden: bool) {
             trash_wallpaper,
             show_in_folder,
             copy_text,
-            set_wallpaper_fit,
             slideshow_status,
             slideshow_now,
             find_duplicates,
@@ -1202,6 +1202,7 @@ pub fn run(start_hidden: bool) {
             previous_wallpaper,
             wallpaper_palette,
             take_open_request,
+            set_monitor_adjust,
             app_usage,
             online_preview,
             window_background,

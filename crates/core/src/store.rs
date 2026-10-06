@@ -98,7 +98,14 @@ impl Store {
         // Each monitor with its fit: the wallpaper's, the monitor's, or the
         // general one.
         let fits = crate::hyprpaper::Fits::load(self);
-        let text = crate::hyprpaper::config_for(&state, &|m, p| fits.of(m, p));
+        // Adjusted wallpapers are their changed copies (made when applied).
+        let mut shown = state.clone();
+        for (m, path) in shown.current.iter_mut() {
+            if let Ok(file) = crate::transform::shown_file(&self.dirs.cache, path, state.adjust_for(m, path).flip) {
+                *path = file;
+            }
+        }
+        let text = crate::hyprpaper::config_for(&shown, &|m, _| fits.of(m, &state.current[m]));
         atomic_write(&self.hyprpaper_conf_path(), text.as_bytes(), false)
     }
 
@@ -146,6 +153,8 @@ impl Store {
         let mut state = self.load_state()?;
         let before = state.clone();
         state.current.retain(|_, p| p != path);
+        let shown = state.current.clone();
+        state.adjust.retain(|m, _| shown.contains_key(m));
         // Nothing to go back to either.
         for h in state.history.values_mut() {
             h.retain(|p| p != path);
@@ -170,10 +179,32 @@ impl Store {
                 h.remove(0);
             }
         }
+        // Adjustments were for what it showed.
+        if state.current.get(monitor).is_some_and(|p| p != path) {
+            state.adjust.remove(monitor);
+        }
         state
             .current
             .insert(monitor.to_string(), path.to_path_buf());
-        self.save_state(&state)
+        self.save_state(&state)?;
+        crate::transform::prune(&self.dirs.cache, &state);
+        Ok(())
+    }
+
+    /// Adjust what `monitor` shows (None-like: back to as it is). Applying it
+    /// is the caller's (`hyprpaper::reapply`).
+    pub fn set_adjust(&self, monitor: &str, adjust: crate::settings::Adjust) -> Result<State> {
+        let mut state = self.load_state()?;
+        if !state.current.contains_key(monitor) {
+            return Err(crate::error::Error::Invalid(format!("{monitor} shows nothing wallpicker set")));
+        }
+        if adjust.is_none() {
+            state.adjust.remove(monitor);
+        } else {
+            state.adjust.insert(monitor.to_string(), adjust);
+        }
+        self.save_state(&state)?;
+        Ok(state)
     }
 
     /// What `monitor` showed before, skipping files that are gone.
@@ -195,8 +226,13 @@ impl Store {
         {
             h.truncate(i);
         }
+        if state.current.get(monitor).is_some_and(|p| p != path) {
+            state.adjust.remove(monitor);
+        }
         state.current.insert(monitor.to_string(), path.to_path_buf());
-        self.save_state(&state)
+        self.save_state(&state)?;
+        crate::transform::prune(&self.dirs.cache, &state);
+        Ok(())
     }
 }
 
@@ -454,6 +490,30 @@ mod tests {
         let d = Dirs::from_lookup(|k| env.get(k).map(PathBuf::from));
         assert_eq!(d.config, PathBuf::from("/cfg/wallpicker"));
         assert_eq!(d.cache, PathBuf::from("/home/u/.cache/wallpicker"));
+    }
+
+    #[test]
+    fn adjustments_last_until_the_wallpaper_changes() {
+        use crate::settings::{Adjust, Flip};
+        let tmp = tempfile::tempdir().unwrap();
+        let store = Store::new(Dirs::under(tmp.path()));
+        let (a, b) = (Path::new("/w/a.jpg"), Path::new("/w/b.jpg"));
+        let mirrored = Adjust { flip: Flip { h: true, v: false }, ..Default::default() };
+        assert!(store.set_adjust("DP-1", mirrored).is_err(), "nothing shown there yet");
+        store.set_current("DP-1", a).unwrap();
+        store.set_current("DP-2", a).unwrap();
+        store.set_adjust("DP-1", mirrored).unwrap();
+        // The same wallpaper again keeps it; the other monitor never had it.
+        store.set_current("DP-1", a).unwrap();
+        let s = store.load_state().unwrap();
+        assert_eq!(s.adjust_for("DP-1", a), mirrored);
+        assert_eq!(s.adjust_for("DP-2", a), Adjust::default());
+        // Another wallpaper clears it, and so does going back.
+        store.set_current("DP-1", b).unwrap();
+        assert!(store.load_state().unwrap().adjust.is_empty());
+        store.set_adjust("DP-1", mirrored).unwrap();
+        store.went_back("DP-1", a).unwrap();
+        assert!(store.load_state().unwrap().adjust.is_empty());
     }
 
     #[test]

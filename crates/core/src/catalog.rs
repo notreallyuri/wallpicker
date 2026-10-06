@@ -8,7 +8,6 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
-use crate::settings::FitMode;
 
 /// Longest tag accepted, in characters.
 pub const MAX_TAG_LEN: usize = 64;
@@ -19,14 +18,11 @@ pub struct Entry {
     pub favorite: bool,
     /// In the order they were added.
     pub tags: Vec<String>,
-    /// How to fit it on any monitor, over the monitor's and the general fit.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub fit: Option<FitMode>,
 }
 
 impl Entry {
     fn is_empty(&self) -> bool {
-        !self.favorite && self.tags.is_empty() && self.fit.is_none()
+        !self.favorite && self.tags.is_empty()
     }
 
     pub fn has_tag(&self, tag: &str) -> bool {
@@ -77,17 +73,6 @@ impl Catalog {
 
     pub fn tags(&self, path: &Path) -> &[String] {
         self.entry(path).map_or(&[], |e| e.tags.as_slice())
-    }
-
-    /// The wallpaper's own fit, if it has one.
-    pub fn fit(&self, path: &Path) -> Option<FitMode> {
-        self.entry(path).and_then(|e| e.fit)
-    }
-
-    /// Give `path` its own fit, or (None) go back to the monitor's.
-    pub fn set_fit(&mut self, path: &Path, fit: Option<FitMode>) {
-        self.items.entry(path.to_path_buf()).or_default().fit = fit;
-        self.drop_if_empty(path);
     }
 
     pub fn set_favorite(&mut self, path: &Path, favorite: bool) {

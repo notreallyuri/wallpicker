@@ -86,6 +86,8 @@ What stands between "my tool" and one others can install (2026-10-05):
 
 - [ ] **Frame a wallpaper per monitor (zoom and pan)**. Neither hyprpaper nor awww can zoom or
   offset (awww only anchors its crop: `--crop-gravity`), so wallpicker makes the image itself.
+  Its home is the Adjust dialog (mirror and fit are there: per monitor, temporary), and the
+  changed-copy step exists (`transform.rs`, used for mirroring): add a crop to `Adjust`.
   - In the app: a live preview in the monitor's own proportions; a zoom slider, drag (or
     horizontal / vertical sliders) to move. All in the browser (CSS transform), so it's instant.
   - On release: crop and scale to the monitor's exact size, save in the cache (keyed by image,

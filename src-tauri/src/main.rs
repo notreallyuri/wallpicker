@@ -20,7 +20,7 @@ fn main() {
         Some("colors") => std::process::exit(wallpicker_lib::cli::colors(&args[1..])),
         Some("backup") => std::process::exit(wallpicker_lib::cli::backup(&args[1..])),
         Some("duplicates") => std::process::exit(wallpicker_lib::cli::duplicates(&args[1..])),
-        Some("fit") => std::process::exit(wallpicker_lib::cli::fit(&args[1..])),
+        Some("adjust") => std::process::exit(wallpicker_lib::cli::adjust(&args[1..])),
         Some("show-in-folder") => std::process::exit(wallpicker_lib::cli::show_in_folder(&args[1..])),
         Some("trash") => std::process::exit(wallpicker_lib::cli::trash(&args[1..])),
         Some("tags") => std::process::exit(wallpicker_lib::cli::tags(&args[1..])),
@@ -60,7 +60,8 @@ fn main() {
              wallpicker slideshow tick|run|status  change it every few minutes (Settings → Slideshow)\n  \
              wallpicker favorite <image> [--off]  pin to the top, or unpin\n  \
              wallpicker tag <image> add|remove <tag>\n  \
-             wallpicker fit <image> auto|cover|contain|tile|fill  its own fit on any monitor\n  \
+             wallpicker adjust <monitor> [--flip h|v|both|none] [--fit F] [--reset]\n                                     \
+             adjust what a monitor shows, until another wallpaper goes there\n  \
              wallpicker duplicates [--json] | duplicates keep <image> <other>...\n                                     \
              find copies and resized versions; keep one, trash the rest\n  \
              wallpicker backup export [FILE] | import FILE [--replace] | snapshots | restore ID\n                                     \

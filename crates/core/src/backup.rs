@@ -1,4 +1,4 @@
-//! Backups of the library (favorites, tags and fits): one file to export and
+//! Backups of the library (favorites and tags): one file to export and
 //! import, and the daily snapshots kept automatically (see `Store`).
 //!
 //! A backup outlives the paths in it: on import each wallpaper is looked for
@@ -106,7 +106,7 @@ pub fn import(
         }
     }
     // An entry with nothing left in it isn't kept (like the catalog's own edits).
-    catalog.items.retain(|_, e| e.favorite || !e.tags.is_empty() || e.fit.is_some());
+    catalog.items.retain(|_, e| e.favorite || !e.tags.is_empty());
     report
 }
 
@@ -137,17 +137,13 @@ fn locate(
     }
 }
 
-/// Favorite if either is, every tag of both (theirs after), its own fit if
-/// it has one.
+/// Favorite if either is, every tag of both (theirs after).
 fn merge(into: &mut Entry, from: &Entry) {
     into.favorite |= from.favorite;
     for t in &from.tags {
         if !into.has_tag(t) {
             into.tags.push(t.clone());
         }
-    }
-    if into.fit.is_none() {
-        into.fit = from.fit;
     }
 }
 
@@ -177,10 +173,9 @@ pub fn date_and_time(secs: u64) -> (String, String) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::settings::FitMode;
 
-    fn entry(favorite: bool, tags: &[&str], fit: Option<FitMode>) -> Entry {
-        Entry { favorite, tags: tags.iter().map(|t| t.to_string()).collect(), fit }
+    fn entry(favorite: bool, tags: &[&str]) -> Entry {
+        Entry { favorite, tags: tags.iter().map(|t| t.to_string()).collect() }
     }
 
     #[test]
@@ -194,10 +189,10 @@ mod tests {
     #[test]
     fn export_then_import_on_another_machine() {
         let mut old = Catalog::default();
-        old.items.insert("/home/a/wpp/x/one.jpg".into(), entry(true, &["Mitsu"], None));
-        old.items.insert("/home/a/wpp/two.png".into(), entry(false, &["dark"], Some(FitMode::Contain)));
-        old.items.insert("/home/a/wpp/three.jpg".into(), entry(true, &[], None));
-        old.items.insert("/home/a/wpp/gone.jpg".into(), entry(true, &[], None));
+        old.items.insert("/home/a/wpp/x/one.jpg".into(), entry(true, &["Mitsu"]));
+        old.items.insert("/home/a/wpp/two.png".into(), entry(false, &["dark"]));
+        old.items.insert("/home/a/wpp/three.jpg".into(), entry(true, &[]));
+        old.items.insert("/home/a/wpp/gone.jpg".into(), entry(true, &[]));
         let sizes = |p: &Path| Some(if p.ends_with("three.jpg") { 300 } else { 100 });
         let backup = export(&old, &["/home/a/wpp".into()], "2026-10-06 14:03".into(), &sizes);
         assert_eq!(backup.items[0].relative.as_deref(), Some(Path::new("gone.jpg")));
@@ -211,15 +206,12 @@ mod tests {
             ("/home/b/Pictures/other/three.jpg".into(), 999),
         ];
         let mut now = Catalog::default();
-        now.items.insert("/home/b/Pictures/two.png".into(), entry(false, &["Dark", "night"], None));
+        now.items.insert("/home/b/Pictures/two.png".into(), entry(false, &["Dark", "night"]));
         let report = import(&mut now, &backup, &folders, &library, false);
         assert_eq!(report, ImportReport { same_place: 0, moved: 3, missing: vec!["gone.jpg".into()] });
-        assert_eq!(now.items[Path::new("/home/b/Pictures/x/one.jpg")], entry(true, &["Mitsu"], None));
-        // Merged: tags once (case-insensitive), the backup's fit since it had none.
-        assert_eq!(
-            now.items[Path::new("/home/b/Pictures/two.png")],
-            entry(false, &["Dark", "night"], Some(FitMode::Contain))
-        );
+        assert_eq!(now.items[Path::new("/home/b/Pictures/x/one.jpg")], entry(true, &["Mitsu"]));
+        // Merged: tags once (case-insensitive).
+        assert_eq!(now.items[Path::new("/home/b/Pictures/two.png")], entry(false, &["Dark", "night"]));
         // By name, told apart by size.
         assert!(now.items[Path::new("/home/b/Pictures/elsewhere/three.jpg")].favorite);
     }
@@ -227,10 +219,10 @@ mod tests {
     #[test]
     fn replace_keeps_only_the_backup() {
         let mut old = Catalog::default();
-        old.items.insert("/w/a.jpg".into(), entry(true, &[], None));
+        old.items.insert("/w/a.jpg".into(), entry(true, &[]));
         let backup = export(&old, &[], String::new(), &|_| None);
         let mut now = Catalog::default();
-        now.items.insert("/w/b.jpg".into(), entry(true, &[], None));
+        now.items.insert("/w/b.jpg".into(), entry(true, &[]));
         let library = vec![("/w/a.jpg".into(), 1), ("/w/b.jpg".into(), 1)];
         let report = import(&mut now, &backup, &[], &library, true);
         assert_eq!(report.same_place, 1);

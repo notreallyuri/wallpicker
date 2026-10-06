@@ -21,7 +21,7 @@ mod backup;
 pub(crate) mod slideshow;
 
 pub use config::{filters, settings};
-pub use library_edits::{colors, duplicates, favorite, fit, show_in_folder, tag, trash};
+pub use library_edits::{adjust, colors, duplicates, favorite, show_in_folder, tag, trash};
 pub use online::{apply_online, collection, collections, details, preview, search, tags};
 pub use backup::backup;
 pub use random::random;
@@ -77,8 +77,6 @@ struct ImageOut {
     root: Option<usize>,
     /// Its folder inside that root: "" at the top, "a/b" further down.
     folder: String,
-    /// Its own fit ("cover", ...), or "" for the monitor's.
-    fit: &'static str,
     /// Pixel size (0 if unknown).
     width: u32,
     height: u32,
@@ -117,7 +115,6 @@ pub fn list(args: &[String]) -> i32 {
             ImageOut {
                 root,
                 folder,
-                fit: catalog.fit(&i.path).map_or("", |f| f.as_str()),
                 favorite: catalog.is_favorite(&i.path),
                 tags: catalog.tags(&i.path).to_vec(),
                 thumb: want_thumbs

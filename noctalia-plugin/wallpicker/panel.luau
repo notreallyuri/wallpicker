@@ -146,8 +146,6 @@ function onLocalMenu(actionId, context)
     app.setFavorite(image.path, not image.favorite)
   elseif actionId == "tags" then
     app.openInApp("tags", image.path)
-  elseif actionId == "fit" then
-    app.openDetail(image.path)
   elseif actionId == "trash" then
     -- Never straight away: the wallpaper's view asks first.
     app.openDetail(image.path, true)

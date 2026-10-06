@@ -74,11 +74,17 @@ pub(crate) fn MonitorBar() -> impl IntoView {
                             let (width, height) = (m.width, m.height);
                             view! {
                                 <Tip text=tip>
-                                    <ToggleGroupItem value=name.get_value() class=CARD>
-                                        <Screen path=shown width=width height=height size=ScreenSize::Pill />
-                                        <span class="font-extrabold">{name.get_value()}</span>
-                                        <Picked />
-                                    </ToggleGroupItem>
+                                    // Right-click: adjust what it shows.
+                                    <span on:contextmenu=move |e| {
+                                        e.prevent_default();
+                                        ctx.adjusting.set(Some(name.get_value()));
+                                    }>
+                                        <ToggleGroupItem value=name.get_value() class=CARD>
+                                            <Screen path=shown width=width height=height size=ScreenSize::Pill monitor=name.get_value() />
+                                            <span class="font-extrabold">{name.get_value()}</span>
+                                            <Picked />
+                                        </ToggleGroupItem>
+                                    </span>
                                 </Tip>
                             }
                         }
@@ -179,6 +185,8 @@ enum ScreenSize {
     /// One of several on the All card's desk: no base of its own (the desk
     /// draws one under all of them).
     Desk,
+    /// The Adjust dialog's preview: big, and showing the fit too.
+    Big,
 }
 
 /// A monitor: a dark bezel with a thin chin around the screen, which shows
@@ -186,7 +194,17 @@ enum ScreenSize {
 /// under a faint glare, on a tapered neck and a base. An empty screen when
 /// wallpicker hasn't set anything there.
 #[component]
-fn Screen(path: Signal<Option<String>>, width: u32, height: u32, size: ScreenSize) -> impl IntoView {
+fn Screen(
+    path: Signal<Option<String>>,
+    width: u32,
+    height: u32,
+    size: ScreenSize,
+    /// Whose adjustments (mirroring; the fit on the big one) it shows.
+    #[prop(into)]
+    monitor: String,
+) -> impl IntoView {
+    let ctx = expect_context::<Ctx>();
+    let monitor = StoredValue::new(monitor);
     let src = RwSignal::new(None::<String>);
     Effect::new(move |_| {
         let Some(p) = path.get() else {
@@ -220,12 +238,38 @@ fn Screen(path: Signal<Option<String>>, width: u32, height: u32, size: ScreenSiz
             "h-2.5 w-6",
             "",
         ),
+        ScreenSize::Big => (
+            "rounded-[14px] bg-zinc-900 p-1.5 pb-3 shadow-xl ring-1 ring-white/10",
+            "h-48 rounded-[8px]",
+            "h-5 w-12",
+            "h-2 w-36 shadow-[0_4px_8px_rgb(0_0_0/0.35)]",
+        ),
+    };
+    // How the picture sits on the big one: the fit in effect there.
+    let object = move || {
+        if size != ScreenSize::Big {
+            return "object-cover";
+        }
+        let fit = monitor.with_value(|m| {
+            let adjusted = ctx.state.with(|s| s.adjust.get(m).and_then(|a| a.fit));
+            ctx.settings.with(|s| s.as_ref().and_then(|s| s.fit_for(m, adjusted)))
+        });
+        match fit {
+            Some(wallpicker_core::settings::FitMode::Contain) => "object-contain",
+            Some(wallpicker_core::settings::FitMode::Fill) => "object-fill",
+            Some(wallpicker_core::settings::FitMode::Tile) => "object-none",
+            _ => "object-cover",
+        }
     };
     view! {
         <span class="flex shrink-0 flex-col items-center" aria-hidden="true">
             <span class=format!("block {bezel}")>
                 <span class=format!("relative block overflow-hidden bg-zinc-800 {screen}") style=ratio>
-                    {move || src.get().map(|s| view! { <img src=s alt="" class="size-full object-cover" /> })}
+                    {move || src.get().map(|s| {
+                        // Mirrored like it's shown (Adjust).
+                        let style = move || monitor.with_value(|m| ctx.flip_style(m));
+                        view! { <img src=s alt="" class=move || format!("size-full transition-transform duration-300 {}", object()) style=style /> }
+                    })}
                     // Glass.
                     <span class="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/15 via-transparent to-transparent" />
                 </span>
@@ -300,7 +344,7 @@ pub(crate) fn MonitorDrawer() -> impl IntoView {
                                         )
                                     }
                                 >
-                                    <Screen path=shown width=m.width height=m.height size=ScreenSize::Card />
+                                    <Screen path=shown width=m.width height=m.height size=ScreenSize::Card monitor=m.name.clone() />
                                     <div class="flex w-full items-center gap-2">
                                         <div class="flex min-w-0 flex-1 flex-col leading-tight">
                                             <span class="flex items-center gap-1.5 font-extrabold">
@@ -309,6 +353,29 @@ pub(crate) fn MonitorDrawer() -> impl IntoView {
                                             </span>
                                             <span class="truncate text-xs text-muted-foreground">{file}</span>
                                         </div>
+                                        <Tip text=Signal::derive(move || format!("Adjust what {} shows: mirror, fit", name.get_value()))>
+                                            <Button
+                                                variant=ButtonVariant::Ghost
+                                                size=ButtonSize::IconSm
+                                                attr:aria-label="Adjust"
+                                                on_click=move |e: leptos::ev::MouseEvent| {
+                                                    e.stop_propagation();
+                                                    ctx.adjusting.set(Some(name.get_value()));
+                                                }
+                                            >
+                                                <Lucide class="size-4">
+                                                    <line x1="21" x2="14" y1="4" y2="4" />
+                                                    <line x1="10" x2="3" y1="4" y2="4" />
+                                                    <line x1="21" x2="12" y1="12" y2="12" />
+                                                    <line x1="8" x2="3" y1="12" y2="12" />
+                                                    <line x1="21" x2="16" y1="20" y2="20" />
+                                                    <line x1="12" x2="3" y1="20" y2="20" />
+                                                    <line x1="14" x2="14" y1="2" y2="6" />
+                                                    <line x1="8" x2="8" y1="10" y2="14" />
+                                                    <line x1="16" x2="16" y1="18" y2="22" />
+                                                </Lucide>
+                                            </Button>
+                                        </Tip>
                                         <Tip text=Signal::derive(move || format!("Back to the wallpaper before, on {}", name.get_value()))>
                                             <Button
                                                 variant=ButtonVariant::Ghost
@@ -358,7 +425,7 @@ pub(crate) fn MonitorDrawer() -> impl IntoView {
                                             let shown = Signal::derive(move || {
                                                 ctx.state.with(|s| s.current.get(&name).map(|p| p.to_string_lossy().into_owned()))
                                             });
-                                            view! { <Screen path=shown width=m.width height=m.height size=ScreenSize::Desk /> }
+                                            view! { <Screen path=shown width=m.width height=m.height size=ScreenSize::Desk monitor=m.name.clone() /> }
                                         }
                                     />
                                 </span>
@@ -374,5 +441,167 @@ pub(crate) fn MonitorDrawer() -> impl IntoView {
                 </div>
             </div>
         </div>
+    }
+}
+
+/// Adjust what one monitor shows: mirror it, give it its own fit. Applied
+/// there at once (wallpicker makes the changed copy), and temporary: another
+/// wallpaper on that monitor goes on as it is. Opened from the drawer's
+/// cards or a right-click on a monitor pill (`Ctx::adjusting`).
+#[component]
+pub(crate) fn AdjustDialog() -> impl IntoView {
+    use wallpicker_core::settings::{Adjust, FitMode, WallpaperBackend, fit_modes};
+    let ctx = expect_context::<Ctx>();
+    let open = RwSignal::new(false);
+    Effect::new(move |_| open.set(ctx.adjusting.with(Option::is_some)));
+    Effect::new(move |prev: Option<bool>| {
+        let o = open.get();
+        if prev == Some(true) && !o {
+            ctx.adjusting.set(None);
+        }
+        o
+    });
+    let busy = RwSignal::new(false);
+    let monitor = move || ctx.adjusting.get().unwrap_or_default();
+    let current = move || ctx.state.with(|s| ctx.adjusting.with(|m| m.as_ref().and_then(|m| s.adjust.get(m).copied()))).unwrap_or_default();
+    let set = move |next: Adjust| {
+        let Some(m) = ctx.adjusting.get_untracked() else { return };
+        // Shown at once here; the monitor follows when the copy is made.
+        ctx.state.update(|s| {
+            if next.is_none() {
+                s.adjust.remove(&m);
+            } else {
+                s.adjust.insert(m.clone(), next);
+            }
+        });
+        busy.set(true);
+        spawn_local(async move {
+            match api::set_monitor_adjust(&m, next).await {
+                Ok(state) => ctx.state.set(state),
+                Err(e) => {
+                    ctx.error_with(&format!("Could not adjust {m}"), &e);
+                    ctx.refresh_state().await;
+                }
+            }
+            busy.try_set(false);
+        });
+    };
+    let backend = move || ctx.settings.with(|s| s.as_ref().map(|s| s.wallpaper_backend).unwrap_or_default());
+    let toggle = move |label: &'static str, horizontal: bool| {
+        move || {
+            let on = current().flip.h && horizontal || current().flip.v && !horizontal;
+            view! {
+                <Button
+                    variant=if on { ButtonVariant::Default } else { ButtonVariant::Outline }
+                    on_click=move |_| {
+                        let mut a = current();
+                        if horizontal { a.flip.h = !a.flip.h } else { a.flip.v = !a.flip.v }
+                        set(a);
+                    }
+                >
+                    <Lucide class="size-4">
+                        {if horizontal {
+                            view! {
+                                <path d="m3 7 5 5-5 5V7" />
+                                <path d="m21 7-5 5 5 5V7" />
+                                <path d="M12 20v2" />
+                                <path d="M12 14v2" />
+                                <path d="M12 8v2" />
+                                <path d="M12 2v2" />
+                            }
+                                .into_any()
+                        } else {
+                            view! {
+                                <path d="m17 3-5 5-5-5h10" />
+                                <path d="m17 21-5-5-5 5h10" />
+                                <path d="M4 12H2" />
+                                <path d="M10 12H8" />
+                                <path d="M16 12h-2" />
+                                <path d="M22 12h-2" />
+                            }
+                                .into_any()
+                        }}
+                    </Lucide>
+                    {label}
+                </Button>
+            }
+        }
+    };
+    view! {
+        <Dialog open=open>
+            <DialogPortal class="sm:max-w-xl">
+                <DialogHeader>
+                    <DialogTitle>{move || format!("Adjust {}", monitor())}</DialogTitle>
+                    <DialogDescription class="line-clamp-1 break-all">
+                        {move || {
+                            ctx.state.with(|s| {
+                                s.current.get(&monitor()).and_then(|p| p.file_name()).map(|f| f.to_string_lossy().into_owned())
+                            })
+                        }}
+                    </DialogDescription>
+                </DialogHeader>
+                <div class="flex justify-center py-2">
+                    {move || {
+                        let m = monitor();
+                        let (w, h) = ctx.monitors.with(|ms| ms.iter().find(|x| x.name == m).map_or((16, 9), |x| (x.width, x.height)));
+                        let shown = Signal::derive(move || {
+                            ctx.state.with(|s| ctx.adjusting.with(|m| m.as_ref().and_then(|m| s.current.get(m)).map(|p| p.to_string_lossy().into_owned())))
+                        });
+                        view! { <Screen path=shown width=w height=h size=ScreenSize::Big monitor=m /> }
+                    }}
+                </div>
+                <div class="flex flex-col gap-2">
+                    <span class="text-sm font-bold">"Mirror"</span>
+                    <div class="flex gap-2">
+                        {toggle("Left to right", true)}
+                        {toggle("Top to bottom", false)}
+                    </div>
+                </div>
+                <Show
+                    when=move || backend() != WallpaperBackend::Noctalia
+                    fallback=|| view! { <p class="text-sm text-muted-foreground">"Fit: Noctalia uses its own fill mode (its settings)."</p> }
+                >
+                    <div class="flex flex-col gap-2">
+                        <span class="text-sm font-bold">"Fit"</span>
+                        <div class="flex flex-wrap gap-2">
+                            {move || {
+                                fit_modes(backend())
+                                    .into_iter()
+                                    .map(|(value, label)| {
+                                        let fit: Option<FitMode> = crate::views::fit_from(value);
+                                        // "" is whatever Settings says for this monitor.
+                                        let label = if value.is_empty() { "As in Settings" } else { label };
+                                        let on = current().fit == fit;
+                                        view! {
+                                            <Button
+                                                size=ButtonSize::Sm
+                                                variant=if on { ButtonVariant::Default } else { ButtonVariant::Outline }
+                                                on_click=move |_| set(Adjust { fit, ..current() })
+                                            >
+                                                {label}
+                                            </Button>
+                                        }
+                                    })
+                                    .collect_view()
+                            }}
+                        </div>
+                    </div>
+                </Show>
+                <DialogFooter class="items-center sm:justify-between">
+                    <span class="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Show when=move || busy.get() fallback=move || view! { {move || format!("Goes back when another wallpaper is put on {}.", monitor())} }>
+                            <Spinner class="size-3.5" />
+                            {move || format!("Showing it on {}…", monitor())}
+                        </Show>
+                    </span>
+                    <div class="flex gap-2">
+                        <Button variant=ButtonVariant::Ghost disabled=Signal::derive(move || current().is_none()) on_click=move |_| set(Adjust::default())>
+                            "Reset"
+                        </Button>
+                        <Button on_click=move |_| open.set(false)>"Done"</Button>
+                    </div>
+                </DialogFooter>
+            </DialogPortal>
+        </Dialog>
     }
 }

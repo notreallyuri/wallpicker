@@ -46,6 +46,8 @@ pub(crate) struct Ctx {
     /// (Settings → Performance; per machine, in localStorage).
     pub(crate) glass: RwSignal<bool>,
     pub(crate) motion: RwSignal<bool>,
+    /// The monitor whose Adjust dialog is open.
+    pub(crate) adjusting: RwSignal<Option<String>>,
     /// Where `wallpicker --open` asked to go, until the part that shows it
     /// (the shell for tabs and Settings, Local for Duplicates and tags)
     /// takes it.
@@ -78,6 +80,7 @@ impl Ctx {
             monitors_open: RwSignal::new(crate::prefs::get("ui.monitors_open").as_deref() == Some("1")),
             glass: RwSignal::new(crate::prefs::get("ui.glass").as_deref() != Some("0")),
             motion: RwSignal::new(crate::prefs::get("ui.motion").as_deref() != Some("0")),
+            adjusting: RwSignal::new(None),
             open_place: RwSignal::new(None),
             toasts,
         }
@@ -157,12 +160,15 @@ impl Ctx {
         .await;
     }
 
-    pub(crate) async fn set_fit(self, path: String, fit: Option<wallpicker_core::settings::FitMode>) {
-        let p = path.clone();
-        self.change_catalog(move |c| c.set_fit(Path::new(&p), fit), api::set_wallpaper_fit(&path, fit))
-            .await;
-        // It was applied again where it shows.
-        self.refresh_state().await;
+    /// CSS mirroring `monitor`'s picture the way it's adjusted, or "".
+    pub(crate) fn flip_style(self, monitor: &str) -> &'static str {
+        let f = self.state.with(|s| s.adjust.get(monitor).map(|a| a.flip).unwrap_or_default());
+        match (f.h, f.v) {
+            (true, true) => "transform: scale(-1, -1)",
+            (true, false) => "transform: scaleX(-1)",
+            (false, true) => "transform: scaleY(-1)",
+            (false, false) => "",
+        }
     }
 
     pub(crate) async fn add_tag(self, path: String, tag: String) {

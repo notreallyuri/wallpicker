@@ -1051,7 +1051,6 @@ notify wallpicker: Wallpaper applied
 header  a.jpg nil
 item favorite Add to favorites nil
 item tags Edit tags in wallpicker… nil
-item fit Fit… nil
 separator   nil
 header  Apply to nil
 item apply_all All monitors nil
@@ -1464,10 +1463,6 @@ column align=stretch flexGrow=1 gap=12
         button enabled=true text=Apply variant=primary on:onClick
       image border=outline borderWidth=1 fit=contain height=490 path=/w/anime/b.jpg radius=12 width=872
       row align=center gap=8
-        label color=on_surface_variant fontSize=12 text=Fit width=60
-        select enabled=true key=fit_/w/anime/b.jpg options=[Automatic|Cover|Contain|Tile|Fill] selectedIndex=0 width=180 on:onChange
-        label color=on_surface_variant flexGrow=1 fontSize=11 maxLines=2 text=On every monitor. Automatic uses the monitor's fit (Settings). Not with Noctalia (it has its own).
-      row align=center gap=8
         label color=on_surface_variant flexGrow=1 fontSize=12 text=Tags
         button controlSize=sm glyph=external-link text=Edit in wallpicker variant=outline on:onClick
       column align=start gap=6
@@ -1479,58 +1474,6 @@ column align=stretch flexGrow=1 gap=12
         label color=on_surface_variant flexGrow=1 fontSize=12 text=Goes to your desktop trash; restore it from your file manager.
         button text=Move to trash… variant=outline on:onClick
   box height=0
-=== local: b.jpg fits as contain
-column align=stretch flexGrow=1 gap=12
-  row align=center gap=8
-    label color=on_surface fontSize=16 fontWeight=bold text=wallpicker
-    row align=center flexGrow=1 gap=4
-      button key=mode_local onClick=onModeLocal text=Local variant=primary
-      button key=mode_online onClick=onModeOnline text=Online variant=ghost
-      button glyph=external-link key=mode_collections text=Collections tooltip=Opens in the wallpicker app variant=ghost on:onClick
-    label color=on_surface_variant fontSize=12 text=Monitor
-    select key=monitor onChange=onMonitorChange options=[All monitors|DP-1|DP-2] selectedIndex=2 width=160
-    button enabled=true glyph=refresh onClick=onRefresh tooltip=Refresh variant=ghost
-    button onClick=onOpenApp text=Open wallpicker variant=outline
-    button glyph=settings tooltip=Settings (in the wallpicker app) variant=ghost on:onClick
-    button glyph=close onClick=onCloseClicked variant=ghost
-  row align=center gap=8
-    input flexGrow=1 focus=false key=filter_0 onChange=onFilterChange onSubmit=onFilterChange placeholder=Filter by name or tag value=
-    button glyph=star key=favorites onClick=onToggleFavorites text=Favorites variant=outline
-    select key=local_sort options=[Newest|Oldest|Name|Random order] selectedIndex=0 width=130 on:onChange
-    button glyph=layout-grid key=layout text=Flat tooltip=Show everything at once, or browse folder by folder variant=outline on:onClick
-    button glyph=copy key=duplicates tooltip=Find duplicates (in the wallpicker app) variant=ghost on:onClick
-    button enabled=true glyph=device-desktop key=now_toggle tooltip=Show what each monitor is showing variant=ghost on:onClick
-    button enabled=true glyph=history key=previous tooltip=Back to the wallpaper before variant=ghost on:onClick
-    button enabled=true glyph=arrows-shuffle key=random text=Random tooltip=Apply a random one of those shown (Ctrl+R) variant=outline on:onClick
-  box height=0
-  box height=0
-  scroll flexGrow=1 gap=12 key=scroll_local_10
-    column align=stretch gap=14
-      row align=center gap=8
-        button glyph=chevron-left text=Back variant=ghost on:onClick
-        label color=on_surface flexGrow=1 fontWeight=semibold maxLines=1 text=b.jpg
-        button enabled=true glyph=star text=Remove from favorites variant=primary on:onClick
-        button enabled=true text=Apply variant=primary on:onClick
-      image border=outline borderWidth=1 fit=contain height=490 path=/w/anime/b.jpg radius=12 width=872
-      row align=center gap=8
-        label color=on_surface_variant fontSize=12 text=Fit width=60
-        select enabled=true key=fit_/w/anime/b.jpg options=[Automatic|Cover|Contain|Tile|Fill] selectedIndex=0 width=180 on:onChange
-        label color=on_surface_variant flexGrow=1 fontSize=11 maxLines=2 text=On every monitor. Automatic uses the monitor's fit (Settings). Not with Noctalia (it has its own).
-      row align=center gap=8
-        label color=on_surface_variant flexGrow=1 fontSize=12 text=Tags
-        button controlSize=sm glyph=external-link text=Edit in wallpicker variant=outline on:onClick
-      column align=start gap=6
-        row align=center gap=6
-          button controlSize=sm fontSize=12 key=tag_Mitsu text=Mitsu tooltip=Show the wallpapers with this tag variant=secondary on:onClick
-          button controlSize=sm fontSize=12 key=tag_dark text=dark tooltip=Show the wallpapers with this tag variant=secondary on:onClick
-      separator
-      row align=center gap=8
-        label color=on_surface_variant flexGrow=1 fontSize=12 text=Goes to your desktop trash; restore it from your file manager.
-        button text=Move to trash… variant=outline on:onClick
-  box height=0
---- ran
-wallpicker fit /w/anime/b.jpg contain
-wallpicker list --json --thumbs
 === local: edit tags hands over to the app
 column align=stretch flexGrow=1 gap=12
   row align=center gap=8
@@ -1564,10 +1507,6 @@ column align=stretch flexGrow=1 gap=12
         button enabled=true glyph=star text=Remove from favorites variant=primary on:onClick
         button enabled=true text=Apply variant=primary on:onClick
       image border=outline borderWidth=1 fit=contain height=490 path=/w/anime/b.jpg radius=12 width=872
-      row align=center gap=8
-        label color=on_surface_variant fontSize=12 text=Fit width=60
-        select enabled=true key=fit_/w/anime/b.jpg options=[Automatic|Cover|Contain|Tile|Fill] selectedIndex=0 width=180 on:onChange
-        label color=on_surface_variant flexGrow=1 fontSize=11 maxLines=2 text=On every monitor. Automatic uses the monitor's fit (Settings). Not with Noctalia (it has its own).
       row align=center gap=8
         label color=on_surface_variant flexGrow=1 fontSize=12 text=Tags
         button controlSize=sm glyph=external-link text=Edit in wallpicker variant=outline on:onClick
@@ -1615,10 +1554,6 @@ column align=stretch flexGrow=1 gap=12
         button enabled=true glyph=star text=Remove from favorites variant=primary on:onClick
         button enabled=true text=Apply variant=primary on:onClick
       image border=outline borderWidth=1 fit=contain height=490 path=/w/anime/b.jpg radius=12 width=872
-      row align=center gap=8
-        label color=on_surface_variant fontSize=12 text=Fit width=60
-        select enabled=true key=fit_/w/anime/b.jpg options=[Automatic|Cover|Contain|Tile|Fill] selectedIndex=0 width=180 on:onChange
-        label color=on_surface_variant flexGrow=1 fontSize=11 maxLines=2 text=On every monitor. Automatic uses the monitor's fit (Settings). Not with Noctalia (it has its own).
       row align=center gap=8
         label color=on_surface_variant flexGrow=1 fontSize=12 text=Tags
         button controlSize=sm glyph=external-link text=Edit in wallpicker variant=outline on:onClick
@@ -1873,10 +1808,6 @@ column align=stretch flexGrow=1 gap=12
         button enabled=true glyph=star text=Add to favorites variant=outline on:onClick
         button enabled=true text=Apply variant=primary on:onClick
       image border=outline borderWidth=1 fit=contain height=490 path=/w/e.jpg radius=12 width=872
-      row align=center gap=8
-        label color=on_surface_variant fontSize=12 text=Fit width=60
-        select enabled=true key=fit_/w/e.jpg options=[Automatic|Cover|Contain|Tile|Fill] selectedIndex=0 width=180 on:onChange
-        label color=on_surface_variant flexGrow=1 fontSize=11 maxLines=2 text=On every monitor. Automatic uses the monitor's fit (Settings). Not with Noctalia (it has its own).
       row align=center gap=8
         label color=on_surface_variant flexGrow=1 fontSize=12 text=Tags
         button controlSize=sm glyph=external-link text=Edit in wallpicker variant=outline on:onClick
