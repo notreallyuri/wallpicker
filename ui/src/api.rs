@@ -323,6 +323,15 @@ pub async fn set_monitor_adjust(monitor: &str, adjust: wallpicker_core::settings
     call("set_monitor_adjust", &Args { monitor, adjust }).await
 }
 
+/// The picture the Adjust dialog frames on (a local file, ≤1600 px).
+pub async fn framing_image(path: &str) -> Result<String, String> {
+    #[derive(Serialize)]
+    struct Args<'a> {
+        path: &'a str,
+    }
+    call("framing_image", &Args { path }).await
+}
+
 /// `{enabled, minutes, next_in}`: when the slideshow changes next.
 #[derive(Debug, Clone, Deserialize)]
 pub struct SlideshowStatus {

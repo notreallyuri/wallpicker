@@ -45,10 +45,13 @@ or **Noctalia**'s wallpaper manager (Settings → General → Wallpaper backend)
   one currently has (with a thumbnail).
 - **Fit**: a general fit in Settings, and a fit per monitor under it (say, Contain on a 4:3
   screen). With the Noctalia backend, Noctalia's own fill mode applies.
-- **Adjust** (the monitor drawer's adjust button, or right-click a monitor pill): mirror what a
-  monitor shows (left to right, top to bottom) and give it its own fit, applied there at once.
-  Temporary: another wallpaper on that monitor goes on as it is. No backend mirrors, so
-  wallpicker makes the mirrored copy (cached). `wallpicker adjust <monitor> --flip h --fit contain`.
+- **Adjust** (the monitor drawer's adjust button, or right-click a monitor pill): **frame** what
+  a monitor shows (drag the preview to move, scroll or the sliders to zoom up to 4×; it's cut to
+  the monitor's exact resolution), **mirror** it (left to right, top to bottom), or give it its
+  own **fit**. The preview follows at once; the monitor a moment after you stop. Temporary:
+  another wallpaper on that monitor goes on as it is. No backend frames or mirrors, so wallpicker
+  makes the changed copy (cached, deleted when unused).
+  `wallpicker adjust <monitor> --frame 200,70,40 --flip h --fit contain`.
 - The search bar (and the tags and folder path under it) stays at the top while you scroll.
 - **Keys**: Ctrl+F search field, Ctrl+R random, Alt+Up parent folder, Alt+Left/Right online pages,
   Ctrl+1/2/3 Local/Online/Collections.

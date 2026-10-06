@@ -101,7 +101,7 @@ impl Store {
         // Adjusted wallpapers are their changed copies (made when applied).
         let mut shown = state.clone();
         for (m, path) in shown.current.iter_mut() {
-            if let Ok(file) = crate::transform::shown_file(&self.dirs.cache, path, state.adjust_for(m, path).flip) {
+            if let Ok(file) = crate::transform::shown_file(&self.dirs.cache, path, &state.adjust_for(m, path)) {
                 *path = file;
             }
         }
@@ -193,7 +193,8 @@ impl Store {
 
     /// Adjust what `monitor` shows (None-like: back to as it is). Applying it
     /// is the caller's (`hyprpaper::reapply`).
-    pub fn set_adjust(&self, monitor: &str, adjust: crate::settings::Adjust) -> Result<State> {
+    pub fn set_adjust(&self, monitor: &str, mut adjust: crate::settings::Adjust) -> Result<State> {
+        adjust.frame = adjust.frame.and_then(crate::settings::Frame::sanitized);
         let mut state = self.load_state()?;
         if !state.current.contains_key(monitor) {
             return Err(crate::error::Error::Invalid(format!("{monitor} shows nothing wallpicker set")));

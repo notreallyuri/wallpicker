@@ -103,12 +103,15 @@ fn absolute(path: &str) -> PathBuf {
     std::path::absolute(&p).unwrap_or(p)
 }
 
-/// `wallpicker adjust <monitor> [--flip h|v|both|none] [--fit F] [--reset]`: adjust
+/// `wallpicker adjust <monitor> [--flip h|v|both|none] [--fit F] [--frame ZOOM,X,Y | --no-frame] [--reset]`: adjust
 /// what a monitor shows (wallpicker makes the changed copy), until another
 /// wallpaper goes there. Without options: what it is now.
 pub fn adjust(args: &[String]) -> i32 {
     use wallpicker_core::settings::{Adjust, Flip};
-    let usage_text = "usage: wallpicker adjust <monitor> [--flip h|v|both|none] [--fit auto|cover|contain|tile|fill] [--reset]";
+    let usage_text = "usage: wallpicker adjust <monitor> [--flip h|v|both|none] [--fit auto|cover|contain|tile|fill]\n\
+                      [--frame ZOOM,X,Y | --no-frame] [--reset]\n\
+     --frame  the part shown, cut to the monitor's size: ZOOM in % (100-400), the center X and Y\n\
+              in % of the picture (50,50 is the middle). e.g. --frame 200,70,40";
     let Some((monitor, opts)) = args.split_first() else {
         return usage_for("adjust", "which monitor?", usage_text);
     };
@@ -141,15 +144,47 @@ pub fn adjust(args: &[String]) -> i32 {
                     None => return usage_for("adjust", "--fit needs a fit", usage_text),
                 }
             }
+            "--no-frame" => adjust.frame = None,
+            "--frame" => {
+                let parts: Vec<f64> = rest
+                    .next()
+                    .map(|v| v.split(',').filter_map(|n| n.trim().parse().ok()).collect())
+                    .unwrap_or_default();
+                let [zoom, x, y] = parts[..] else {
+                    return usage_for("adjust", "--frame needs ZOOM,X,Y (e.g. 200,50,50)", usage_text);
+                };
+                // Cut to this monitor's resolution.
+                let Some(m) = wallpicker_core::hyprpaper::list_monitors(&wallpicker_core::cmd::SystemRunner)
+                    .ok()
+                    .and_then(|ms| ms.into_iter().find(|m| m.name == *monitor))
+                else {
+                    return fail(&format!("{monitor} isn't connected"));
+                };
+                adjust.frame = Some(wallpicker_core::settings::Frame {
+                    zoom: zoom.clamp(100.0, 400.0) as u16,
+                    x: (x.clamp(0.0, 100.0) * 10.0) as u16,
+                    y: (y.clamp(0.0, 100.0) * 10.0) as u16,
+                    width: m.width,
+                    height: m.height,
+                });
+            }
             other => return usage_for("adjust", &format!("unknown option {other}"), usage_text),
         }
         changed = true;
     }
     let describe = move |a: Adjust| {
         format!(
-            "{monitor}: flip {}, fit {}",
+            "{monitor}: flip {}, fit {}, frame {}",
             if a.flip.is_none() { "none" } else { a.flip.as_str() },
-            a.fit.map_or("auto", |f| f.as_str())
+            a.fit.map_or("auto", |f| f.as_str()),
+            a.frame.map_or("none".to_string(), |f| format!(
+                "{}% at {},{} for {}×{}",
+                f.zoom,
+                f64::from(f.x) / 10.0,
+                f64::from(f.y) / 10.0,
+                f.width,
+                f.height
+            ))
         )
     };
     if !changed {

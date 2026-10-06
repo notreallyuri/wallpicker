@@ -227,7 +227,12 @@ impl Fits {
     }
 
     pub fn of(&self, monitor: &str, path: &Path) -> Option<FitMode> {
-        self.settings.fit_for(monitor, self.state.adjust_for(monitor, path).fit)
+        let adjust = self.state.adjust_for(monitor, path);
+        // Framed: cut to the monitor's exact size, nothing to fit.
+        if adjust.frame.is_some() {
+            return None;
+        }
+        self.settings.fit_for(monitor, adjust.fit)
     }
 }
 
@@ -266,7 +271,10 @@ impl Backend {
     pub fn apply(&self, runner: &dyn Runner, monitor: &str, path: &Path, fit: Option<FitMode>) -> Result<()> {
         // An adjusted wallpaper is shown from its changed copy (only while
         // the monitor still shows it: a new one goes on as it is).
-        let file = crate::transform::shown_file(&self.cache, path, self.state.adjust_for(monitor, path).flip)?;
+        let adjust = self.state.adjust_for(monitor, path);
+        let file = crate::transform::shown_file(&self.cache, path, &adjust)?;
+        // A framed picture is the monitor's exact size: nothing to fit.
+        let fit = if adjust.frame.is_some() { None } else { fit };
         let path = file.as_path();
         match self.kind {
             WallpaperBackend::Hyprpaper => apply(runner, monitor, path, fit),

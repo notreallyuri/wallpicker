@@ -84,20 +84,9 @@ What stands between "my tool" and one others can install (2026-10-05):
 
 ## Planned (each needs a plan before starting)
 
-- [ ] **Frame a wallpaper per monitor (zoom and pan)**. Neither hyprpaper nor awww can zoom or
-  offset (awww only anchors its crop: `--crop-gravity`), so wallpicker makes the image itself.
-  Its home is the Adjust dialog (mirror and fit are there: per monitor, temporary), and the
-  changed-copy step exists (`transform.rs`, used for mirroring): add a crop to `Adjust`.
-  - In the app: a live preview in the monitor's own proportions; a zoom slider, drag (or
-    horizontal / vertical sliders) to move. All in the browser (CSS transform), so it's instant.
-  - On release: crop and scale to the monitor's exact size, save in the cache (keyed by image,
-    monitor size and frame), and apply that file. Works with every backend, Noctalia too.
-  - Stored per wallpaper and monitor (or monitor size) in the library, as a normalized rectangle
-    (0..1), so it survives resolution changes; "Reset" goes back to the plain fit.
-  - Not live on the desktop while dragging: re-encoding a 4K image and re-applying dozens of
-    times a second would stutter. Apply on release (awww's transition makes it smooth).
-  - Open questions: per monitor or per monitor size; what Previous and the slideshow do with
-    framed wallpapers (use the frame, presumably); cache pruning.
+- [x] **Frame a wallpaper per monitor (zoom and pan)**: in the Adjust dialog (drag, scroll, sliders;
+  zoom up to 4×), cut to the monitor's exact resolution by `transform.rs`, per monitor and
+  temporary like mirroring and fit. `wallpicker adjust <monitor> --frame ZOOM,X,Y`.
 - [ ] **Span one wallpaper across monitors**: cut it to each monitor's place and size in the
   layout (`hyprctl monitors` has x, y, scale), mixed resolutions too. Shares the crop-and-cache
   step with framing above, so it's cheaper after that. Bezels: optional gap per monitor.

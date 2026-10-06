@@ -747,6 +747,15 @@ pub(crate) async fn set_adjust(
     .await
 }
 
+/// The picture the Adjust dialog frames on: sharp enough to zoom into
+/// (fitted inside 1600 px, cached), not the whole original.
+#[tauri::command]
+async fn framing_image(state: tauri::State<'_, AppState>, path: String) -> CmdResult<PathBuf> {
+    let path = wallpaper_path(&path)?;
+    let cache = state.store.dirs().cache.join("framing");
+    blocking(move || wallpicker_core::thumbs::fit_within(&cache, &path, 1600)).await
+}
+
 #[tauri::command]
 async fn set_monitor_adjust(
     state: tauri::State<'_, AppState>,
@@ -1203,6 +1212,7 @@ pub fn run(start_hidden: bool) {
             wallpaper_palette,
             take_open_request,
             set_monitor_adjust,
+            framing_image,
             app_usage,
             online_preview,
             window_background,

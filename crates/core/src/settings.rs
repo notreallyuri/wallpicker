@@ -338,12 +338,59 @@ impl Flip {
 pub struct Adjust {
     pub flip: Flip,
     /// Its own fit on this monitor, over the monitor's and the general one.
+    /// Not used while it's framed (the frame is the monitor's exact size).
     pub fit: Option<FitMode>,
+    /// The part of the picture shown, cut to the monitor's size.
+    pub frame: Option<Frame>,
 }
 
 impl Adjust {
     pub fn is_none(&self) -> bool {
-        self.flip.is_none() && self.fit.is_none()
+        self.flip.is_none() && self.fit.is_none() && self.frame.is_none()
+    }
+}
+
+/// A frame on a picture: the largest area in the monitor's proportions that
+/// fits in it (as Cover would show), made `zoom`% smaller around a center
+/// (`x`, `y`, ‰ of the picture's width and height), and scaled to the
+/// monitor's resolution (`width`×`height`). Integers, so it stays Eq/Copy
+/// and names a cached file exactly.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Frame {
+    /// 100 (the whole Cover area) to 400 (a quarter of its width).
+    pub zoom: u16,
+    pub x: u16,
+    pub y: u16,
+    pub width: u32,
+    pub height: u32,
+}
+
+impl Frame {
+    /// The area cut from a `w`×`h` picture: (left, top, width, height) in
+    /// pixels, kept inside the picture.
+    pub fn rect(&self, w: u32, h: u32) -> (u32, u32, u32, u32) {
+        let (w, h) = (f64::from(w.max(1)), f64::from(h.max(1)));
+        let aspect = f64::from(self.width.max(1)) / f64::from(self.height.max(1));
+        // Zoom 100: the widest area with the monitor's shape.
+        let (mut cw, mut ch) = if w / h > aspect { (h * aspect, h) } else { (w, w / aspect) };
+        let zoom = f64::from(self.zoom.clamp(100, 400)) / 100.0;
+        cw /= zoom;
+        ch /= zoom;
+        let cx = f64::from(self.x.min(1000)) / 1000.0 * w;
+        let cy = f64::from(self.y.min(1000)) / 1000.0 * h;
+        let left = (cx - cw / 2.0).clamp(0.0, w - cw);
+        let top = (cy - ch / 2.0).clamp(0.0, h - ch);
+        (left.round() as u32, top.round() as u32, cw.round().max(1.0) as u32, ch.round().max(1.0) as u32)
+    }
+
+    /// Valid values: zoom in range, center in the picture, a real size.
+    pub fn sanitized(self) -> Option<Frame> {
+        (self.width > 0 && self.height > 0 && self.width <= 16384 && self.height <= 16384).then_some(Frame {
+            zoom: self.zoom.clamp(100, 400),
+            x: self.x.min(1000),
+            y: self.y.min(1000),
+            ..self
+        })
     }
 }
 
@@ -480,6 +527,21 @@ impl Slideshow {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn frame_rects() {
+        let f = |zoom, x, y| Frame { zoom, x, y, width: 1920, height: 1080 };
+        // A 4:3 picture on a 16:9 monitor: full width, a band of its height.
+        assert_eq!(f(100, 500, 500).rect(4000, 3000), (0, 375, 4000, 2250));
+        // Twice as close, around the center.
+        assert_eq!(f(200, 500, 500).rect(4000, 3000), (1000, 938, 2000, 1125));
+        // A center near the edge stays inside the picture.
+        assert_eq!(f(200, 0, 1000).rect(4000, 3000), (0, 1875, 2000, 1125));
+        // A wide picture: full height.
+        assert_eq!(f(100, 500, 500).rect(7680, 2160).3, 2160);
+        assert_eq!(f(900, 2000, 0).sanitized().unwrap().zoom, 400);
+        assert!(Frame { width: 0, ..f(100, 0, 0) }.sanitized().is_none());
+    }
 
     #[test]
     fn night_windows() {

@@ -4,6 +4,7 @@
 
 use leptos::prelude::*;
 use leptos::task::spawn_local;
+use wasm_bindgen::JsCast;
 use nocomponents::primitives::toggle_group::ToggleGroupType;
 use wallpicker_core::monitors::Monitor;
 
@@ -450,7 +451,7 @@ pub(crate) fn MonitorDrawer() -> impl IntoView {
 /// cards or a right-click on a monitor pill (`Ctx::adjusting`).
 #[component]
 pub(crate) fn AdjustDialog() -> impl IntoView {
-    use wallpicker_core::settings::{Adjust, FitMode, WallpaperBackend, fit_modes};
+    use wallpicker_core::settings::{Adjust, FitMode, Frame, WallpaperBackend, fit_modes};
     let ctx = expect_context::<Ctx>();
     let open = RwSignal::new(false);
     Effect::new(move |_| open.set(ctx.adjusting.with(Option::is_some)));
@@ -487,6 +488,72 @@ pub(crate) fn AdjustDialog() -> impl IntoView {
         });
     };
     let backend = move || ctx.settings.with(|s| s.as_ref().map(|s| s.wallpaper_backend).unwrap_or_default());
+    // The frame being moved: the preview follows it at once, the monitor
+    // when it stops for a moment (cutting a big picture takes a while).
+    let draft = RwSignal::new(None::<Frame>);
+    // Loaded when it opens on a monitor; after that it's the dialog's (a late
+    // answer from the app mustn't move the frame under the pointer).
+    Effect::new(move |_| {
+        ctx.adjusting.track();
+        draft.set(untrack(current).frame);
+    });
+    let seq = StoredValue::new(0u64);
+    let schedule = Callback::new(move |()| {
+        let n = seq.get_value() + 1;
+        seq.set_value(n);
+        set_timeout(
+            move || {
+                if seq.get_value() == n {
+                    set(Adjust { frame: draft.get_untracked(), ..current() });
+                }
+            },
+            std::time::Duration::from_millis(350),
+        );
+    });
+    let size = move || {
+        let m = monitor();
+        ctx.monitors.with(|ms| ms.iter().find(|x| x.name == m).map_or((1920, 1080), |x| (x.width, x.height)))
+    };
+    // A slider moved: the frame (made at the default if there was none).
+    let slide = move |field: &'static str, value: u16| {
+        let (w, h) = size();
+        let mut f = draft.get_untracked().unwrap_or(Frame { zoom: 100, x: 500, y: 500, width: w, height: h });
+        match field {
+            "zoom" => f.zoom = value,
+            "x" => f.x = value,
+            _ => f.y = value,
+        }
+        draft.set(Some(f));
+        schedule.run(());
+    };
+    let slider = move |label: &'static str, field: &'static str, min: u16, max: u16| {
+        view! {
+            <label class="flex items-center gap-3 text-sm">
+                <span class="w-24 shrink-0 font-bold">{label}</span>
+                <input
+                    type="range"
+                    min=min
+                    max=max
+                    step="5"
+                    class="h-2 flex-1 cursor-pointer accent-[var(--primary)]"
+                    prop:value=move || {
+                        let f = draft.get();
+                        match field {
+                            "zoom" => f.map_or(100, |f| f.zoom),
+                            "x" => f.map_or(500, |f| f.x),
+                            _ => f.map_or(500, |f| f.y),
+                        }
+                        .to_string()
+                    }
+                    on:input=move |e| {
+                        if let Ok(v) = event_target_value(&e).parse::<u16>() {
+                            slide(field, v);
+                        }
+                    }
+                />
+            </label>
+        }
+    };
     let toggle = move |label: &'static str, horizontal: bool| {
         move || {
             let on = current().flip.h && horizontal || current().flip.v && !horizontal;
@@ -543,12 +610,18 @@ pub(crate) fn AdjustDialog() -> impl IntoView {
                 <div class="flex justify-center py-2">
                     {move || {
                         let m = monitor();
-                        let (w, h) = ctx.monitors.with(|ms| ms.iter().find(|x| x.name == m).map_or((16, 9), |x| (x.width, x.height)));
+                        let (w, h) = size();
                         let shown = Signal::derive(move || {
                             ctx.state.with(|s| ctx.adjusting.with(|m| m.as_ref().and_then(|m| s.current.get(m)).map(|p| p.to_string_lossy().into_owned())))
                         });
-                        view! { <Screen path=shown width=w height=h size=ScreenSize::Big monitor=m /> }
+                        view! { <Framer path=shown monitor=m width=w height=h draft=draft on_change=schedule /> }
                     }}
+                </div>
+                <div class="flex flex-col gap-2">
+                    {slider("Zoom", "zoom", 100, 400)}
+                    {slider("Left – right", "x", 0, 1000)}
+                    {slider("Up – down", "y", 0, 1000)}
+                    <p class="text-xs text-muted-foreground">"Drag the picture to move it, scroll to zoom."</p>
                 </div>
                 <div class="flex flex-col gap-2">
                     <span class="text-sm font-bold">"Mirror"</span>
@@ -557,9 +630,27 @@ pub(crate) fn AdjustDialog() -> impl IntoView {
                         {toggle("Top to bottom", false)}
                     </div>
                 </div>
+                <Show when=move || draft.with(Option::is_some)>
+                    <div class="flex items-center gap-3 rounded-xl bg-primary/10 px-3 py-2 text-sm">
+                        <span class="flex-1">{move || format!("Framed: cut to {}'s exact size, so Fit doesn't apply.", monitor())}</span>
+                        <Button
+                            size=ButtonSize::Sm
+                            variant=ButtonVariant::Outline
+                            on_click=move |_| {
+                                draft.set(None);
+                                schedule.run(());
+                            }
+                        >
+                            "Reset frame"
+                        </Button>
+                    </div>
+                </Show>
                 <Show
-                    when=move || backend() != WallpaperBackend::Noctalia
-                    fallback=|| view! { <p class="text-sm text-muted-foreground">"Fit: Noctalia uses its own fill mode (its settings)."</p> }
+                    when=move || backend() != WallpaperBackend::Noctalia && draft.with(Option::is_none)
+                    fallback=move || {
+                        (backend() == WallpaperBackend::Noctalia && draft.with(Option::is_none))
+                            .then(|| view! { <p class="text-sm text-muted-foreground">"Fit: Noctalia uses its own fill mode (its settings)."</p> })
+                    }
                 >
                     <div class="flex flex-col gap-2">
                         <span class="text-sm font-bold">"Fit"</span>
@@ -603,5 +694,166 @@ pub(crate) fn AdjustDialog() -> impl IntoView {
                 </DialogFooter>
             </DialogPortal>
         </Dialog>
+    }
+}
+
+/// The Adjust dialog's preview, and where framing happens: a big monitor
+/// showing exactly the framed part of the picture (mirrored like it will
+/// be). Drag to move the frame, scroll to zoom; `on_change` after each move.
+/// Without a frame it shows the fit in effect.
+#[component]
+fn Framer(
+    path: Signal<Option<String>>,
+    #[prop(into)] monitor: String,
+    width: u32,
+    height: u32,
+    draft: RwSignal<Option<wallpicker_core::settings::Frame>>,
+    on_change: Callback<()>,
+) -> impl IntoView {
+    use wallpicker_core::settings::{FitMode, Frame};
+    let ctx = expect_context::<Ctx>();
+    let monitor = StoredValue::new(monitor);
+    // The screen, in CSS pixels: 192 tall, the monitor's shape.
+    let fh = 192.0_f64;
+    let fw = fh * f64::from(width.max(1)) / f64::from(height.max(1));
+    let src = RwSignal::new(None::<String>);
+    let natural = RwSignal::new(None::<(u32, u32)>);
+    Effect::new(move |_| {
+        let Some(p) = path.get() else { return };
+        spawn_local(async move {
+            if let Ok(file) = api::framing_image(&p).await {
+                src.try_set(Some(api::asset_url(&file)));
+            }
+        });
+    });
+    let flip = move || ctx.state.with(|s| monitor.with_value(|m| s.adjust.get(m).map(|a| a.flip).unwrap_or_default()));
+    let fit = move || {
+        let adjusted = ctx.state.with(|s| monitor.with_value(|m| s.adjust.get(m).and_then(|a| a.fit)));
+        monitor.with_value(|m| ctx.settings.with(|s| s.as_ref().and_then(|s| s.fit_for(m, adjusted))))
+    };
+    // The picture's place for a frame: (left, top, scale) in CSS pixels.
+    let placed = move |f: Frame| {
+        natural.get().map(|(nw, nh)| {
+            let (l, t, cw, _) = f.rect(nw, nh);
+            let s = fw / f64::from(cw.max(1));
+            (f64::from(l) * s, f64::from(t) * s, s, nw, nh)
+        })
+    };
+    let img_style = move || match (draft.get(), natural.get()) {
+        (Some(f), Some(_)) => placed(f).map_or(String::new(), |(l, t, s, nw, nh)| {
+            format!(
+                "position:absolute;left:{}px;top:{}px;width:{}px;height:{}px;max-width:none",
+                -l,
+                -t,
+                f64::from(nw) * s,
+                f64::from(nh) * s
+            )
+        }),
+        _ => String::new(),
+    };
+    let img_class = move || {
+        if draft.with(Option::is_some) {
+            return "select-none";
+        }
+        match fit() {
+            Some(FitMode::Contain) => "size-full object-contain select-none",
+            Some(FitMode::Fill) => "size-full object-fill select-none",
+            Some(FitMode::Tile) => "size-full object-none select-none",
+            _ => "size-full object-cover select-none",
+        }
+    };
+    let stage_style = move || {
+        let f = flip();
+        match (f.h, f.v) {
+            (true, true) => "transform: scale(-1, -1)",
+            (true, false) => "transform: scaleX(-1)",
+            (false, true) => "transform: scaleY(-1)",
+            (false, false) => "",
+        }
+    };
+    let default_frame = move || Frame { zoom: 100, x: 500, y: 500, width, height };
+    // Move the frame's center by a drag of (dx, dy) screen pixels.
+    let drag_by = move |dx: f64, dy: f64| {
+        let Some((nw, nh)) = natural.get_untracked() else { return };
+        let f = draft.get_untracked().unwrap_or_else(default_frame);
+        let (l, t, cw, ch) = f.rect(nw, nh);
+        let s = fw / f64::from(cw.max(1));
+        let flip = flip();
+        // The picture follows the pointer: the frame moves the other way
+        // (and the mirrored way when it's mirrored).
+        let (dx, dy) = (if flip.h { -dx } else { dx }, if flip.v { -dy } else { dy });
+        let cx = f64::from(l) + f64::from(cw) / 2.0 - dx / s;
+        let cy = f64::from(t) + f64::from(ch) / 2.0 - dy / s;
+        let moved = Frame {
+            x: (cx / f64::from(nw) * 1000.0).clamp(0.0, 1000.0) as u16,
+            y: (cy / f64::from(nh) * 1000.0).clamp(0.0, 1000.0) as u16,
+            ..f
+        };
+        // Back to a center the frame can have (inside the picture).
+        let (l, t, cw, ch) = moved.rect(nw, nh);
+        draft.set(Some(Frame {
+            x: ((f64::from(l) + f64::from(cw) / 2.0) / f64::from(nw) * 1000.0).round() as u16,
+            y: ((f64::from(t) + f64::from(ch) / 2.0) / f64::from(nh) * 1000.0).round() as u16,
+            ..moved
+        }));
+    };
+    let dragging = StoredValue::new(None::<(i32, i32)>);
+    view! {
+        <span class="flex shrink-0 flex-col items-center">
+            <span class="block rounded-[14px] bg-zinc-900 p-1.5 pb-3 shadow-xl ring-1 ring-white/10">
+                <div
+                    class="relative cursor-grab touch-none overflow-hidden rounded-[8px] bg-zinc-800 active:cursor-grabbing"
+                    style=format!("width:{fw}px;height:{fh}px")
+                    on:pointerdown=move |e: leptos::ev::PointerEvent| {
+                        if let Some(el) = e.current_target().and_then(|t| t.dyn_into::<web_sys::Element>().ok()) {
+                            let _ = el.set_pointer_capture(e.pointer_id());
+                        }
+                        dragging.set_value(Some((e.client_x(), e.client_y())));
+                    }
+                    on:pointermove=move |e: leptos::ev::PointerEvent| {
+                        if let Some((x, y)) = dragging.get_value() {
+                            dragging.set_value(Some((e.client_x(), e.client_y())));
+                            drag_by(f64::from(e.client_x() - x), f64::from(e.client_y() - y));
+                        }
+                    }
+                    on:pointerup=move |_| {
+                        if dragging.get_value().take().is_some() {
+                            dragging.set_value(None);
+                            on_change.run(());
+                        }
+                    }
+                    on:wheel=move |e: leptos::ev::WheelEvent| {
+                        e.prevent_default();
+                        let f = draft.get_untracked().unwrap_or_else(default_frame);
+                        let zoom = (f64::from(f.zoom) * (1.0 - e.delta_y() * 0.001)).clamp(100.0, 400.0);
+                        draft.set(Some(Frame { zoom: zoom as u16, ..f }));
+                        // Keep the center valid at the new size.
+                        drag_by(0.0, 0.0);
+                        on_change.run(());
+                    }
+                >
+                    <div class="absolute inset-0" style=stage_style>
+                        {move || src.get().map(|s| view! {
+                            <img
+                                src=s
+                                alt=""
+                                draggable="false"
+                                on:load=move |e| {
+                                    if let Some(img) = e.target().and_then(|t| t.dyn_into::<web_sys::HtmlImageElement>().ok()) {
+                                        natural.set(Some((img.natural_width(), img.natural_height())));
+                                    }
+                                }
+                                class=img_class
+                                style=img_style
+                            />
+                        })}
+                    </div>
+                    // Glass.
+                    <span class="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/15 via-transparent to-transparent" />
+                </div>
+            </span>
+            <span class="block h-5 w-12 bg-gradient-to-b from-zinc-700 to-zinc-800 [clip-path:polygon(28%_0,72%_0,100%_100%,0_100%)]" />
+            <span class="block h-2 w-36 rounded-full bg-gradient-to-b from-zinc-600 to-zinc-800 shadow-[0_4px_8px_rgb(0_0_0/0.35)]" />
+        </span>
     }
 }
