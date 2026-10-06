@@ -58,6 +58,8 @@ struct Local {
     scroll: UniformListScrollHandle,
     /// Where a wheel scroll is gliding to (offset y, negative going down).
     glide_to: Option<f32>,
+    /// The loop moving it there, while one runs.
+    gliding: Option<Task<()>>,
 }
 
 impl Local {
@@ -118,7 +120,23 @@ impl Local {
 
         // For measuring only: WALLPICKER_AUTOSCROLL=1 scrolls through the
         // whole library, a row at a time, then back up.
-        if std::env::var_os("WALLPICKER_AUTOSCROLL").is_some() {
+        if std::env::var("WALLPICKER_AUTOSCROLL").as_deref() == Ok("wheel") {
+            // Wheel notches through the real handler, as a mouse sends them.
+            cx.spawn_in(window, async move |this, cx| {
+                cx.background_executor().timer(std::time::Duration::from_secs(4)).await;
+                for i in 0..60 {
+                    let down = i < 40;
+                    let event = ScrollWheelEvent {
+                        delta: ScrollDelta::Lines(point(0., if down { -3. } else { 3. })),
+                        ..Default::default()
+                    };
+                    let _ = this.update_in(cx, |this, window, cx| this.wheel(&event, window, cx));
+                    cx.background_executor().timer(std::time::Duration::from_millis(150)).await;
+                }
+                eprintln!("wheel test: done");
+            })
+            .detach();
+        } else if std::env::var_os("WALLPICKER_AUTOSCROLL").is_some() {
             cx.spawn(async move |this, cx| {
                 cx.background_executor().timer(std::time::Duration::from_secs(4)).await;
                 for pass in 0..2 {
@@ -151,6 +169,7 @@ impl Local {
             columns: 4,
             scroll: UniformListScrollHandle::new(),
             glide_to: None,
+            gliding: None,
         }
     }
 
@@ -361,9 +380,11 @@ impl Local {
 
 impl Local {
     /// A wheel notch moves a fixed step at once in GPUI; here it sets where
-    /// to go and `glide` gets there over a few frames. A touchpad's pixel
-    /// deltas are already smooth: they apply as they come.
-    fn wheel(&mut self, event: &ScrollWheelEvent, window: &mut Window, cx: &mut Context<Self>) {
+    /// to go and a short loop glides there (`glide`), about 120 steps a
+    /// second. A touchpad's pixel deltas are already smooth: they apply as
+    /// they come. (Not `request_animation_frame`: from an input event there's
+    /// no view being drawn, and GPUI panics.)
+    fn wheel(&mut self, event: &ScrollWheelEvent, _window: &mut Window, cx: &mut Context<Self>) {
         let handle = self.scroll.0.borrow().base_handle.clone();
         let max = f32::from(handle.max_offset().y);
         let now = f32::from(handle.offset().y);
@@ -371,7 +392,24 @@ impl Local {
             ScrollDelta::Lines(lines) => {
                 let from = self.glide_to.unwrap_or(now);
                 self.glide_to = Some((from + lines.y * 140.0).clamp(-max, 0.0));
-                window.request_animation_frame();
+                if self.gliding.is_none() {
+                    self.gliding = Some(cx.spawn(async move |this, cx| {
+                        loop {
+                            cx.background_executor().timer(std::time::Duration::from_millis(8)).await;
+                            let more = this.update(cx, |this, cx| {
+                                let more = this.glide();
+                                cx.notify();
+                                if !more {
+                                    this.gliding = None;
+                                }
+                                more
+                            });
+                            if !matches!(more, Ok(true)) {
+                                break;
+                            }
+                        }
+                    }));
+                }
             }
             ScrollDelta::Pixels(delta) => {
                 self.glide_to = None;
@@ -381,18 +419,18 @@ impl Local {
         cx.notify();
     }
 
-    /// One frame of a glide: a fifth of the way left, so it eases out.
-    fn glide(&mut self, window: &mut Window) {
-        let Some(to) = self.glide_to else { return };
+    /// One step of a glide: a fifth of the way left, so it eases out.
+    /// Whether there's more to go.
+    fn glide(&mut self) -> bool {
+        let Some(to) = self.glide_to else { return false };
         let handle = self.scroll.0.borrow().base_handle.clone();
         let now = f32::from(handle.offset().y);
         let next = if (to - now).abs() < 0.5 { to } else { now + (to - now) * 0.2 };
         handle.set_offset(point(px(0.), px(next)));
         if next == to {
             self.glide_to = None;
-        } else {
-            window.request_animation_frame();
         }
+        self.glide_to.is_some()
     }
 }
 
@@ -403,7 +441,6 @@ fn scan_store_clone(this: &WeakEntity<Local>, cx: &mut AsyncApp) -> Store {
 
 impl Render for Local {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        self.glide(window);
         let width = f32::from(window.viewport_size().width) - 2.0 * 24.0;
         self.columns = (((width + GAP) / (TILE_MIN + GAP)).floor() as usize).max(1);
         let columns = self.columns;

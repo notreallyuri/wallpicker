@@ -17,7 +17,8 @@ uses), cut with `fonttools varLib.instancer Nunito.ttf wght=700`.
 
 Its own workspace and `target/`: the app's build doesn't change. The first build takes ~4 min.
 
-`WALLPICKER_AUTOSCROLL=1` scrolls through the whole library and back (for measuring against
+`WALLPICKER_AUTOSCROLL=wheel` sends 60 wheel notches through the real wheel handler (it caught a
+panic headless). `WALLPICKER_AUTOSCROLL=1` scrolls through the whole library and back (for measuring against
 the WebKit app with the same workload).
 
 First measurement (headless, the same scroll through 135 wallpapers): 94 MB when opened and
