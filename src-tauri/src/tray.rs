@@ -20,21 +20,45 @@ fn main_window(app: &AppHandle) -> Option<WebviewWindow> {
     app.get_webview_window("main")
 }
 
-pub fn show(app: &AppHandle) {
+/// The window, made from tauri.conf's "main" when there's none: it isn't
+/// made at startup (`create: false`), and closing to the tray destroys it,
+/// so its WebKit processes go away while it isn't needed.
+fn ensure_window(app: &AppHandle) -> Option<WebviewWindow> {
     if let Some(w) = main_window(app) {
+        return Some(w);
+    }
+    let config = app.config().app.windows.iter().find(|w| w.label == "main")?.clone();
+    match tauri::WebviewWindowBuilder::from_config(app, &config).and_then(|b| b.build()) {
+        Ok(w) => Some(w),
+        Err(e) => {
+            eprintln!("wallpicker: could not open the window: {e}");
+            None
+        }
+    }
+}
+
+pub fn show(app: &AppHandle) {
+    if let Some(w) = ensure_window(app) {
         let _ = w.show();
         let _ = w.unminimize();
         let _ = w.set_focus();
     }
 }
 
+/// Put the window away: destroyed when it goes to the tray (its memory with
+/// it), else only hidden.
+fn put_away(app: &AppHandle, w: &WebviewWindow) {
+    if hides_on_close(app) {
+        let _ = w.destroy();
+    } else {
+        let _ = w.hide();
+    }
+}
+
 pub fn toggle(app: &AppHandle) {
-    if let Some(w) = main_window(app) {
-        if w.is_visible().unwrap_or(false) {
-            let _ = w.hide();
-        } else {
-            show(app);
-        }
+    match main_window(app) {
+        Some(w) if w.is_visible().unwrap_or(false) => put_away(app, &w),
+        _ => show(app),
     }
 }
 
@@ -51,7 +75,8 @@ pub fn second_launch(app: &AppHandle, argv: &[String], cwd: &std::path::Path) {
     }
 }
 
-/// Closing hides to the tray when that's on and the tray icon is up.
+/// Closing goes to the tray (the app keeps running, the window is destroyed)
+/// when that's on and the tray icon is up.
 pub fn hides_on_close(app: &AppHandle) -> bool {
     TRAY_UP.load(Ordering::Relaxed)
         && app

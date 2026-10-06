@@ -60,7 +60,8 @@ or **Noctalia**'s wallpaper manager (Settings → General → Wallpaper backend)
   it changes right away when night starts and ends. `wallpicker random --color dark` too. The
   Noctalia plugin keeps time for it while Noctalia runs; without Noctalia, run
   `wallpicker slideshow run` (say, from Hyprland's autostart). **Change now** changes it at once.
-- **Tray**: closing the window keeps wallpicker in the tray (Settings → General). The tray menu
+- **Tray**: closing the window keeps wallpicker in the tray (Settings → General). The window is
+  closed for real then, so the tray costs ~30 MB instead of ~340 MB; it opens again in a moment. The tray menu
   shows or hides the window, applies a random wallpaper, or quits. Running `wallpicker` again
   brings the window back instead of starting a second app; `wallpicker --toggle` shows or hides it
   (for a keybind), and `wallpicker --tray` starts with only the tray icon (for an autostart).

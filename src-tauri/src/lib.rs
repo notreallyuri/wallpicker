@@ -1119,21 +1119,14 @@ pub fn run(start_hidden: bool) {
         }))
         .plugin(tauri_plugin_dialog::init())
         .manage(AppState::new(store.clone()))
-        .on_window_event(|window, event| {
-            if let tauri::WindowEvent::CloseRequested { api, .. } = event
-                && tray::hides_on_close(window.app_handle())
-            {
-                api.prevent_close();
-                let _ = window.hide();
-            }
-        })
         .setup(move |app| {
             // Without a tray (nothing to show it in), the app just runs as a
             // window; closing it quits.
             if let Err(e) = tray::setup(app.handle()) {
                 eprintln!("wallpicker: no tray icon: {e}");
             }
-            // The window starts hidden (tauri.conf) so `--tray` doesn't flash it.
+            // The window isn't made at startup (tauri.conf: `create: false`);
+            // `--tray` leaves it unmade until it's wanted.
             if !start_hidden {
                 tray::show(app.handle());
             }
@@ -1189,6 +1182,16 @@ pub fn run(start_hidden: bool) {
             wallhaven_collection,
             resolve_duplicates,
         ])
-        .run(context)
-        .expect("error while running wallpicker");
+        .build(context)
+        .expect("error while building wallpicker")
+        .run(|app, event| {
+            // Closing the last window would end the app; with the tray it
+            // goes on (the window is made again when wanted). Quitting from
+            // the tray menu asks with an exit code, and isn't stopped.
+            if let tauri::RunEvent::ExitRequested { code: None, api, .. } = event
+                && tray::hides_on_close(app)
+            {
+                api.prevent_exit();
+            }
+        });
 }

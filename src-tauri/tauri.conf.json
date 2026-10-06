@@ -19,7 +19,8 @@
         "height": 760,
         "resizable": false,
         "center": true,
-        "visible": false
+        "visible": false,
+        "create": false
       }
     ],
     "security": {
@@ -33,6 +34,8 @@
   },
   "bundle": {
     "active": false,
-    "icon": ["icons/icon.png"]
+    "icon": [
+      "icons/icon.png"
+    ]
   }
 }
