@@ -71,6 +71,74 @@ What stands between "my tool" and one others can install (2026-10-05):
   the app's still do (it reads the image).
 - [ ] Use the current wallpaper for hyprlock and Noctalia's greeter (`noctalia msg greeter-sync`).
 
+## Quickshell frontend (the port, decided 2026-10-06)
+
+The UI moves from Tauri (WebKit + Leptos) to Quickshell (QML); the Rust core and CLI stay and do
+the work. Why: the prototype (`prototype/quickshell-local`, the Local tab 1:1) measured ~215-260 MB
+open against ~300-360 MB, and a full first screen ~0.43 s after starting from nothing against
+~0.5-0.6 s for today's reopen from the tray, with nothing left running between opens. It looks
+and feels like the app (real transitions and easing, glass, shadows); the scrolling needs work.
+
+### How it fits together
+
+- **`quickshell/`** (repo root): the UI, run with `qs -p`. Split by focus, no god-files: one
+  component per file, a folder per area; a file that grows past ~300 lines gets split.
+  - `shell.qml`: the entry only (ShellRoot, the window's life, IPC).
+  - `services/`: singletons holding state and talking to Rust: `Backend` (the connection),
+    `Theme`, `Library`, `Monitors`, `Online`, `Settings`, `Toasts`.
+  - `components/`: the app's building blocks, mirroring `ui/src/components`: Btn, Icon,
+    TextField, Chip, Badge, Pill, Switch, Select, Menu, Popover, Tooltip, Dialog, Pager, Spinner,
+    Toast, Skeleton, ScrollArea (the smooth scrolling lives here, once).
+  - `bar/`: the top bar (tabs, monitor pills, the drawer, Previous, Settings).
+  - `views/local/`, `views/online/`, `views/collections/`, `views/settings/` (a file per section).
+  - `dialogs/`: Adjust (mirror, fit, framing), Tags, Duplicates, Trash, Details.
+- **`wallpicker serve`**: one long-running Rust process per open UI, JSON lines over stdin and
+  stdout (`{id, method, params}` → `{id, result | error}`, plus pushed `{event, data}`: state
+  changed, workspace switched, thumbnail made, download progress). Not a process per action
+  (~50-120 ms each). Its methods are today's 50 Tauri commands (`src-tauri/src/commands/`): their
+  logic moves to a layer without Tauri types, which both the Tauri app (until it's gone) and
+  `serve` call. The CLI's one-shot commands stay as they are (the Noctalia plugin uses them).
+- **Process model**: `wallpicker` (no arguments) starts `qs -p <the ui>` if it isn't running, else
+  toggles it over IPC (`--toggle`, `--open <place>` likewise); closing exits Quickshell (0 MB
+  between opens). What must keep running moves to a small `wallpicker daemon` without GTK or
+  WebKit: the workspace listener, the tray (ksni: a D-Bus tray item, no GTK) if we keep one.
+- **Installed**: `install-local.sh` puts `quickshell/` in `~/.local/share/wallpicker/ui`;
+  `wallpicker` finds it there (or next to the binary, for development).
+
+### Phases (each ends with something usable; the Tauri app stays until phase 6)
+
+- [ ] **0. Foundation**: the `quickshell/` layout; `serve` with the library, monitors, theme and
+  apply methods (the shared command layer started); `Backend` service (requests, events);
+  `Theme` (palette like palette.rs, the color themes, dark/light, Nunito weights); the base
+  components; smooth wheel scrolling (ScrollArea: a notch glides, touchpads 1:1, kinetic
+  flicks); `wallpicker` starting / toggling the UI; headless checks (cage + grim, the QML log;
+  qmltestrunner for components).
+- [ ] **1. Local tab**: the prototype, rebuilt on the foundation, then everything it lacks:
+  Folders layout and breadcrumbs, Color filter, the ⋯ menu, the tile's right-click menu (apply
+  to, favorite, tags, show in folder, trash, duplicates), the Tags dialog, keyboard shortcuts,
+  empty and loading states, Random.
+- [ ] **2. Top bar and monitors**: the monitor drawer, All, Previous, the Adjust dialog (mirror,
+  fit, framing by drag, scroll and sliders).
+- [ ] **3. Online and Collections**: providers, search, the filters dialog, details (preview,
+  tags, download, apply), downloads, Wallhaven collections, pages and Jump to.
+- [ ] **4. Settings**: every section (General, Appearance, Downloads, Slideshow, Workspaces with
+  its picker, Performance, Backup with file dialogs, providers), conflicts and Stop it.
+- [ ] **5. Background**: `wallpicker daemon` (workspace listener, tray or not), following the
+  wallpaper's colors live, Noctalia colors, toasts for what happens in the background.
+- [ ] **6. Switch over**: `wallpicker` opens the Quickshell UI; the Noctalia plugin's handoffs
+  (`--open`) go through it; remove the Tauri app, WebKit and Leptos (`ui/`, the GUI half of
+  `src-tauri`); README, install script, scripts/memory and scripts/open-timing redone for QML.
+
+### To decide on the way
+
+- Tray: keep it (ksni in the daemon) or drop it (Quickshell starts fast; a keybind and the
+  Noctalia plugin open it).
+- File dialogs (backup export/import, snapshot folder): the XDG desktop portal's FileChooser,
+  from Rust (`rfd` over the portal) or from QML.
+- Window kind: a normal window (FloatingWindow, as now) or a layer-shell overlay like a launcher.
+- Closing: exit (0 MB, ~0.45 s to open) or stay hidden (~200 MB, instant); maybe a setting, like
+  the WebKit app's planned "Free the memory after".
+
 ## Next up (2026-10-06)
 
 - [x] **Backup**: export / import the library (favorites, tags, fits) as one file, finding moved
@@ -86,7 +154,8 @@ What stands between "my tool" and one others can install (2026-10-05):
   settings, the library, thumbnails. Measure each step (timestamps from the open request to a
   filled grid, headless, a few cycles), then cut the slow ones (e.g. draw the frame before the
   data, fewer requests at once, a smaller bundle). First of the two.
-- [ ] **Keep the window warm after closing**: closing only hides it, so reopening is instant (page
+- [ ] ~~**Keep the window warm after closing**~~ (superseded by the Quickshell port, which
+  decides this its own way; see "Closing" above): closing only hides it, so reopening is instant (page
   and scroll kept); it's destroyed after it has stayed closed for a while, and the memory goes
   back. The while is a setting (Settings → Performance, "Free the memory after"): 5 min by
   default; 30 min, always ready (never freed), or at once (today's behavior). After the cold open
