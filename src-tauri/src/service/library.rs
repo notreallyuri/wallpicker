@@ -1,11 +1,17 @@
-//! The local library: the scan, thumbnails, favorites.
+//! The local library: the scan, thumbnails, favorites and tags, colors,
+//! duplicates.
 
 use std::path::PathBuf;
 
-use wallpicker_core::catalog::Catalog;
+use wallpicker_core::catalog::{self, Catalog};
+use wallpicker_core::cmd::SystemRunner;
+use wallpicker_core::duplicates::DuplicateGroup;
+use wallpicker_core::hyprpaper;
+use wallpicker_core::store::Store;
 use wallpicker_core::library::{self, LocalImage};
 use wallpicker_core::thumbs;
 
+use crate::service::wallpapers::trash_path;
 use crate::{AppState, CmdResult, blocking, err, wallpaper_path};
 
 /// Every image in the wallpaper folders, each with its cached thumbnail when
@@ -15,6 +21,51 @@ pub(crate) async fn scan(state: &AppState) -> CmdResult<Vec<LocalImage>> {
     blocking(move || {
         let s = store.load_settings()?;
         Ok(library::with_cached_thumbs(library::scan(&s.folders, s.recursive), &store.dirs().cache, s.thumb_width))
+    })
+    .await
+}
+
+/// A scanned image and where it sits: which wallpaper folder (`root`, an
+/// index into `Library::roots`) and the subfolder in it ("" at its top).
+#[derive(serde::Serialize)]
+pub(crate) struct Placed {
+    #[serde(flatten)]
+    pub image: LocalImage,
+    pub root: usize,
+    pub folder: String,
+}
+
+/// A wallpaper folder from the settings.
+#[derive(serde::Serialize)]
+pub(crate) struct Root {
+    pub path: PathBuf,
+    pub name: String,
+}
+
+/// The library with each image's place, for browsing by folder.
+#[derive(serde::Serialize)]
+pub(crate) struct Library {
+    pub images: Vec<Placed>,
+    pub roots: Vec<Root>,
+}
+
+pub(crate) async fn library(state: &AppState) -> CmdResult<Library> {
+    let store = state.store.clone();
+    let images = scan(state).await?;
+    blocking(move || {
+        let folders = store.load_settings()?.folders;
+        let images = images
+            .into_iter()
+            .map(|image| {
+                let (root, folder) = library::folder_in(&image.path, &folders).unwrap_or((0, String::new()));
+                Placed { image, root, folder }
+            })
+            .collect();
+        let roots = folders
+            .iter()
+            .map(|p| Root { name: p.file_name().map_or_else(|| p.display().to_string(), |n| n.to_string_lossy().into_owned()), path: p.clone() })
+            .collect();
+        Ok(Library { images, roots })
     })
     .await
 }
@@ -58,4 +109,153 @@ pub(crate) async fn catalog(state: &AppState) -> CmdResult<Catalog> {
 pub(crate) async fn set_favorite(state: &AppState, path: String, favorite: bool) -> CmdResult<Catalog> {
     let path = wallpaper_path(&path)?;
     update_catalog(state, move |c| c.set_favorite(&path, favorite)).await
+}
+
+pub(crate) async fn add_tag(state: &AppState, path: String, tag: String) -> CmdResult<Catalog> {
+    let path = wallpaper_path(&path)?;
+    if catalog::normalize_tag(&tag).is_none() {
+        return Err(format!("Tags must be 1 to {} characters, without control characters.", catalog::MAX_TAG_LEN));
+    }
+    update_catalog(state, move |c| {
+        c.add_tag(&path, &tag);
+    })
+    .await
+}
+
+pub(crate) async fn remove_tag(state: &AppState, path: String, tag: String) -> CmdResult<Catalog> {
+    let path = wallpaper_path(&path)?;
+    update_catalog(state, move |c| c.remove_tag(&path, &tag)).await
+}
+
+/// The wallpapers with `color` (a hue, or dark / light / warm / muted), the
+/// most of it first: (path, score).
+pub(crate) async fn with_color(state: &AppState, color: String) -> CmdResult<Vec<(PathBuf, f32)>> {
+    let Some(color) = wallpicker_core::settings::known_color(Some(color.clone())) else {
+        return Err(format!("{color}? one of {}", wallpicker_core::colors::HUES.iter().chain(wallpicker_core::colors::TONES.iter()).map(|(k, _)| *k).collect::<Vec<_>>().join(", ")));
+    };
+    let store = state.store.clone();
+    blocking(move || {
+        let mut found: Vec<(PathBuf, f32)> = color_profiles(&store)?
+            .into_iter()
+            .filter(|(_, p)| wallpicker_core::colors::matches(p, &color))
+            .map(|(path, p)| {
+                let score = wallpicker_core::colors::score(&p, &color);
+                (path, score)
+            })
+            .collect();
+        found.sort_by(|a, b| b.1.total_cmp(&a.1));
+        Ok(found)
+    })
+    .await
+}
+
+#[derive(Debug, Default, serde::Serialize)]
+pub(crate) struct ResolveReport {
+    pub trashed: Vec<String>,
+    /// (path, why)
+    pub failed: Vec<(String, String)>,
+    /// Monitors that showed a trashed copy and now show the kept one.
+    pub reapplied: Vec<String>,
+}
+
+/// The library's duplicate groups, best first in each.
+pub(crate) async fn duplicates(state: &AppState) -> CmdResult<Vec<DuplicateGroup>> {
+    let store = state.store.clone();
+    blocking(move || {
+        let settings = store.load_settings()?;
+        let images = library::scan(&settings.folders, settings.recursive);
+        let catalog = store.load_catalog().unwrap_or_default();
+        Ok(wallpicker_core::duplicates::find(
+            &images,
+            &catalog,
+            &store.dirs().cache,
+            settings.thumb_width,
+        ))
+    })
+    .await
+}
+
+/// Every library image's colors (computed once, cached), by path.
+pub(crate) fn color_profiles(
+    store: &Store,
+) -> wallpicker_core::error::Result<
+    std::collections::BTreeMap<PathBuf, wallpicker_core::colors::ColorProfile>,
+> {
+    let settings = store.load_settings()?;
+    let images = library::scan(&settings.folders, settings.recursive);
+    Ok(wallpicker_core::colors::profiles(
+        &images,
+        &store.dirs().cache,
+        settings.thumb_width,
+    ))
+}
+
+/// Keep `keep`, move `others` to the trash. The kept one gets their
+/// favorite, tags and fit (when it has none), and goes on any monitor that
+/// showed one of them. Each copy is trashed with the usual checks; one that
+/// fails doesn't stop the rest.
+pub(crate) async fn resolve_duplicates_with(
+    state: &AppState,
+    keep: &str,
+    others: &[String],
+) -> CmdResult<ResolveReport> {
+    let keep_path = wallpaper_path(keep)?;
+    let store = state.store.clone();
+    let check = keep_path.clone();
+    blocking(move || {
+        let s = store.load_settings()?;
+        let mut roots = s.folders.clone();
+        roots.push(s.download_dir.clone());
+        library::library_file(&check, &roots)
+    })
+    .await?;
+    let other_paths: Vec<PathBuf> = others
+        .iter()
+        .map(|o| wallpaper_path(o))
+        .collect::<CmdResult<_>>()?;
+    if other_paths.contains(&keep_path) {
+        return Err("The kept wallpaper can't also be trashed.".into());
+    }
+
+    let (k, o) = (keep_path.clone(), other_paths.clone());
+    update_catalog(state, move |c| {
+        let favorite = o.iter().any(|p| c.is_favorite(p));
+        let tags: Vec<String> = o.iter().flat_map(|p| c.tags(p).to_vec()).collect();
+        if favorite {
+            c.set_favorite(&k, true);
+        }
+        for t in &tags {
+            c.add_tag(&k, t);
+        }
+    })
+    .await?;
+
+    let shown: Vec<String> = state
+        .store
+        .load_state()
+        .map_err(err)?
+        .current
+        .iter()
+        .filter(|(_, p)| other_paths.contains(p))
+        .map(|(m, _)| m.clone())
+        .collect();
+
+    let mut report = ResolveReport::default();
+    for o in others {
+        match trash_path(state, o).await {
+            Ok(()) => report.trashed.push(o.clone()),
+            Err(e) => report.failed.push((o.clone(), e)),
+        }
+    }
+    if !shown.is_empty() {
+        let store = state.store.clone();
+        let keep = keep_path.clone();
+        let applied = blocking(move || {
+            let backend = store.load_settings()?.wallpaper_backend;
+            hyprpaper::apply_and_remember_with(&SystemRunner, &store, backend, &shown, &keep)
+        })
+        .await?;
+        report.reapplied = applied.applied;
+    }
+    Ok(report)
 }

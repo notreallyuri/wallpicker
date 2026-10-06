@@ -92,7 +92,7 @@ pub fn trash(args: &[String]) -> i32 {
     let state = AppState::new(Store::new(Dirs::from_env()));
     let p = path.to_string_lossy().into_owned();
     run_edit(
-        async move { crate::commands::wallpapers::trash_path(&state, &p).await },
+        async move { crate::service::wallpapers::trash_path(&state, &p).await },
         format!("moved {} to the trash", path.display()),
     )
 }
@@ -208,7 +208,7 @@ pub fn duplicates(args: &[String]) -> i32 {
     match args {
         [] | [_] if args.iter().all(|a| a == "--json") => {
             let json = !args.is_empty();
-            let groups = match tauri::async_runtime::block_on(crate::commands::library::duplicates(&state)) {
+            let groups = match tauri::async_runtime::block_on(crate::service::library::duplicates(&state)) {
                 Ok(g) => g,
                 Err(e) => return fail(&e),
             };
@@ -235,7 +235,7 @@ pub fn duplicates(args: &[String]) -> i32 {
         [action, keep, others @ ..] if action == "keep" && !others.is_empty() => {
             let keep = absolute(keep).to_string_lossy().into_owned();
             let others: Vec<String> = others.iter().map(|o| absolute(o).to_string_lossy().into_owned()).collect();
-            match tauri::async_runtime::block_on(crate::commands::library::resolve_duplicates_with(&state, &keep, &others)) {
+            match tauri::async_runtime::block_on(crate::service::library::resolve_duplicates_with(&state, &keep, &others)) {
                 Ok(r) => {
                     for t in &r.trashed {
                         println!("trashed {t}");
@@ -264,7 +264,7 @@ pub fn show_in_folder(args: &[String]) -> i32 {
     };
     let path = absolute(path);
     let store = Store::new(Dirs::from_env());
-    match crate::commands::wallpapers::show_in_folder_blocking(&store, &path.to_string_lossy()) {
+    match crate::service::wallpapers::show_in_folder_blocking(&store, &path.to_string_lossy()) {
         Ok(()) => 0,
         Err(e) => fail(&e),
     }
@@ -283,7 +283,7 @@ pub fn colors(args: &[String]) -> i32 {
     {
         return fail(&format!("colors: {k}? one of {}", known.join(", ")));
     }
-    let profiles = match crate::commands::library::color_profiles(&store) {
+    let profiles = match crate::service::library::color_profiles(&store) {
         Ok(p) => p,
         Err(e) => return fail(&e),
     };

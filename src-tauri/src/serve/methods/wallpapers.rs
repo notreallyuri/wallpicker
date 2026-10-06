@@ -1,5 +1,6 @@
-//! wallpapers.monitors, wallpapers.apply, wallpapers.previous. Applying and
-//! going back announce `state-changed` (what the monitors show).
+//! wallpapers.*: monitors, apply, previous (announcing `state-changed`:
+//! what the monitors show), and the files: trash (announcing
+//! `library-changed` too), show_in_folder.
 
 use serde_json::{Value, json as value};
 
@@ -17,6 +18,22 @@ pub(super) async fn call(state: &AppState, out: &Out, name: &str, params: &Value
         },
         "previous" => match param(params, "monitors") {
             Ok(monitors) => json(wallpapers::previous(state, monitors).await),
+            Err(e) => Err(e),
+        },
+        "show_in_folder" => {
+            return Some(match param::<String>(params, "path") {
+                Ok(path) => json(wallpapers::show_in_folder(state, path).await),
+                Err(e) => Err(e),
+            });
+        }
+        "trash" => match param::<String>(params, "path") {
+            Ok(path) => {
+                let result = json(wallpapers::trash_path(state, &path).await);
+                if result.is_ok() {
+                    out.event("library-changed", value!(null));
+                }
+                result
+            }
             Err(e) => Err(e),
         },
         _ => return None,
