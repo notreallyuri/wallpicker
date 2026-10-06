@@ -375,7 +375,9 @@ fn SettingsForm(on_saved: Callback<()>) -> impl IntoView {
                 </SidebarContent>
             </Sidebar>
 
-            <SidebarInset>
+            // min-w-0: a long line (a file name) shrinks to fit instead of
+            // widening the dialog sideways.
+            <SidebarInset class="min-w-0">
                 // The same height as the panel's header, so the two rules meet.
                 // `pr-12` leaves the corner to the dialog's close button.
                 <header class="flex h-12 shrink-0 items-center border-b px-4 pr-12">

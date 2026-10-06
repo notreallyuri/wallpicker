@@ -130,7 +130,7 @@ fn WorkspaceItem(row: WorkspaceRow, assign: impl Fn(String, Option<String>) + Co
                 <span class="truncate text-sm font-bold">
                     {file.unwrap_or_else(|| "No wallpaper".to_string())}
                 </span>
-                <span class="text-xs text-muted-foreground">{format!("Workspace {} · {where_}", row.name)}</span>
+                <span class="truncate text-xs text-muted-foreground">{format!("Workspace {} · {where_}", row.name)}</span>
             </div>
             {move || shown.get().map(|(m, p)| view! {
                 <Button size=ButtonSize::Sm variant=ButtonVariant::Outline on_click=move |_| assign(name.get_value(), Some(p.clone()))>
