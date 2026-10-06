@@ -21,6 +21,7 @@ const SECTION_APPEARANCE: &str = "appearance";
 const SECTION_DOWNLOADS: &str = "downloads";
 const SECTION_SLIDESHOW: &str = "slideshow";
 const SECTION_BACKUP: &str = "backup";
+const SECTION_WORKSPACES: &str = "workspaces";
 const SECTION_PERFORMANCE: &str = "performance";
 const SECTION_WALLHAVEN: &str = "wallhaven";
 const SECTION_KONACHAN: &str = "konachan";
@@ -59,6 +60,12 @@ const SECTIONS: &[Section] = &[
         label: "Slideshow",
         group: "App",
         blurb: "A new wallpaper every few minutes, picked at random.",
+    },
+    Section {
+        slug: SECTION_WORKSPACES,
+        label: "Workspaces",
+        group: "App",
+        blurb: "A wallpaper for each Hyprland workspace, put on as you switch to it.",
     },
     Section {
         slug: SECTION_PERFORMANCE,
@@ -138,6 +145,8 @@ fn SettingsForm(on_saved: Callback<()>) -> impl IntoView {
     let close_to_tray = RwSignal::new(true);
     let theme_from_wallpaper = RwSignal::new(true);
     let full_previews = RwSignal::new(false);
+    let ws_enabled = RwSignal::new(false);
+    let ws_remember = RwSignal::new(true);
     // "" is the first monitor.
     let theme_monitor = RwSignal::new(String::new());
     let api_key = RwSignal::new(String::new());
@@ -189,6 +198,8 @@ fn SettingsForm(on_saved: Callback<()>) -> impl IntoView {
             close_to_tray.set(s.close_to_tray);
             theme_from_wallpaper.set(s.theme_from_wallpaper);
             full_previews.set(s.full_previews);
+            ws_enabled.set(s.workspaces.enabled);
+            ws_remember.set(s.workspaces.remember);
             theme_monitor.set(s.theme_monitor.clone().unwrap_or_default());
             api_key.set(s.wallhaven_api_key.clone().unwrap_or_default());
             username.set(s.wallhaven_username.clone().unwrap_or_default());
@@ -260,6 +271,8 @@ fn SettingsForm(on_saved: Callback<()>) -> impl IntoView {
         s.close_to_tray = close_to_tray.get_untracked();
         s.theme_from_wallpaper = theme_from_wallpaper.get_untracked();
         s.full_previews = full_previews.get_untracked();
+        s.workspaces.enabled = ws_enabled.get_untracked();
+        s.workspaces.remember = ws_remember.get_untracked();
         s.theme_monitor = Some(theme_monitor.get_untracked()).filter(|m| !m.is_empty());
         let key = api_key.get_untracked().trim().to_string();
         s.wallhaven_api_key = (!key.is_empty()).then_some(key);
@@ -537,6 +550,9 @@ fn SettingsForm(on_saved: Callback<()>) -> impl IntoView {
                             .into_any(),
                             SECTION_SLIDESHOW => view! { <SlideshowPane form=show /> }.into_any(),
                             SECTION_BACKUP => view! { <BackupPane /> }.into_any(),
+                            SECTION_WORKSPACES => {
+                                view! { <super::workspaces::WorkspacesPane enabled=ws_enabled remember=ws_remember /> }.into_any()
+                            }
                             SECTION_PERFORMANCE => view! { <PerformancePane full_previews=full_previews /> }.into_any(),
                             SECTION_WALLHAVEN => view! {
                                 <Field>

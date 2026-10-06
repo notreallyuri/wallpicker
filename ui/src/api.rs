@@ -159,6 +159,30 @@ pub async fn take_open_request() -> Result<Option<OpenPlace>, String> {
     call("take_open_request", &NoArgs {}).await
 }
 
+/// A workspace in Settings → Workspaces: the monitor showing it (if one is)
+/// and its wallpaper (if it has one).
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+pub struct WorkspaceRow {
+    pub name: String,
+    pub monitor: Option<String>,
+    pub open: bool,
+    pub wallpaper: Option<String>,
+}
+
+pub async fn workspace_rows() -> Result<Vec<WorkspaceRow>, String> {
+    call("workspace_rows", &NoArgs {}).await
+}
+
+/// Set, or with None clear, a workspace's wallpaper.
+pub async fn set_workspace_wallpaper(workspace: &str, path: Option<&str>) -> Result<(), String> {
+    #[derive(Serialize)]
+    struct Args<'a> {
+        workspace: &'a str,
+        path: Option<&'a str>,
+    }
+    call("set_workspace_wallpaper", &Args { workspace, path }).await
+}
+
 /// URL the webview can load a local file from (via Tauri's asset protocol).
 pub fn asset_url(path: &str) -> String {
     tauri_convert_file_src(path)

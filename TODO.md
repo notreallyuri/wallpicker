@@ -97,8 +97,8 @@ What stands between "my tool" and one others can install (2026-10-05):
     frame.
   - Video (mp4/webm) means mpvpaper as a fourth backend: a bigger step, decide separately
     (CPU/GPU cost, pause on fullscreen).
-- [ ] **A wallpaper per workspace**: listen to Hyprland's event socket (`workspace>>`) and apply
-  that workspace's wallpaper; the set is chosen in the app. Best with awww's transitions.
+- [x] **Wallpaper per workspace**: Settings → Workspaces; follows Hyprland's event socket (in the
+  app, or `wallpicker workspaces run`), remembers what you apply, outside the history.
 - [ ] Lock and login screens: the current wallpaper for hyprlock, and Noctalia's greeter
   (`noctalia msg greeter-sync`). (Also listed under Noctalia.)
 

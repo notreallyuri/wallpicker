@@ -7,6 +7,7 @@ use crate::components::nc::prelude::*;
 pub(crate) mod local;
 pub(crate) mod online;
 pub(crate) mod settings;
+mod workspaces;
 
 /// A nocomponents `Select` over `(value, label)` pairs, bound to a plain
 /// `String` model like the other form fields.

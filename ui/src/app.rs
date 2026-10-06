@@ -177,6 +177,8 @@ fn OpenPlaces(settings_open: RwSignal<bool>) -> impl IntoView {
     };
     take();
     api::listen("open-request", take);
+    // A workspace switch put another wallpaper on a monitor.
+    api::listen("state-changed", move || spawn_local(async move { ctx.refresh_state().await }));
     Effect::new(move |_| {
         let Some(view) = ctx.open_place.with(|p| p.as_ref().map(|p| p.view.clone())) else { return };
         match view.as_str() {

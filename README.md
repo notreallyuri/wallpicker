@@ -65,6 +65,13 @@ or **Noctalia**'s wallpaper manager (Settings → General → Wallpaper backend)
   it changes right away when night starts and ends. `wallpicker random --color dark` too. The
   Noctalia plugin keeps time for it while Noctalia runs; without Noctalia, run
   `wallpicker slideshow run` (say, from Hyprland's autostart). **Change now** changes it at once.
+- **A wallpaper per workspace** (Settings → Workspaces): when a monitor switches to a Hyprland
+  workspace that has a wallpaper, it goes on that monitor. With **Remember what I put on each
+  workspace**, applying a wallpaper is all it takes: it becomes the wallpaper of the workspace its
+  monitor shows (Random and the slideshow don't change them). Switching doesn't go into the
+  history, so Previous still means the one you chose before. wallpicker follows the workspaces
+  while it runs (the tray is enough); without it, `wallpicker workspaces run`. Also
+  `wallpicker workspaces list | on | off | set 3 image.png | clear 3`.
 - **Tray**: closing the window keeps wallpicker in the tray (Settings → General). The window is
   closed for real then, so the tray costs ~30 MB instead of ~340 MB; it opens again in a moment. The tray menu
   shows or hides the window, applies a random wallpaper, or quits. Running `wallpicker` again
