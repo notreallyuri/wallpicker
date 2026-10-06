@@ -25,6 +25,10 @@ GridView {
     boundsBehavior: Flickable.StopAtBounds
     ScrollBar.vertical: ScrollBar {}
 
+    SmoothScroll {
+        flickable: grid
+    }
+
     // The space at the top changed: keep the content where it was relative
     // to it (so it visibly moves), like a scroll area's padding.
     property real lastSpace: 0

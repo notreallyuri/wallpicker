@@ -41,6 +41,29 @@ QtObject {
             return "clicked " + h.area.parent;
         }
 
+        /// Wheel notches over (x, y), through the view's SmoothScroll (as a
+        /// mouse's would); says where it's heading.
+        function wheel(x: real, y: real, notches: real): string {
+            let item = hooks.hit(x, y).item;
+            while (item && !(item instanceof Flickable))
+                item = item.parent;
+            if (!item)
+                return "no scrolling view at " + x + "," + y;
+            const smooth = item.contentItem.data.find(o => typeof o.notches === "function");
+            if (!smooth)
+                return "no SmoothScroll in " + item;
+            smooth.notches(notches);
+            return "from " + Math.round(item.contentY) + " to " + Math.round(smooth.goal);
+        }
+
+        /// The scroll position of the view at (x, y).
+        function scrollY(x: real, y: real): string {
+            let item = hooks.hit(x, y).item;
+            while (item && !(item instanceof Flickable))
+                item = item.parent;
+            return item ? String(Math.round(item.contentY)) : "no scrolling view";
+        }
+
         /// What's at (x, y).
         function probe(x: real, y: real): string {
             const h = hooks.hit(x, y);
