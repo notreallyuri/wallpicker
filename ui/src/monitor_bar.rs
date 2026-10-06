@@ -33,13 +33,15 @@ pub(crate) fn MonitorBar() -> impl IntoView {
 
     view! {
         <div class="ml-auto flex flex-wrap items-center gap-2">
-            <span class="text-[11px] font-extrabold tracking-wider text-muted-foreground uppercase">"Apply to"</span>
             <Show
                 when=move || ctx.monitors.with(|m| !m.is_empty())
                 fallback=|| {
                     view! { <span class="text-sm text-muted-foreground">"No monitors found."</span> }
                 }
             >
+                // With the drawer open, the monitors are there: one place at a time.
+                <div class=move || if ctx.monitors_open.get() { "hidden" } else { "flex items-center gap-2" }>
+                <span class="text-[11px] font-extrabold tracking-wider text-muted-foreground uppercase">"Apply to"</span>
                 <ToggleGroup kind=ToggleGroupType::Single value=ctx.selection class="gap-1.5">
                     <For
                         each=move || ctx.monitors.get()
@@ -99,6 +101,7 @@ pub(crate) fn MonitorBar() -> impl IntoView {
                         </Tip>
                     </Show>
                 </ToggleGroup>
+                </div>
                 <Tip text=Signal::derive(move || {
                     if ctx.monitors_open.get() { "Hide the monitors" } else { "Show the monitors, bigger" }.to_string()
                 })>
@@ -298,6 +301,37 @@ pub(crate) fn MonitorDrawer() -> impl IntoView {
                             }
                         }
                     />
+                    <Show when=move || ctx.monitors.with(|m| m.len() > 1)>
+                        <div
+                            role="button"
+                            tabindex="0"
+                            on:click=move |_| ctx.selection.set(vec![ALL_MONITORS.to_string()])
+                            class=move || {
+                                format!(
+                                    "flex w-56 cursor-pointer flex-col items-center gap-2 rounded-3xl border-2 p-3 transition duration-300 ease-bounce hover:-translate-y-0.5 {}",
+                                    if ctx.selection.with(|s| s.iter().any(|v| v == ALL_MONITORS)) {
+                                        "border-primary bg-primary/12 shadow-[0_3px_0_0_color-mix(in_oklab,var(--primary)_45%,transparent)]"
+                                    } else {
+                                        "border-transparent bg-card/60 hover:bg-card"
+                                    },
+                                )
+                            }
+                        >
+                            // Every monitor, side by side, on one stand.
+                            <span class="flex flex-col items-center" aria-hidden="true">
+                                <span class="flex h-28 items-end gap-1.5">
+                                    <span class="block h-16 w-24 rounded-xl bg-gradient-to-br from-primary/60 to-primary/25 ring-[3px] ring-foreground/20" />
+                                    <span class="block h-16 w-24 rounded-xl bg-gradient-to-br from-primary/40 to-primary/15 ring-[3px] ring-foreground/20" />
+                                </span>
+                                <span class="block h-2 w-4 bg-foreground/20" />
+                                <span class="block h-1 w-24 rounded-full bg-foreground/20" />
+                            </span>
+                            <div class="flex w-full flex-col leading-tight">
+                                <span class="font-extrabold">"All"</span>
+                                <span class="text-xs text-muted-foreground">"every monitor"</span>
+                            </div>
+                        </div>
+                    </Show>
                 </div>
             </div>
         </div>
