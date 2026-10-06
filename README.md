@@ -241,7 +241,9 @@ install from before the rename). Its daemon keeps the wallpapers across restarts
 - **Transition**: Settings → General (Transition, Duration, Frames per second), or
   `wallpicker settings set transition.kind=wipe transition.duration_ms=800 transition.fps=144`.
 - Only one program should draw the wallpaper. Settings warns when another one is running
-  (hyprpaper, Noctalia's own wallpaper, swaybg…); stop it and take it out of your autostart.
+  (hyprpaper, awww, Noctalia's own wallpaper, swaybg…), with **Stop it** for each program (awww
+  with `awww kill`); Noctalia's own wallpaper is turned off in its settings. Take a stopped
+  program out of Hyprland's autostart too, or it comes back at login.
 
 ## Keeping wallpapers after hyprpaper restarts
 

@@ -969,11 +969,16 @@ fn ColorsMonitor(model: RwSignal<String>) -> impl IntoView {
 
 /// A warning when something besides the picked backend draws wallpapers
 /// too (hyprpaper still running, Noctalia's own wallpaper on...): they fight
-/// over the screen. Checked again whenever the backend is changed.
+/// over the screen. Checked again whenever the backend is changed; each
+/// program can be stopped from here (Noctalia's wallpaper is switched off in
+/// Noctalia's settings, so that one only says how).
 #[component]
 fn Conflicts(backend: RwSignal<String>) -> impl IntoView {
+    let ctx = expect_context::<Ctx>();
     let found = RwSignal::new(Vec::<String>::new());
+    let check = RwSignal::new(0u32);
     Effect::new(move |_| {
+        check.track();
         let b = backend.get();
         if b.is_empty() {
             return;
@@ -985,16 +990,61 @@ fn Conflicts(backend: RwSignal<String>) -> impl IntoView {
             }
         });
     });
+    let stopping = RwSignal::new(None::<String>);
+    let stop = move |name: String| {
+        stopping.set(Some(name.clone()));
+        spawn_local(async move {
+            match api::stop_wallpaper_program(&name).await {
+                Ok(()) => ctx.info(format!(
+                    "Stopped {name}. If it's in Hyprland's autostart, take it out there or it starts again at login."
+                )),
+                Err(e) => ctx.error_with(&format!("Could not stop {name}"), &e),
+            }
+            stopping.try_set(None);
+            // What's still running now.
+            check.update(|n| *n += 1);
+        });
+    };
     view! {
         <Show when=move || found.with(|f| !f.is_empty())>
-            <div class="rounded-2xl border-2 border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">
-                <p class="font-bold text-amber-600 dark:text-amber-400">
-                    {move || format!("Also drawing wallpapers: {}", found.get().join(", "))}
-                </p>
-                <p class="mt-1 text-muted-foreground">
-                    "Only one should: they cover each other. Stop the others (and take them out of "
-                    "Hyprland's autostart); for Noctalia's, turn its wallpaper off in its settings."
-                </p>
+            <div class="flex flex-col gap-2 rounded-2xl border-2 border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">
+                <p class="font-bold text-amber-600 dark:text-amber-400">"Also drawing wallpapers"</p>
+                <p class="text-muted-foreground">"Only one program should: they cover each other."</p>
+                <For
+                    each=move || found.get()
+                    key=|name| name.clone()
+                    children=move |name: String| {
+                        let noctalia = name.starts_with("Noctalia");
+                        let busy_name = name.clone();
+                        let stop_name = name.clone();
+                        view! {
+                            <div class="flex items-center gap-3">
+                                <span class="font-bold">{name.clone()}</span>
+                                {if noctalia {
+                                    view! {
+                                        <span class="text-muted-foreground">
+                                            "Turn it off in Noctalia's settings (Wallpaper)."
+                                        </span>
+                                    }
+                                        .into_any()
+                                } else {
+                                    view! {
+                                        <Button
+                                            class="ml-auto"
+                                            size=ButtonSize::Sm
+                                            variant=ButtonVariant::Outline
+                                            disabled=Signal::derive(move || stopping.with(|s| s.as_deref() == Some(busy_name.as_str())))
+                                            on_click=move |_| stop(stop_name.clone())
+                                        >
+                                            "Stop it"
+                                        </Button>
+                                    }
+                                        .into_any()
+                                }}
+                            </div>
+                        }
+                    }
+                />
             </div>
         </Show>
     }

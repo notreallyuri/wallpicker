@@ -539,6 +539,12 @@ async fn wallpaper_conflicts(backend: WallpaperBackend) -> CmdResult<Vec<String>
     blocking(move || Ok(hyprpaper::conflicts(&SystemRunner, backend))).await
 }
 
+/// Stop a program [`wallpaper_conflicts`] found (hyprpaper, awww-daemon...).
+#[tauri::command]
+async fn stop_wallpaper_program(name: String) -> CmdResult<()> {
+    blocking(move || Ok(hyprpaper::stop_program(&SystemRunner, &name)?)).await
+}
+
 /// The app's colors, from the current wallpaper (None: its own).
 #[tauri::command]
 async fn wallpaper_palette(state: tauri::State<'_, AppState>) -> CmdResult<Option<theme::Palette>> {
@@ -1046,6 +1052,7 @@ pub fn run(start_hidden: bool) {
             wallpaper_palette,
             take_open_request,
             wallpaper_conflicts,
+            stop_wallpaper_program,
             noctalia_colors,
             set_noctalia_colors,
             wallhaven_collections,

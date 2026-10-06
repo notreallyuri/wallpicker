@@ -41,6 +41,15 @@ pub async fn wallpaper_conflicts(backend: &str) -> Result<Vec<String>, String> {
     call("wallpaper_conflicts", &Args { backend }).await
 }
 
+/// Stop one of the programs [`wallpaper_conflicts`] found.
+pub async fn stop_wallpaper_program(name: &str) -> Result<(), String> {
+    #[derive(Serialize)]
+    struct Args<'a> {
+        name: &'a str,
+    }
+    call("stop_wallpaper_program", &Args { name }).await
+}
+
 /// Where `wallpicker --open` asked the window to go: a tab, "settings",
 /// "duplicates", or "tags" with the image.
 #[derive(Debug, Clone, PartialEq, Deserialize)]

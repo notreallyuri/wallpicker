@@ -276,8 +276,10 @@ impl Backend {
 /// Other programs drawing wallpapers besides `backend`: two at once fight
 /// over the screen (whichever drew last is on top). Names to show, like
 /// "hyprpaper" or "Noctalia's wallpaper".
+/// The wallpaper programs [`conflicts`] looks for, and [`stop_program`] stops.
+const DAEMONS: [&str; 6] = ["hyprpaper", "awww-daemon", "swww-daemon", "swaybg", "mpvpaper", "wpaperd"];
+
 pub fn conflicts(runner: &dyn Runner, backend: WallpaperBackend) -> Vec<String> {
-    const DAEMONS: [&str; 6] = ["hyprpaper", "awww-daemon", "swww-daemon", "swaybg", "mpvpaper", "wpaperd"];
     let mine: &[&str] = match backend {
         WallpaperBackend::Hyprpaper => &["hyprpaper"],
         WallpaperBackend::Awww => &["awww-daemon", "swww-daemon"],
@@ -293,6 +295,26 @@ pub fn conflicts(runner: &dyn Runner, backend: WallpaperBackend) -> Vec<String> 
         found.push("Noctalia's wallpaper".into());
     }
     found
+}
+
+/// Stop one of the programs [`conflicts`] found: awww's and swww's daemons
+/// with their own `kill` (else by name), the others by name. Nothing outside
+/// that list; Noctalia's wallpaper is switched off in Noctalia's settings.
+pub fn stop_program(runner: &dyn Runner, name: &str) -> Result<()> {
+    if !DAEMONS.contains(&name) {
+        return Err(Error::Invalid(format!("wallpicker doesn't stop {name}")));
+    }
+    let own_kill = match name {
+        "awww-daemon" => Some("awww"),
+        "swww-daemon" => Some("swww"),
+        _ => None,
+    };
+    if let Some(client) = own_kill
+        && runner.run(client, &["kill"]).is_ok()
+    {
+        return Ok(());
+    }
+    runner.run("pkill", &["-x", name]).map(drop)
 }
 
 /// [`apply_and_remember`] through the chosen backend, each monitor with its
@@ -490,6 +512,19 @@ mod tests {
                 .pop_front()
                 .unwrap_or_else(|| Ok(self.default.clone()))
         }
+    }
+
+    #[test]
+    fn stops_only_known_wallpaper_programs() {
+        let mock = Mock::new(vec![]);
+        stop_program(&mock, "awww-daemon").unwrap();
+        stop_program(&mock, "hyprpaper").unwrap();
+        assert!(stop_program(&mock, "firefox").is_err());
+        assert_eq!(mock.calls(), vec!["awww kill", "pkill -x hyprpaper"]);
+        // awww's own kill failing (an old client): by name instead.
+        let mock = Mock::new(vec![Err(Error::Invalid("no".into()))]);
+        stop_program(&mock, "awww-daemon").unwrap();
+        assert_eq!(mock.calls(), vec!["awww kill", "pkill -x awww-daemon"]);
     }
 
     fn cmd_err(msg: &str) -> Error {
