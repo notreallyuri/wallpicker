@@ -18,6 +18,8 @@ chrono = { version = "0.4", default-features = false, features = ["clock", "std"
 wallpicker-core = { path = "../crates/core" }
 tauri = { version = "2", features = ["protocol-asset", "tray-icon", "image-png"] }
 tauri-plugin-single-instance = "2"
+# Native file dialogs (backup export/import, the snapshot folder).
+tauri-plugin-dialog = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["sync", "macros"] }

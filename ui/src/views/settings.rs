@@ -1110,51 +1110,44 @@ fn Conflicts(backend: RwSignal<String>) -> impl IntoView {
 
 /// Settings → Backup: export, import, and the daily snapshots. These act
 /// at once (not with Save): they're about the library, not the settings.
+/// Export and import go through the system's file dialogs.
 #[component]
 fn BackupPane() -> impl IntoView {
     let ctx = expect_context::<Ctx>();
-    let export_path = RwSignal::new(String::new());
-    let import_path = RwSignal::new(String::new());
     let replace = RwSignal::new(false);
     let busy = RwSignal::new(false);
     let report = RwSignal::new(None::<String>);
     let snapshots = RwSignal::new(None::<Vec<api::Snapshot>>);
+    let folder = RwSignal::new(String::new());
     // The snapshot whose Restore was pressed once (asks before replacing).
     let confirming = RwSignal::new(None::<String>);
     let reload = move || {
         spawn_local(async move {
             snapshots.try_set(Some(api::backup_snapshots().await.unwrap_or_default()));
+            if let Ok(f) = api::snapshot_dir().await {
+                folder.try_set(f);
+            }
         });
     };
-    spawn_local(async move {
-        if let Ok(p) = api::backup_default_path().await {
-            export_path.try_set(p);
-        }
-    });
     reload();
 
     let export = move |_| {
         busy.set(true);
-        let path = Some(export_path.get_untracked()).filter(|p| !p.trim().is_empty());
         spawn_local(async move {
-            match api::backup_export(path).await {
-                Ok(e) => ctx.info(format!("Exported {} wallpapers to {}", e.items, e.path)),
+            match api::backup_export_pick().await {
+                Ok(Some(e)) => ctx.info(format!("Exported {} wallpapers to {}", e.items, e.path)),
+                Ok(None) => {}
                 Err(e) => ctx.error_with("Could not export", &e),
             }
             busy.try_set(false);
         });
     };
     let import = move |_| {
-        let path = import_path.get_untracked();
-        if path.trim().is_empty() {
-            return;
-        }
         busy.set(true);
-        report.set(None);
         let replace = replace.get_untracked();
         spawn_local(async move {
-            match api::backup_import(&path, replace).await {
-                Ok(r) => {
+            match api::backup_import_pick(replace).await {
+                Ok(Some(r)) => {
                     let mut text = format!("Found {} where they were, {} moved.", r.same_place, r.moved);
                     if !r.missing.is_empty() {
                         text.push_str(&format!(" Not in your library now ({}): {}.", r.missing.len(), r.missing.join(", ")));
@@ -1163,7 +1156,22 @@ fn BackupPane() -> impl IntoView {
                     ctx.refresh_catalog().await;
                     reload();
                 }
+                Ok(None) => {}
                 Err(e) => ctx.error_with("Could not import", &e),
+            }
+            busy.try_set(false);
+        });
+    };
+    let move_folder = move |reset: bool| {
+        busy.set(true);
+        spawn_local(async move {
+            match api::snapshot_dir_pick(reset).await {
+                Ok(Some(dir)) => {
+                    ctx.info(format!("Snapshots now go to {dir}"));
+                    reload();
+                }
+                Ok(None) => {}
+                Err(e) => ctx.error_with("Could not use that folder", &e),
             }
             busy.try_set(false);
         });
@@ -1186,36 +1194,42 @@ fn BackupPane() -> impl IntoView {
 
     view! {
         <div class="flex flex-col gap-6">
-            <Field>
-                <FieldLabel>"Export"</FieldLabel>
-                <div class="flex gap-2">
-                    <Input model=export_path class="flex-1" />
-                    <Button disabled=busy on_click=export>"Export"</Button>
+            <div class="flex flex-col gap-2">
+                <span class="text-sm font-bold">"Export and import"</span>
+                <div class="flex flex-wrap items-center gap-2">
+                    <Button disabled=busy on_click=export>"Export…"</Button>
+                    <Button variant=ButtonVariant::Outline disabled=busy on_click=import>"Import…"</Button>
                 </div>
-                <FieldDescription>"Favorites, tags and fits, in one file. ~ is allowed."</FieldDescription>
-            </Field>
-            <Field>
-                <FieldLabel>"Import"</FieldLabel>
-                <div class="flex gap-2">
-                    <Input model=import_path class="flex-1" attr:placeholder="~/wallpicker-backup-2026-10-06.json" />
-                    <Button variant=ButtonVariant::Outline disabled=busy on_click=import>"Import"</Button>
-                </div>
-                <FieldDescription>
-                    "Merged into your library: a wallpaper that moved (another folder, another home) is found "
-                    "by its place in your wallpaper folders, or by name and size."
-                </FieldDescription>
-            </Field>
-            <Field orientation=Orientation::Horizontal>
-                <Switch checked=replace />
-                <FieldLabel>"Replace the library instead of merging"</FieldLabel>
-            </Field>
-            {move || report.get().map(|r| view! { <p class="-mt-3 rounded-xl bg-primary/10 px-3 py-2 text-sm">{r}</p> })}
+                <p class="text-sm text-muted-foreground">
+                    "Favorites, tags and fits, in one file. An import is merged into your library: a "
+                    "wallpaper that moved (another folder, another home) is found by its place in your "
+                    "wallpaper folders, or by name and size."
+                </p>
+                <Field orientation=Orientation::Horizontal>
+                    <Switch checked=replace />
+                    <FieldLabel>"Replace the library instead of merging"</FieldLabel>
+                </Field>
+                {move || report.get().map(|r| view! { <p class="rounded-xl bg-primary/10 px-3 py-2 text-sm">{r}</p> })}
+            </div>
             <div class="flex flex-col gap-2">
                 <span class="text-sm font-bold">"Daily snapshots"</span>
                 <p class="text-sm text-muted-foreground">
                     "A copy of the library before the first change of each day; the last 14 are kept. "
-                    "Restoring keeps what's there now as a snapshot too."
+                    "Restoring keeps what's there now as a snapshot too. A synced folder (Syncthing, "
+                    "Nextcloud…) makes them backups off this machine."
                 </p>
+                <div class="flex flex-wrap items-center gap-2 text-sm">
+                    <span class="text-muted-foreground">"Saved in"</span>
+                    <code class="max-w-full truncate rounded-lg bg-muted px-2 py-1 text-xs" title=move || folder.get()>
+                        {move || folder.get()}
+                    </code>
+                    <Button size=ButtonSize::Sm variant=ButtonVariant::Outline disabled=busy on_click=move |_| move_folder(false)>
+                        "Change…"
+                    </Button>
+                    <Button size=ButtonSize::Sm variant=ButtonVariant::Ghost disabled=busy on_click=move |_| move_folder(true)>
+                        "Default"
+                    </Button>
+                </div>
                 {move || match snapshots.get() {
                     None => view! { <Spinner /> }.into_any(),
                     Some(list) if list.is_empty() => {

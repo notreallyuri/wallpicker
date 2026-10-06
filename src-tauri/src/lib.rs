@@ -95,12 +95,16 @@ async fn get_settings(state: tauri::State<'_, AppState>) -> CmdResult<Settings> 
 #[tauri::command]
 async fn save_settings(
     state: tauri::State<'_, AppState>,
-    settings: Settings,
+    mut settings: Settings,
 ) -> CmdResult<Settings> {
     let store = state.store.clone();
     blocking(move || {
         let before = hyprpaper::Fits::load(&store);
-        let backend_before = store.load_settings()?.wallpaper_backend;
+        let on_disk = store.load_settings()?;
+        let backend_before = on_disk.wallpaper_backend;
+        // The snapshot folder is set from Settings → Backup on its own (it
+        // moves the snapshots); a form opened before that mustn't undo it.
+        settings.snapshot_dir = on_disk.snapshot_dir;
         store.save_settings(&settings)?;
         let saved = store.load_settings()?;
         // A new backend shows what each monitor had; a fit that changed shows
@@ -544,30 +548,83 @@ async fn resolve_duplicates(
     resolve_duplicates_with(&state, &keep, &others).await
 }
 
-/// The library (favorites, tags, fits) to one file; None: the default path.
+/// A native file dialog over the window: what was picked, or None.
+fn file_dialog(app: &tauri::AppHandle) -> tauri_plugin_dialog::FileDialogBuilder<tauri::Wry> {
+    use tauri_plugin_dialog::DialogExt;
+    let mut d = app.dialog().file();
+    if let Some(w) = app.get_webview_window("main") {
+        d = d.set_parent(&w);
+    }
+    d
+}
+
+fn picked(p: Option<tauri_plugin_dialog::FilePath>) -> Option<PathBuf> {
+    p.and_then(|f| f.into_path().ok())
+}
+
+/// Export the library to a file picked in a save dialog (None: cancelled).
 #[tauri::command]
-async fn backup_export(state: tauri::State<'_, AppState>, path: Option<String>) -> CmdResult<backup::Exported> {
+async fn backup_export_pick(app: tauri::AppHandle, state: tauri::State<'_, AppState>) -> CmdResult<Option<backup::Exported>> {
     let store = state.store.clone();
-    tauri::async_runtime::spawn_blocking(move || backup::export(&store, path.as_deref())).await.map_err(err)?
+    tauri::async_runtime::spawn_blocking(move || {
+        let suggested = backup::default_export_path();
+        let mut d = file_dialog(&app).set_title("Export the wallpicker library").add_filter("wallpicker backup", &["json"]);
+        if let (Some(dir), Some(name)) = (suggested.parent(), suggested.file_name()) {
+            d = d.set_directory(dir).set_file_name(name.to_string_lossy());
+        }
+        let Some(path) = picked(d.blocking_save_file()) else { return Ok(None) };
+        backup::export(&store, Some(&path.to_string_lossy())).map(Some)
+    })
+    .await
+    .map_err(err)?
 }
 
-/// Where an export goes when no path is given.
+/// Import a backup picked in an open dialog (None: cancelled).
 #[tauri::command]
-fn backup_default_path() -> String {
-    backup::default_export_path().display().to_string()
-}
-
-#[tauri::command]
-async fn backup_import(
+async fn backup_import_pick(
+    app: tauri::AppHandle,
     state: tauri::State<'_, AppState>,
-    path: String,
     replace: bool,
-) -> CmdResult<wallpicker_core::backup::ImportReport> {
+) -> CmdResult<Option<wallpicker_core::backup::ImportReport>> {
     let store = state.store.clone();
     let lock = state.catalog_lock.clone();
     tauri::async_runtime::spawn_blocking(move || {
+        let home = std::env::var_os("HOME").map(PathBuf::from).unwrap_or_default();
+        let d = file_dialog(&app)
+            .set_title("Import a wallpicker backup")
+            .add_filter("wallpicker backup", &["json"])
+            .set_directory(home);
+        let Some(path) = picked(d.blocking_pick_file()) else { return Ok(None) };
         let _guard = lock.lock().unwrap_or_else(|p| p.into_inner());
-        backup::import(&store, &path, replace)
+        backup::import(&store, &path.to_string_lossy(), replace).map(Some)
+    })
+    .await
+    .map_err(err)?
+}
+
+/// Where the daily snapshots go now.
+#[tauri::command]
+async fn snapshot_dir(state: tauri::State<'_, AppState>) -> CmdResult<PathBuf> {
+    let store = state.store.clone();
+    blocking(move || Ok(store.snapshots_dir())).await
+}
+
+/// Pick another folder for the snapshots (copying them there); None:
+/// cancelled. `reset`: back to the default folder, no dialog.
+#[tauri::command]
+async fn snapshot_dir_pick(app: tauri::AppHandle, state: tauri::State<'_, AppState>, reset: bool) -> CmdResult<Option<PathBuf>> {
+    let store = state.store.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let dir = if reset {
+            None
+        } else {
+            let d = file_dialog(&app).set_title("A folder for the daily snapshots").set_directory(store.snapshots_dir());
+            match picked(d.blocking_pick_folder()) {
+                Some(p) => Some(p),
+                None => return Ok(None),
+            }
+        };
+        store.set_snapshots_dir(dir).map(Some).map_err(|e| e.to_string())
     })
     .await
     .map_err(err)?
@@ -1060,6 +1117,7 @@ pub fn run(start_hidden: bool) {
         .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
             tray::second_launch(app, &argv, std::path::Path::new(&cwd))
         }))
+        .plugin(tauri_plugin_dialog::init())
         .manage(AppState::new(store.clone()))
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event
@@ -1116,9 +1174,10 @@ pub fn run(start_hidden: bool) {
             previous_wallpaper,
             wallpaper_palette,
             take_open_request,
-            backup_export,
-            backup_default_path,
-            backup_import,
+            backup_export_pick,
+            backup_import_pick,
+            snapshot_dir,
+            snapshot_dir_pick,
             backup_snapshots,
             backup_restore,
             wallpaper_conflicts,

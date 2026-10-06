@@ -111,6 +111,9 @@ pub struct Settings {
     pub theme_monitor: Option<String>,
     /// awww's transition (the awww backend).
     pub transition: Transition,
+    /// Where the library's daily snapshots go (None: wallpicker's data
+    /// folder). A synced folder makes them off-machine backups.
+    pub snapshot_dir: Option<PathBuf>,
     /// Noctalia's color scheme before "follow the wallpaper" was turned on
     /// ("community Garnet"), to go back to.
     pub noctalia_previous_scheme: Option<String>,
@@ -139,6 +142,7 @@ impl Default for Settings {
             theme_from_wallpaper: true,
             theme_monitor: None,
             transition: Transition::default(),
+            snapshot_dir: None,
             noctalia_previous_scheme: None,
             thumb_width: 360,
         }
@@ -181,6 +185,10 @@ impl Settings {
             .collect();
         self.folders.dedup();
         self.download_dir = expand_tilde(&self.download_dir, home);
+        self.snapshot_dir = self
+            .snapshot_dir
+            .map(|p| expand_tilde(&p, home))
+            .filter(|p| !p.as_os_str().is_empty());
         self.thumb_width = self.thumb_width.clamp(120, 1024);
         self.wallhaven_api_key = self
             .wallhaven_api_key

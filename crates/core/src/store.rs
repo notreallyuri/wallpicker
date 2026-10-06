@@ -267,9 +267,39 @@ pub struct Snapshot {
 pub const SNAPSHOTS_KEPT: usize = 14;
 
 impl Store {
-    /// The library's automatic snapshots.
-    pub fn snapshots_dir(&self) -> PathBuf {
+    /// Where the snapshots go when no folder is set.
+    pub fn default_snapshots_dir(&self) -> PathBuf {
         self.dirs.data.join("backups")
+    }
+
+    /// The library's automatic snapshots: the folder in the settings, else
+    /// [`Store::default_snapshots_dir`].
+    pub fn snapshots_dir(&self) -> PathBuf {
+        self.load_settings()
+            .ok()
+            .and_then(|s| s.snapshot_dir)
+            .unwrap_or_else(|| self.default_snapshots_dir())
+    }
+
+    /// Keep the snapshots in `dir` from now on (None: the default folder),
+    /// copying the ones there are, so none are lost. Returns the folder.
+    pub fn set_snapshots_dir(&self, dir: Option<PathBuf>) -> Result<PathBuf> {
+        let old = self.snapshots_dir();
+        let mut settings = self.load_settings()?;
+        settings.snapshot_dir = dir.filter(|d| *d != self.default_snapshots_dir());
+        let new = settings.snapshot_dir.clone().unwrap_or_else(|| self.default_snapshots_dir());
+        if new != old {
+            fs::create_dir_all(&new)?;
+            for id in self.snapshot_ids()? {
+                let name = format!("{id}.json");
+                let target = new.join(&name);
+                if !target.exists() {
+                    fs::copy(old.join(&name), target)?;
+                }
+            }
+        }
+        self.save_settings(&settings)?;
+        Ok(new)
     }
 
     /// Before the first change of a day: a copy of the library as it was
@@ -450,6 +480,23 @@ mod tests {
 
         assert!(store.restore_snapshot("../config").is_err());
         assert!(store.restore_snapshot("library-2026-1x-06").is_err());
+    }
+
+    #[test]
+    fn snapshots_move_to_another_folder() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = Store::new(Dirs::under(tmp.path()));
+        let old = store.default_snapshots_dir();
+        fs::create_dir_all(&old).unwrap();
+        fs::write(old.join("library-2026-10-01.json"), r#"{"items":{}}"#).unwrap();
+        let synced = tmp.path().join("Sync/wallpicker");
+        assert_eq!(store.set_snapshots_dir(Some(synced.clone())).unwrap(), synced);
+        assert!(synced.join("library-2026-10-01.json").is_file());
+        assert_eq!(store.snapshots_dir(), synced);
+        assert_eq!(store.snapshots().unwrap().len(), 1);
+        // Back to the default: stored as no folder.
+        store.set_snapshots_dir(Some(old.clone())).unwrap();
+        assert_eq!(store.load_settings().unwrap().snapshot_dir, None);
     }
 
     #[test]

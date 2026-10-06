@@ -268,6 +268,7 @@ struct SettingsOptions {
 const SETTINGS_USAGE: &str = "usage: wallpicker settings [--json]\n       \
      wallpicker settings set KEY=VALUE...\n\
      keys: folders (one per line) download_dir recursive backend fit_mode thumb_width konachan_site close_to_tray\n\
+     snapshot_dir (where the daily library snapshots go; empty: the default)\n\
      monitor_fit.NAME (a monitor's own fit; empty to use fit_mode)\n\
      slideshow.enabled slideshow.minutes slideshow.favorites slideshow.tags (comma-separated)\n\
      slideshow.any slideshow.folder slideshow.monitors (comma-separated; empty: all) slideshow.each\n\
@@ -395,6 +396,11 @@ fn set_settings(s: &mut Settings, pairs: &[String]) -> Result<(), String> {
             }
             "transition.fps" => {
                 next.transition.fps = value.parse().map_err(|_| format!("{key}: a number from 1 to 255"))?;
+            }
+            // Moving the snapshots along is the app's (Settings → Backup); this
+            // only says where new ones go.
+            "snapshot_dir" => {
+                next.snapshot_dir = if value.trim().is_empty() { None } else { Some(path(key, value)?) };
             }
             "slideshow.enabled" => next.slideshow.enabled = boolean(key, value)?,
             "slideshow.minutes" => {

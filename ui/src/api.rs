@@ -57,25 +57,33 @@ pub struct Exported {
     pub items: usize,
 }
 
-pub async fn backup_export(path: Option<String>) -> Result<Exported, String> {
+/// Export to a file picked in the system's save dialog (None: cancelled).
+pub async fn backup_export_pick() -> Result<Option<Exported>, String> {
+    call("backup_export_pick", &NoArgs {}).await
+}
+
+/// Import a file picked in the system's open dialog (None: cancelled).
+pub async fn backup_import_pick(replace: bool) -> Result<Option<wallpicker_core::backup::ImportReport>, String> {
     #[derive(Serialize)]
     struct Args {
-        path: Option<String>,
-    }
-    call("backup_export", &Args { path }).await
-}
-
-pub async fn backup_default_path() -> Result<String, String> {
-    call("backup_default_path", &NoArgs {}).await
-}
-
-pub async fn backup_import(path: &str, replace: bool) -> Result<wallpicker_core::backup::ImportReport, String> {
-    #[derive(Serialize)]
-    struct Args<'a> {
-        path: &'a str,
         replace: bool,
     }
-    call("backup_import", &Args { path, replace }).await
+    call("backup_import_pick", &Args { replace }).await
+}
+
+/// Where the daily snapshots go.
+pub async fn snapshot_dir() -> Result<String, String> {
+    call("snapshot_dir", &NoArgs {}).await
+}
+
+/// Pick another snapshot folder (copying the snapshots), or with `reset`,
+/// go back to the default; None: cancelled.
+pub async fn snapshot_dir_pick(reset: bool) -> Result<Option<String>, String> {
+    #[derive(Serialize)]
+    struct Args {
+        reset: bool,
+    }
+    call("snapshot_dir_pick", &Args { reset }).await
 }
 
 /// One of the library's automatic daily snapshots.

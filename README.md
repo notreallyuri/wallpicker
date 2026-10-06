@@ -76,9 +76,11 @@ or **Noctalia**'s wallpaper manager (Settings → General → Wallpaper backend)
   teal, blue, purple, pink) or tone (Dark, Light, Muted: mostly white, grey or black), the most of
   it first. Read from the thumbnails once, then cached. `wallpicker colors [COLOR]`.
 - **Backup** (Settings → Backup): your favorites, tags and fits are copied before the first change
-  of each day (the last 14 kept; restore any of them), and can be exported to one file and imported
-  again, merged or replacing. An import finds wallpapers that moved: by their place inside your
-  wallpaper folders, or by name and size. `wallpicker backup export|import|snapshots|restore`.
+  of each day (the last 14 kept; restore any of them), in a folder you can choose (a synced one
+  makes them off-machine backups). **Export…** and **Import…** use the system's file dialog; an
+  import is merged (or replaces the library) and finds wallpapers that moved, by their place
+  inside your wallpaper folders or by name and size.
+  `wallpicker backup export|import|snapshots|restore`, `settings set snapshot_dir=…`.
 - **Previous**: each monitor remembers its last 30 wallpapers; **↶ Previous** (in the monitor
   bar, the tray menu, the panel, or `wallpicker previous` for a keybind) goes back through them.
 - **Saved choices**: every applied wallpaper is written to `state.json`, and
