@@ -20,7 +20,8 @@
         "resizable": false,
         "center": true,
         "visible": false,
-        "create": false
+        "create": false,
+        "backgroundColor": "#1d1622"
       }
     ],
     "security": {

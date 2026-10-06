@@ -647,6 +647,12 @@ async fn backup_restore(state: tauri::State<'_, AppState>, id: String) -> CmdRes
     .await
 }
 
+/// The interface's background color now, for the next window to start in.
+#[tauri::command]
+fn window_background(app: tauri::AppHandle, r: u8, g: u8, b: u8) {
+    tray::set_background(&app, (r, g, b));
+}
+
 /// Where `wallpicker --open` asked the window to go, once.
 #[tauri::command]
 fn take_open_request() -> Option<open::Place> {
@@ -1167,6 +1173,7 @@ pub fn run(start_hidden: bool) {
             previous_wallpaper,
             wallpaper_palette,
             take_open_request,
+            window_background,
             backup_export_pick,
             backup_import_pick,
             snapshot_dir,

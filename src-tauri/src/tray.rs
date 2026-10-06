@@ -20,6 +20,37 @@ fn main_window(app: &AppHandle) -> Option<WebviewWindow> {
     app.get_webview_window("main")
 }
 
+/// The interface's background color, reported by it (`window_background`):
+/// a new window starts in it instead of WebKit's white, so opening doesn't
+/// flash. Kept in the state folder too, for the first window after login.
+static BACKGROUND: std::sync::Mutex<Option<(u8, u8, u8)>> = std::sync::Mutex::new(None);
+
+fn background_file(app: &AppHandle) -> Option<std::path::PathBuf> {
+    Some(app.try_state::<crate::AppState>()?.store.dirs().state.join("window-background"))
+}
+
+pub fn set_background(app: &AppHandle, rgb: (u8, u8, u8)) {
+    if let Ok(mut b) = BACKGROUND.lock() {
+        if *b == Some(rgb) {
+            return;
+        }
+        *b = Some(rgb);
+    }
+    if let Some(f) = background_file(app) {
+        let _ = std::fs::write(f, format!("{} {} {}", rgb.0, rgb.1, rgb.2));
+    }
+}
+
+fn background(app: &AppHandle) -> Option<tauri::window::Color> {
+    let known = BACKGROUND.lock().ok().and_then(|b| *b);
+    let (r, g, b) = known.or_else(|| {
+        let text = std::fs::read_to_string(background_file(app)?).ok()?;
+        let v: Vec<u8> = text.split_whitespace().filter_map(|n| n.parse().ok()).collect();
+        (v.len() == 3).then(|| (v[0], v[1], v[2]))
+    })?;
+    Some(tauri::window::Color(r, g, b, 255))
+}
+
 /// The window, made from tauri.conf's "main" when there's none: it isn't
 /// made at startup (`create: false`), and closing to the tray destroys it,
 /// so its WebKit processes go away while it isn't needed.
@@ -28,7 +59,14 @@ fn ensure_window(app: &AppHandle) -> Option<WebviewWindow> {
         return Some(w);
     }
     let config = app.config().app.windows.iter().find(|w| w.label == "main")?.clone();
-    match tauri::WebviewWindowBuilder::from_config(app, &config).and_then(|b| b.build()) {
+    let built = tauri::WebviewWindowBuilder::from_config(app, &config).and_then(|b| {
+        match background(app) {
+            Some(color) => b.background_color(color),
+            None => b,
+        }
+        .build()
+    });
+    match built {
         Ok(w) => Some(w),
         Err(e) => {
             eprintln!("wallpicker: could not open the window: {e}");

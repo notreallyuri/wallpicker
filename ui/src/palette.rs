@@ -89,25 +89,80 @@ fn set_style(css: Option<String>) {
     }
 }
 
+/// The palette's stylesheet as last applied, so a new window starts with it
+/// (no switch from the built-in colors a moment after opening).
+const CACHE_KEY: &str = "ui.palette_css";
+
+/// Tell the app what the background is now, so its next window starts in
+/// that color instead of WebKit's white. After the theme class and the
+/// palette have settled.
+fn report_background() {
+    set_timeout(
+        || {
+            let Some(body) = document().body() else { return };
+            let Ok(Some(style)) = window().get_computed_style(&body) else { return };
+            let Ok(color) = style.get_property_value("background-color") else { return };
+            // Computed colors come as rgb(), oklab() or color(...): let a
+            // 1×1 canvas turn whichever into sRGB bytes.
+            let Some(v) = to_rgb(&color) else { return };
+            if let [r, g, b] = v[..] {
+                spawn_local(async move {
+                    let _ = api::window_background(r, g, b).await;
+                });
+            }
+        },
+        std::time::Duration::from_millis(100),
+    );
+}
+
+/// Any CSS color as sRGB bytes, by painting it on a 1×1 canvas.
+fn to_rgb(color: &str) -> Option<Vec<u8>> {
+    let canvas: web_sys::HtmlCanvasElement = document().create_element("canvas").ok()?.dyn_into().ok()?;
+    canvas.set_width(1);
+    canvas.set_height(1);
+    let ctx: web_sys::CanvasRenderingContext2d = canvas.get_context("2d").ok()??.dyn_into().ok()?;
+    ctx.set_fill_style_str(color);
+    ctx.fill_rect(0.0, 0.0, 1.0, 1.0);
+    let data = ctx.get_image_data(0.0, 0.0, 1.0, 1.0).ok()?.data();
+    Some(data.0[..3].to_vec())
+}
+
 /// Follow the wallpaper: again whenever a monitor's wallpaper or the setting
 /// changes.
 pub(crate) fn install(ctx: Ctx) {
+    // The last palette at once, before the settings are even read.
+    if let Some(cached) = crate::prefs::get(CACHE_KEY).filter(|c| !c.is_empty()) {
+        set_style(Some(cached));
+    }
     let seq = StoredValue::new(0u64);
     Effect::new(move |_| {
         ctx.state.track();
-        let on = ctx.settings.with(|s| s.as_ref().is_some_and(|s| s.theme_from_wallpaper));
+        // Not known yet: keep what's showing (the cached palette, if any).
+        let Some(on) = ctx.settings.with(|s| s.as_ref().map(|s| s.theme_from_wallpaper)) else { return };
         let n = seq.get_value() + 1;
         seq.set_value(n);
         if !on {
             set_style(None);
+            crate::prefs::set(CACHE_KEY, "");
+            report_background();
             return;
         }
         spawn_local(async move {
             let palette = api::wallpaper_palette().await.ok().flatten();
             if seq.get_value() == n {
-                set_style(palette.as_ref().map(css));
+                let style = palette.as_ref().map(css);
+                crate::prefs::set(CACHE_KEY, style.as_deref().unwrap_or(""));
+                set_style(style);
+                report_background();
             }
         });
+    });
+    // Light / dark and the color theme change the background too.
+    let theme = nocomponents::utils::theme::use_theme();
+    Effect::new(move |_| {
+        theme.resolved.track();
+        theme.color.track();
+        report_background();
     });
 }
 

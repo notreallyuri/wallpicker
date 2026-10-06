@@ -111,6 +111,17 @@ pub async fn image_colors() -> Result<std::collections::BTreeMap<std::path::Path
     call("image_colors", &NoArgs {}).await
 }
 
+/// Tell the app the interface's background color (for the next window).
+pub async fn window_background(r: u8, g: u8, b: u8) -> Result<(), String> {
+    #[derive(Serialize)]
+    struct Args {
+        r: u8,
+        g: u8,
+        b: u8,
+    }
+    call("window_background", &Args { r, g, b }).await
+}
+
 /// Where `wallpicker --open` asked the window to go: a tab, "settings",
 /// "duplicates", or "tags" with the image.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
