@@ -285,6 +285,9 @@ pub async fn set_wallpaper_fit(path: &str, fit: Option<wallpicker_core::settings
 pub struct SlideshowStatus {
     pub enabled: bool,
     pub next_in: Option<u64>,
+    /// "day" or "night", when the night set is on.
+    #[serde(default)]
+    pub period: Option<String>,
 }
 
 pub async fn slideshow_status() -> Result<SlideshowStatus, String> {

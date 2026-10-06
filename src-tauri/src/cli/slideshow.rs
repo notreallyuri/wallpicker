@@ -22,6 +22,18 @@ fn now() -> u64 {
     SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |d| d.as_secs())
 }
 
+/// Minutes since local midnight.
+fn local_minute() -> u32 {
+    use chrono::Timelike;
+    let t = chrono::Local::now();
+    t.hour() * 60 + t.minute()
+}
+
+/// "night" inside the night window (when it's on), else "day".
+fn period(show: &wallpicker_core::settings::Slideshow, minute: u32) -> &'static str {
+    if show.night.is_night(minute) { "night" } else { "day" }
+}
+
 pub fn slideshow(args: &[String]) -> i32 {
     match args.iter().map(String::as_str).collect::<Vec<_>>().as_slice() {
         ["tick"] => tick(false),
@@ -50,16 +62,33 @@ pub(crate) fn tick_with(store: &Store, force: bool) -> Result<bool, String> {
     }
     let mut state = store.load_state().unwrap_or_default();
     let now = now();
-    if !force && show.due_in(now, state.slideshow_changed) > 0 {
+    let period = period(show, local_minute());
+    // Day turning to night (or back) changes it right away.
+    let turned = show.night.enabled && !state.slideshow_period.is_empty() && state.slideshow_period != period;
+    if !force && !turned && show.due_in(now, state.slideshow_changed) > 0 {
         return Ok(true);
     }
-    let choice = Choice {
-        favorites: show.favorites,
-        tags: show.tags.clone(),
-        any: show.any,
-        folder: show.folder.clone(),
-        monitors: show.monitors.clone(),
-        each: show.each,
+    let choice = if period == "night" {
+        let n = &show.night;
+        Choice {
+            favorites: n.favorites,
+            tags: n.tags.clone(),
+            any: n.any,
+            folder: n.folder.clone(),
+            color: n.color.clone(),
+            monitors: show.monitors.clone(),
+            each: show.each,
+        }
+    } else {
+        Choice {
+            favorites: show.favorites,
+            tags: show.tags.clone(),
+            any: show.any,
+            folder: show.folder.clone(),
+            color: show.color.clone(),
+            monitors: show.monitors.clone(),
+            each: show.each,
+        }
     };
     let result = apply_random(store, &settings, &choice);
     // Counted as a change even when it failed, so a broken setup (hyprpaper
@@ -67,6 +96,7 @@ pub(crate) fn tick_with(store: &Store, force: bool) -> Result<bool, String> {
     // minute.
     state = store.load_state().unwrap_or(state);
     state.slideshow_changed = now;
+    state.slideshow_period = period.to_string();
     store.save_state(&state).map_err(|e| e.to_string())?;
     result
 }
@@ -86,6 +116,8 @@ pub(crate) struct Status {
     minutes: u32,
     /// Seconds until the next change, if it's on.
     next_in: Option<u64>,
+    /// "day" or "night" now, when the night set is on.
+    period: Option<&'static str>,
 }
 
 fn status() -> i32 {
@@ -104,5 +136,6 @@ pub(crate) fn status_of(store: &Store) -> Result<Status, String> {
         enabled: show.enabled,
         minutes: show.minutes,
         next_in: show.enabled.then(|| show.due_in(now(), last)),
+        period: show.night.enabled.then(|| period(show, local_minute())),
     })
 }

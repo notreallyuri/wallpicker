@@ -10,12 +10,15 @@ pub enum InputType {
     Password,
     Number,
     File,
+    /// "HH:MM" (wallpicker: the slideshow's night).
+    Time,
 }
 
 impl InputType {
     pub fn as_str(&self) -> &'static str {
         match self {
             InputType::Text => "text",
+            InputType::Time => "time",
             InputType::Email => "email",
             InputType::Password => "password",
             InputType::Number => "number",

@@ -12,8 +12,9 @@ use wallpicker_core::store::{Dirs, Store};
 
 use super::{fail, usage_for};
 
-const USAGE: &str = "usage: wallpicker random [--favorites] [--tag TAG]... [--any] [--folder DIR] [--monitor NAME]... [--each]\n\
+const USAGE: &str = "usage: wallpicker random [--favorites] [--tag TAG]... [--any] [--folder DIR] [--color C] [--monitor NAME]... [--each]\n\
      --favorites  only favorites\n\
+     --color C    only wallpapers with this color (a hue, dark, light or muted; see `wallpicker colors`)\n\
      --tag TAG    only wallpapers with this tag (repeat: all of them; with --any: any of them)\n\
      --folder DIR only wallpapers inside DIR\n\
      --monitor    where to apply (repeat; default: every monitor)\n\
@@ -49,6 +50,7 @@ pub fn random(args: &[String]) -> i32 {
     let (mut favorites, mut any, mut each) = (false, false, false);
     let (mut tags, mut monitors) = (Vec::new(), Vec::new());
     let mut folder: Option<PathBuf> = None;
+    let mut color: Option<String> = None;
     let mut rest = args.iter();
     while let Some(a) = rest.next() {
         match a.as_str() {
@@ -67,6 +69,10 @@ pub fn random(args: &[String]) -> i32 {
                 }
                 None => return usage_for("random", "--folder needs a folder", USAGE),
             },
+            "--color" => match rest.next() {
+                Some(c) if wallpicker_core::settings::known_color(Some(c.clone())).is_some() => color = Some(c.clone()),
+                _ => return usage_for("random", "--color needs a color: red orange yellow green teal blue purple pink dark light muted", USAGE),
+            },
             "--monitor" | "-m" => match rest.next() {
                 Some(m) => monitors.push(m.clone()),
                 None => return usage_for("random", "--monitor needs a monitor name", USAGE),
@@ -80,7 +86,7 @@ pub fn random(args: &[String]) -> i32 {
         Ok(s) => s,
         Err(e) => return fail(&e),
     };
-    let choice = Choice { favorites, tags, any, folder, monitors, each };
+    let choice = Choice { favorites, tags, any, folder, color, monitors, each };
     match apply_random(&store, &settings, &choice) {
         Ok(true) => 0,
         Ok(false) => 1,
@@ -95,6 +101,8 @@ pub(super) struct Choice {
     pub tags: Vec<String>,
     pub any: bool,
     pub folder: Option<PathBuf>,
+    /// A color (see `colors`).
+    pub color: Option<String>,
     /// Empty: every connected monitor.
     pub monitors: Vec<String>,
     pub each: bool,
@@ -112,6 +120,17 @@ pub(super) fn apply_random(store: &Store, settings: &Settings, choice: &Choice) 
         .filter(|p| choice.tags.is_empty() || catalog.matches(p, &choice.tags, mode))
         .filter(|p| choice.folder.as_ref().is_none_or(|f| p.starts_with(f)))
         .collect();
+    // By color: read (or computed, then cached) only when asked for.
+    let candidates: Vec<PathBuf> = match &choice.color {
+        None => candidates,
+        Some(c) => {
+            let profiles = crate::color_profiles(store).map_err(|e| e.to_string())?;
+            candidates
+                .into_iter()
+                .filter(|p| profiles.get(p).is_some_and(|cp| wallpicker_core::colors::matches(cp, c)))
+                .collect()
+        }
+    };
     if candidates.is_empty() {
         return Err("no wallpapers match".into());
     }

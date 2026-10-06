@@ -644,12 +644,69 @@ const MONITOR_FITS: &[(&str, &str)] = &[
 struct SlideshowForm {
     enabled: RwSignal<bool>,
     minutes: RwSignal<String>,
+    day: PickForm,
+    monitors: RwSignal<Vec<String>>,
+    each: RwSignal<bool>,
+    night_enabled: RwSignal<bool>,
+    night_from: RwSignal<String>,
+    night_to: RwSignal<String>,
+    night: PickForm,
+}
+
+/// What the slideshow picks from: the day's set, or the night's.
+#[derive(Clone, Copy)]
+struct PickForm {
     favorites: RwSignal<bool>,
     tags: RwSignal<Vec<String>>,
     any: RwSignal<bool>,
     folder: RwSignal<String>,
-    monitors: RwSignal<Vec<String>>,
-    each: RwSignal<bool>,
+    /// "" is any color.
+    color: RwSignal<String>,
+}
+
+/// A set's picks as read from the form: favorites, tags, any, folder, color.
+type Picks = (bool, Vec<String>, bool, Option<PathBuf>, Option<String>);
+
+impl PickForm {
+    fn new() -> PickForm {
+        PickForm {
+            favorites: RwSignal::new(false),
+            tags: RwSignal::new(Vec::new()),
+            any: RwSignal::new(false),
+            folder: RwSignal::new(String::new()),
+            color: RwSignal::new(String::new()),
+        }
+    }
+
+    fn load(self, favorites: bool, tags: &[String], any: bool, folder: Option<&PathBuf>, color: Option<&String>) {
+        self.favorites.set(favorites);
+        self.tags.set(tags.to_vec());
+        self.any.set(any);
+        self.folder.set(folder.map(|p| p.display().to_string()).unwrap_or_default());
+        self.color.set(color.cloned().unwrap_or_default());
+    }
+
+    fn read(self) -> Result<Picks, &'static str> {
+        let folder = self.folder.get_untracked().trim().to_string();
+        let folder = if folder.is_empty() {
+            None
+        } else {
+            let p = PathBuf::from(&folder);
+            // `has_root`: `is_absolute` is always false on wasm.
+            if !p.has_root() && !p.starts_with("~") {
+                return Err("A slideshow folder must be an absolute path (or start with ~).");
+            }
+            Some(p)
+        };
+        let color = Some(self.color.get_untracked()).filter(|c| !c.is_empty());
+        Ok((self.favorites.get_untracked(), self.tags.get_untracked(), self.any.get_untracked(), folder, color))
+    }
+}
+
+/// The color choices for a set: any, the hues, then the tones.
+fn color_choices() -> Vec<(&'static str, &'static str)> {
+    use wallpicker_core::colors::{HUES, TONES};
+    std::iter::once(("", "Any color")).chain(HUES).chain(TONES).collect()
 }
 
 const SLIDESHOW_MINUTES: &[(&str, &str)] = &[
@@ -669,45 +726,45 @@ impl SlideshowForm {
         SlideshowForm {
             enabled: RwSignal::new(false),
             minutes: RwSignal::new("30".into()),
-            favorites: RwSignal::new(false),
-            tags: RwSignal::new(Vec::new()),
-            any: RwSignal::new(false),
-            folder: RwSignal::new(String::new()),
+            day: PickForm::new(),
             monitors: RwSignal::new(Vec::new()),
             each: RwSignal::new(true),
+            night_enabled: RwSignal::new(false),
+            night_from: RwSignal::new("20:00".into()),
+            night_to: RwSignal::new("07:00".into()),
+            night: PickForm::new(),
         }
     }
 
     fn load(self, s: &settings::Slideshow) {
         self.enabled.set(s.enabled);
         self.minutes.set(s.minutes.to_string());
-        self.favorites.set(s.favorites);
-        self.tags.set(s.tags.clone());
-        self.any.set(s.any);
-        self.folder.set(s.folder.as_ref().map(|p| p.display().to_string()).unwrap_or_default());
+        self.day.load(s.favorites, &s.tags, s.any, s.folder.as_ref(), s.color.as_ref());
         self.monitors.set(s.monitors.clone());
         self.each.set(s.each);
+        let n = &s.night;
+        self.night_enabled.set(n.enabled);
+        self.night_from.set(n.from.clone());
+        self.night_to.set(n.to.clone());
+        self.night.load(n.favorites, &n.tags, n.any, n.folder.as_ref(), n.color.as_ref());
     }
 
     fn read(self, mut s: settings::Slideshow) -> Result<settings::Slideshow, &'static str> {
         s.enabled = self.enabled.get_untracked();
         s.minutes = self.minutes.get_untracked().parse().unwrap_or(30).clamp(1, 24 * 60);
-        s.favorites = self.favorites.get_untracked();
-        s.tags = self.tags.get_untracked();
-        s.any = self.any.get_untracked();
-        let folder = self.folder.get_untracked().trim().to_string();
-        s.folder = if folder.is_empty() {
-            None
-        } else {
-            let p = PathBuf::from(&folder);
-            // `has_root`: `is_absolute` is always false on wasm.
-            if !p.has_root() && !p.starts_with("~") {
-                return Err("The slideshow folder must be an absolute path (or start with ~).");
-            }
-            Some(p)
-        };
+        (s.favorites, s.tags, s.any, s.folder, s.color) = self.day.read()?;
         s.monitors = self.monitors.get_untracked();
         s.each = self.each.get_untracked();
+        let n = &mut s.night;
+        n.enabled = self.night_enabled.get_untracked();
+        for (signal, field) in [(self.night_from, &mut n.from), (self.night_to, &mut n.to)] {
+            let t = signal.get_untracked();
+            if settings::parse_hhmm(&t).is_none() {
+                return Err("The night's times must look like 20:00.");
+            }
+            *field = t.trim().to_string();
+        }
+        (n.favorites, n.tags, n.any, n.folder, n.color) = self.night.read()?;
         Ok(s)
     }
 }
@@ -729,7 +786,14 @@ fn SlideshowPane(form: SlideshowForm) -> impl IntoView {
     let refresh = move || {
         spawn_local(async move {
             let text = match api::slideshow_status().await {
-                Ok(s) if s.enabled => s.next_in.map(|n| format!("Next change in about {} min.", n.div_ceil(60).max(1))),
+                Ok(s) if s.enabled => s.next_in.map(|n| {
+                    let when = match s.period.as_deref() {
+                        Some("night") => "Night now. ",
+                        Some(_) => "Day now. ",
+                        None => "",
+                    };
+                    format!("{when}Next change in about {} min.", n.div_ceil(60).max(1))
+                }),
                 Ok(_) => Some("Off.".to_string()),
                 Err(_) => None,
             };
@@ -759,39 +823,7 @@ fn SlideshowPane(form: SlideshowForm) -> impl IntoView {
             <FieldLabel>"Every"</FieldLabel>
             <Choice items=SLIDESHOW_MINUTES.to_vec() model=form.minutes class="w-48" />
         </Field>
-        <Field orientation=Orientation::Horizontal>
-            <Switch checked=form.favorites />
-            <FieldLabel>"Only favorites"</FieldLabel>
-        </Field>
-        <Show when=move || tags.with(|t| !t.is_empty())>
-            <Field>
-                <FieldLabel>"Only with these tags"</FieldLabel>
-                <ToggleGroup
-                    kind=ToggleGroupType::Multiple
-                    variant=ToggleVariant::Outline
-                    size=ToggleSize::Sm
-                    value=form.tags
-                    class="flex-wrap gap-1.5"
-                >
-                    <For
-                        each=move || tags.get()
-                        key=|t| t.clone()
-                        children=|t: String| view! { <ToggleGroupItem value=t.clone() class="rounded-full! px-3">{t}</ToggleGroupItem> }
-                    />
-                </ToggleGroup>
-                <Show when=move || form.tags.with(|t| t.len() > 1)>
-                    <Field orientation=Orientation::Horizontal>
-                        <Switch checked=form.any />
-                        <FieldLabel>"Any of them (off: all of them)"</FieldLabel>
-                    </Field>
-                </Show>
-                <FieldDescription>"None picked: any wallpaper."</FieldDescription>
-            </Field>
-        </Show>
-        <Field>
-            <FieldLabel>"Only in folder"</FieldLabel>
-            <Input model=form.folder class="font-mono text-xs" attr:placeholder="Any folder" attr:spellcheck="false" />
-        </Field>
+        <PickFields set=form.day tags=tags />
         <Show when=move || ctx.monitors.with(|m| m.len() > 1)>
             <Field>
                 <FieldLabel>"On these monitors"</FieldLabel>
@@ -817,6 +849,24 @@ fn SlideshowPane(form: SlideshowForm) -> impl IntoView {
                 <FieldLabel>"A different wallpaper on each monitor"</FieldLabel>
             </Field>
         </Show>
+        <div class="flex flex-col gap-4 rounded-2xl border-2 border-border/60 p-4">
+            <Field orientation=Orientation::Horizontal>
+                <Switch checked=form.night_enabled />
+                <FieldLabel>"Something else at night"</FieldLabel>
+            </Field>
+            <Show when=move || form.night_enabled.get()>
+                <div class="flex items-center gap-2 text-sm">
+                    <span>"From"</span>
+                    <Input model=form.night_from input_type=InputType::Time class="w-32" />
+                    <span>"to"</span>
+                    <Input model=form.night_to input_type=InputType::Time class="w-32" />
+                </div>
+                <PickFields set=form.night tags=tags />
+                <p class="text-xs text-muted-foreground">
+                    "It changes right away when night starts and ends, then every interval as usual."
+                </p>
+            </Show>
+        </div>
         <div class="flex items-center gap-3">
             <Button variant=ButtonVariant::Outline disabled=busy on_click=change_now>
                 "Change now"
@@ -1229,5 +1279,50 @@ fn BackupPane() -> impl IntoView {
                 }}
             </div>
         </div>
+    }
+}
+
+/// One set's picks: favorites, color, tags (with all/any) and folder.
+#[component]
+fn PickFields(set: PickForm, tags: Memo<Vec<String>>) -> impl IntoView {
+    use nocomponents::primitives::toggle_group::ToggleGroupType;
+    view! {
+        <Field orientation=Orientation::Horizontal>
+            <Switch checked=set.favorites />
+            <FieldLabel>"Only favorites"</FieldLabel>
+        </Field>
+        <Field>
+            <FieldLabel>"Only with the color"</FieldLabel>
+            <Choice items=color_choices() model=set.color class="w-48" />
+        </Field>
+        <Show when=move || tags.with(|t| !t.is_empty())>
+            <Field>
+                <FieldLabel>"Only with these tags"</FieldLabel>
+                <ToggleGroup
+                    kind=ToggleGroupType::Multiple
+                    variant=ToggleVariant::Outline
+                    size=ToggleSize::Sm
+                    value=set.tags
+                    class="flex-wrap gap-1.5"
+                >
+                    <For
+                        each=move || tags.get()
+                        key=|t| t.clone()
+                        children=|t: String| view! { <ToggleGroupItem value=t.clone() class="rounded-full! px-3">{t}</ToggleGroupItem> }
+                    />
+                </ToggleGroup>
+                <Show when=move || set.tags.with(|t| t.len() > 1)>
+                    <Field orientation=Orientation::Horizontal>
+                        <Switch checked=set.any />
+                        <FieldLabel>"Any of them (off: all of them)"</FieldLabel>
+                    </Field>
+                </Show>
+                <FieldDescription>"None picked: any wallpaper."</FieldDescription>
+            </Field>
+        </Show>
+        <Field>
+            <FieldLabel>"Only in folder"</FieldLabel>
+            <Input model=set.folder class="font-mono text-xs" attr:placeholder="Any folder" attr:spellcheck="false" />
+        </Field>
     }
 }

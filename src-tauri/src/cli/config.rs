@@ -271,6 +271,8 @@ const SETTINGS_USAGE: &str = "usage: wallpicker settings [--json]\n       \
      monitor_fit.NAME (a monitor's own fit; empty to use fit_mode)\n\
      slideshow.enabled slideshow.minutes slideshow.favorites slideshow.tags (comma-separated)\n\
      slideshow.any slideshow.folder slideshow.monitors (comma-separated; empty: all) slideshow.each\n\
+     slideshow.color (empty: any) slideshow.night.enabled slideshow.night.from slideshow.night.to (HH:MM)\n\
+     slideshow.night.favorites slideshow.night.tags slideshow.night.any slideshow.night.folder slideshow.night.color\n\
      transition.kind transition.duration_ms transition.fps (the awww backend)\n\
      The Wallhaven API key is set in the app.";
 
@@ -405,17 +407,29 @@ fn set_settings(s: &mut Settings, pairs: &[String]) -> Result<(), String> {
             "slideshow.favorites" => next.slideshow.favorites = boolean(key, value)?,
             "slideshow.any" => next.slideshow.any = boolean(key, value)?,
             "slideshow.each" => next.slideshow.each = boolean(key, value)?,
-            "slideshow.tags" => {
-                next.slideshow.tags = value
-                    .split(',')
-                    .map(str::trim)
-                    .filter(|t| !t.is_empty())
-                    .map(|t| wallpicker_core::catalog::normalize_tag(t).ok_or_else(|| format!("{key}: {t:?} isn't a tag")))
-                    .collect::<Result<_, _>>()?;
-            }
+            "slideshow.tags" => next.slideshow.tags = tag_list(key, value)?,
             "slideshow.folder" => {
                 next.slideshow.folder = if value.trim().is_empty() { None } else { Some(path(key, value)?) };
             }
+            "slideshow.color" => next.slideshow.color = color(key, value)?,
+            "slideshow.night.enabled" => next.slideshow.night.enabled = boolean(key, value)?,
+            "slideshow.night.from" | "slideshow.night.to" => {
+                if settings::parse_hhmm(value).is_none() {
+                    return Err(format!("{key}: a time like 20:00, not {value:?}"));
+                }
+                if key.ends_with("from") {
+                    next.slideshow.night.from = value.trim().to_string();
+                } else {
+                    next.slideshow.night.to = value.trim().to_string();
+                }
+            }
+            "slideshow.night.favorites" => next.slideshow.night.favorites = boolean(key, value)?,
+            "slideshow.night.any" => next.slideshow.night.any = boolean(key, value)?,
+            "slideshow.night.tags" => next.slideshow.night.tags = tag_list(key, value)?,
+            "slideshow.night.folder" => {
+                next.slideshow.night.folder = if value.trim().is_empty() { None } else { Some(path(key, value)?) };
+            }
+            "slideshow.night.color" => next.slideshow.night.color = color(key, value)?,
             "slideshow.monitors" => {
                 next.slideshow.monitors = value.split(',').map(str::trim).filter(|m| !m.is_empty()).map(String::from).collect();
             }
@@ -485,4 +499,25 @@ fn resolution(key: &str, value: &str) -> Result<Option<String>, String> {
 /// An enum by its saved name ("noctalia", "cover", "com").
 fn enum_value<T: DeserializeOwned>(key: &str, value: &str) -> Result<T, String> {
     serde_json::from_value(serde_json::Value::String(value.to_string())).map_err(|_| bad(key, value))
+}
+
+/// Comma-separated tags, each a valid tag.
+fn tag_list(key: &str, value: &str) -> Result<Vec<String>, String> {
+    value
+        .split(',')
+        .map(str::trim)
+        .filter(|t| !t.is_empty())
+        .map(|t| wallpicker_core::catalog::normalize_tag(t).ok_or_else(|| format!("{key}: {t:?} isn't a tag")))
+        .collect()
+}
+
+/// A color the filter knows, or "" for any.
+fn color(key: &str, value: &str) -> Result<Option<String>, String> {
+    let v = value.trim();
+    if v.is_empty() {
+        return Ok(None);
+    }
+    settings::known_color(Some(v.to_string()))
+        .map(Some)
+        .ok_or_else(|| format!("{key}: {v}? one of red orange yellow green teal blue purple pink dark light muted, or empty"))
 }

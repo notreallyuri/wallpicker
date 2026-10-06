@@ -55,7 +55,9 @@ or **Noctalia**'s wallpaper manager (Settings → General → Wallpaper backend)
   their favorite and tags move to the kept one (a monitor showing one of them gets it instead).
   Pictures that only look alike (the same artist's figure on white) aren't matched.
 - **Slideshow** (Settings → Slideshow): a random wallpaper every few minutes, from favorites,
-  some tags or a folder, on all or some monitors, the same one or a different one on each. The
+  some tags, a folder or a color, on all or some monitors, the same one or a different one on
+  each. **Something else at night**: a second set for a time window (say 20:00–07:00, Dark), and
+  it changes right away when night starts and ends. `wallpicker random --color dark` too. The
   Noctalia plugin keeps time for it while Noctalia runs; without Noctalia, run
   `wallpicker slideshow run` (say, from Hyprland's autostart). **Change now** changes it at once.
 - **Tray**: closing the window keeps wallpicker in the tray (Settings → General). The tray menu

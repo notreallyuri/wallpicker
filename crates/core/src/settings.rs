@@ -193,6 +193,8 @@ impl Settings {
             .filter(|u| crate::wallhaven::is_valid_username(u));
         self.theme_monitor = self.theme_monitor.map(|m| m.trim().to_string()).filter(|m| !m.is_empty());
         self.transition = self.transition.sanitized();
+        self.slideshow.color = known_color(self.slideshow.color.take());
+        self.slideshow.night = std::mem::take(&mut self.slideshow.night).sanitized();
         self
     }
 }
@@ -270,6 +272,9 @@ pub struct State {
     /// When the slideshow last changed the wallpaper (seconds since the Unix
     /// epoch; 0: never).
     pub slideshow_changed: u64,
+    /// "day" or "night": which set the slideshow last picked from, to change
+    /// right away when that turns ("" before the first time).
+    pub slideshow_period: String,
     /// What each monitor showed before, oldest first (see
     /// [`HISTORY_LEN`]): `wallpicker previous` goes back through it.
     pub history: BTreeMap<String, Vec<PathBuf>>,
@@ -298,6 +303,81 @@ pub struct Slideshow {
     pub monitors: Vec<String>,
     /// A different wallpaper on each monitor (else the same one on all).
     pub each: bool,
+    /// Only wallpapers with this color (a hue, "dark", "light" or "muted";
+    /// see `colors`).
+    pub color: Option<String>,
+    /// Another set for the night (its own picks, in a time window).
+    pub night: NightSet,
+}
+
+/// The slideshow's night: between `from` and `to` (local time, "HH:MM"; the
+/// window may cross midnight) it picks from these instead, and it changes
+/// right away when day turns to night and back.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct NightSet {
+    pub enabled: bool,
+    pub from: String,
+    pub to: String,
+    pub favorites: bool,
+    pub tags: Vec<String>,
+    pub any: bool,
+    pub folder: Option<PathBuf>,
+    pub color: Option<String>,
+}
+
+impl Default for NightSet {
+    fn default() -> Self {
+        NightSet {
+            enabled: false,
+            from: "20:00".into(),
+            to: "07:00".into(),
+            favorites: false,
+            tags: Vec::new(),
+            any: false,
+            folder: None,
+            color: Some("dark".into()),
+        }
+    }
+}
+
+/// Minutes since midnight of "HH:MM" (or "H:MM").
+pub fn parse_hhmm(text: &str) -> Option<u32> {
+    let (h, m) = text.trim().split_once(':')?;
+    let (h, m): (u32, u32) = (h.parse().ok()?, m.parse().ok()?);
+    (h < 24 && m < 60 && text.trim().len() <= 5).then_some(h * 60 + m)
+}
+
+impl NightSet {
+    /// Whether `minute` (since local midnight) is in the night. Off, or a
+    /// window that starts and ends at the same time, is never night.
+    pub fn is_night(&self, minute: u32) -> bool {
+        let (Some(from), Some(to)) = (parse_hhmm(&self.from), parse_hhmm(&self.to)) else { return false };
+        if !self.enabled || from == to {
+            return false;
+        }
+        if from < to { (from..to).contains(&minute) } else { minute >= from || minute < to }
+    }
+
+    /// Times that parse, and a known color, or the defaults.
+    pub fn sanitized(mut self) -> Self {
+        let d = NightSet::default();
+        if parse_hhmm(&self.from).is_none() {
+            self.from = d.from;
+        }
+        if parse_hhmm(&self.to).is_none() {
+            self.to = d.to;
+        }
+        self.color = known_color(self.color);
+        self
+    }
+}
+
+/// A color the filter knows (`colors::HUES` or `TONES`), else None.
+pub fn known_color(color: Option<String>) -> Option<String> {
+    color.filter(|c| {
+        crate::colors::HUES.iter().chain(crate::colors::TONES.iter()).any(|(k, _)| k == c)
+    })
 }
 
 impl Default for Slideshow {
@@ -311,6 +391,8 @@ impl Default for Slideshow {
             folder: None,
             monitors: Vec::new(),
             each: true,
+            color: None,
+            night: NightSet::default(),
         }
     }
 }
@@ -331,6 +413,23 @@ impl Slideshow {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn night_windows() {
+        let night = |from: &str, to: &str| NightSet { enabled: true, from: from.into(), to: to.into(), ..NightSet::default() };
+        let n = night("20:00", "07:00");
+        assert!(n.is_night(22 * 60) && n.is_night(3 * 60) && n.is_night(20 * 60));
+        assert!(!n.is_night(7 * 60) && !n.is_night(12 * 60));
+        let afternoon = night("13:30", "18:00");
+        assert!(afternoon.is_night(14 * 60) && !afternoon.is_night(18 * 60) && !afternoon.is_night(9 * 60));
+        assert!(!night("10:00", "10:00").is_night(10 * 60));
+        assert!(!NightSet { enabled: false, ..n.clone() }.is_night(22 * 60));
+        assert_eq!(parse_hhmm("7:05"), Some(425));
+        assert_eq!(parse_hhmm("24:00"), None);
+        assert_eq!(parse_hhmm("ab"), None);
+        let fixed = NightSet { from: "25:00".into(), color: Some("plaid".into()), ..n }.sanitized();
+        assert_eq!((fixed.from.as_str(), fixed.color), ("20:00", None));
+    }
 
     #[test]
     fn missing_fields_fall_back_to_defaults() {

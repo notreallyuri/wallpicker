@@ -13,6 +13,8 @@ crate-type = ["rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
+# Local time, for the slideshow's night window.
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 wallpicker-core = { path = "../crates/core" }
 tauri = { version = "2", features = ["protocol-asset", "tray-icon", "image-png"] }
 tauri-plugin-single-instance = "2"

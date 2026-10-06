@@ -78,7 +78,9 @@ What stands between "my tool" and one others can install (2026-10-05):
 - [x] **Filter by color**: a profile per image (share of eight hues, lightness, how colorful),
   from the thumbnail, cached; Local's Color button; `wallpicker colors`. (The duplicates grid was
   too coarse: a 4×4 average loses small colored subjects.)
-- [ ] **Day and night sets**: the slideshow picks from a different set by time of day.
+- [x] **Day and night sets**: the slideshow's night set (its own favorites, tags, folder,
+  color) in a local time window that may cross midnight; it switches right away at the edges.
+  Each set can filter by color (light by day, dark by night).
 
 ## Planned (each needs a plan before starting)
 
