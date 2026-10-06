@@ -240,6 +240,8 @@ impl Store {
     /// that can run concurrently must serialize calls themselves.
     pub fn update_catalog(&self, change: impl FnOnce(&mut Catalog)) -> Result<Catalog> {
         let mut catalog = self.load_catalog()?;
+        // Best effort: an edit isn't refused over its safety copy.
+        let _ = self.snapshot_catalog();
         change(&mut catalog);
         let text = serde_json::to_string_pretty(&catalog)?;
         atomic_write(&self.catalog_path(), text.as_bytes(), false)?;
@@ -248,6 +250,131 @@ impl Store {
         let _ = self.write_hyprpaper_conf();
         Ok(catalog)
     }
+}
+
+/// One of the library's automatic snapshots.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
+pub struct Snapshot {
+    /// "library-2026-10-06" (its file name without .json): what to restore.
+    pub id: String,
+    /// "2026-10-06", or "2026-10-06 14:03:22" for one made before a restore.
+    pub label: String,
+    /// How many wallpapers it has favorites, tags or fits for.
+    pub items: usize,
+}
+
+/// How many daily snapshots are kept.
+pub const SNAPSHOTS_KEPT: usize = 14;
+
+impl Store {
+    /// The library's automatic snapshots.
+    pub fn snapshots_dir(&self) -> PathBuf {
+        self.dirs.data.join("backups")
+    }
+
+    /// Before the first change of a day: a copy of the library as it was
+    /// (`backups/library-YYYY-MM-DD.json`), keeping the newest
+    /// [`SNAPSHOTS_KEPT`].
+    fn snapshot_catalog(&self) -> Result<()> {
+        let src = self.catalog_path();
+        if !src.is_file() {
+            return Ok(());
+        }
+        let (date, _) = crate::backup::date_and_time(now_secs());
+        let dir = self.snapshots_dir();
+        let target = dir.join(format!("library-{date}.json"));
+        if target.exists() {
+            return Ok(());
+        }
+        fs::create_dir_all(&dir)?;
+        fs::copy(&src, &target)?;
+        self.prune_snapshots()
+    }
+
+    fn prune_snapshots(&self) -> Result<()> {
+        let mut names = self.snapshot_ids()?;
+        // Newest first (the names sort by date).
+        names.sort_unstable_by(|a, b| b.cmp(a));
+        for old in names.iter().skip(SNAPSHOTS_KEPT) {
+            let _ = fs::remove_file(self.snapshots_dir().join(format!("{old}.json")));
+        }
+        Ok(())
+    }
+
+    fn snapshot_ids(&self) -> Result<Vec<String>> {
+        let dir = match fs::read_dir(self.snapshots_dir()) {
+            Ok(d) => d,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
+            Err(e) => return Err(e.into()),
+        };
+        Ok(dir
+            .filter_map(|e| e.ok())
+            .filter_map(|e| e.file_name().to_str().map(str::to_string))
+            .filter_map(|n| n.strip_suffix(".json").map(str::to_string))
+            .filter(|n| is_snapshot_id(n))
+            .collect())
+    }
+
+    /// The snapshots, newest first.
+    pub fn snapshots(&self) -> Result<Vec<Snapshot>> {
+        let mut ids = self.snapshot_ids()?;
+        ids.sort_unstable_by(|a, b| b.cmp(a));
+        Ok(ids
+            .into_iter()
+            .map(|id| {
+                let items = fs::read_to_string(self.snapshots_dir().join(format!("{id}.json")))
+                    .ok()
+                    .and_then(|t| serde_json::from_str::<Catalog>(&t).ok())
+                    .map_or(0, |c| c.items.len());
+                let rest = &id["library-".len()..];
+                let label = match rest.split_at_checked(10) {
+                    Some((date, time)) if time.len() == 7 => {
+                        format!("{date} {}:{}:{}", &time[1..3], &time[3..5], &time[5..7])
+                    }
+                    _ => rest.to_string(),
+                };
+                Snapshot { id, label, items }
+            })
+            .collect())
+    }
+
+    /// Put snapshot `id` back as the library. What's there now is kept first,
+    /// as a snapshot of its own (so a restore can be undone too).
+    pub fn restore_snapshot(&self, id: &str) -> Result<Catalog> {
+        if !is_snapshot_id(id) {
+            return Err(crate::error::Error::Invalid(format!("no such snapshot: {id}")));
+        }
+        let text = fs::read_to_string(self.snapshots_dir().join(format!("{id}.json")))?;
+        let snapshot: Catalog = serde_json::from_str(&text)?;
+        let src = self.catalog_path();
+        if src.is_file() {
+            let secs = now_secs();
+            let (date, _) = crate::backup::date_and_time(secs);
+            let stamp = format!("{:02}{:02}{:02}", (secs / 3600) % 24, (secs / 60) % 60, secs % 60);
+            fs::create_dir_all(self.snapshots_dir())?;
+            fs::copy(&src, self.snapshots_dir().join(format!("library-{date}-{stamp}.json")))?;
+        }
+        let text = serde_json::to_string_pretty(&snapshot)?;
+        atomic_write(&src, text.as_bytes(), false)?;
+        let _ = self.write_hyprpaper_conf();
+        Ok(snapshot)
+    }
+}
+
+/// "library-2026-10-06" or "library-2026-10-06-142233", nothing else (so an
+/// id from outside can't name another file).
+fn is_snapshot_id(id: &str) -> bool {
+    let Some(rest) = id.strip_prefix("library-") else { return false };
+    let b = rest.as_bytes();
+    let date_ok = b.len() >= 10
+        && b[..10].iter().enumerate().all(|(i, c)| if i == 4 || i == 7 { *c == b'-' } else { c.is_ascii_digit() });
+    date_ok && (b.len() == 10 || (b.len() == 17 && b[10] == b'-' && b[11..].iter().all(u8::is_ascii_digit)))
+}
+
+fn now_secs() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.as_secs())
 }
 
 /// Write to a temporary file in the same directory, then rename over the
@@ -297,6 +424,49 @@ mod tests {
         let d = Dirs::from_lookup(|k| env.get(k).map(PathBuf::from));
         assert_eq!(d.config, PathBuf::from("/cfg/wallpicker"));
         assert_eq!(d.cache, PathBuf::from("/home/u/.cache/wallpicker"));
+    }
+
+    #[test]
+    fn snapshots_daily_and_restore() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = Store::new(Dirs::under(tmp.path()));
+        // The first edit has nothing to copy yet; the second copies the first.
+        store.update_catalog(|c| c.set_favorite(Path::new("/w/a.jpg"), true)).unwrap();
+        assert!(store.snapshots().unwrap().is_empty());
+        store.update_catalog(|c| c.set_favorite(Path::new("/w/b.jpg"), true)).unwrap();
+        store.update_catalog(|c| c.set_favorite(Path::new("/w/c.jpg"), true)).unwrap();
+        let snaps = store.snapshots().unwrap();
+        // One a day: as the library was before today's first copied change.
+        assert_eq!(snaps.len(), 1);
+        assert_eq!(snaps[0].items, 1);
+
+        let restored = store.restore_snapshot(&snaps[0].id).unwrap();
+        assert_eq!(restored.items.len(), 1);
+        assert_eq!(store.load_catalog().unwrap().items.len(), 1);
+        // What was there (3) is kept as a timestamped snapshot.
+        let snaps = store.snapshots().unwrap();
+        assert_eq!(snaps.len(), 2);
+        assert!(snaps.iter().any(|s| s.items == 3 && s.label.len() == "2026-10-06 14:03:22".len()));
+
+        assert!(store.restore_snapshot("../config").is_err());
+        assert!(store.restore_snapshot("library-2026-1x-06").is_err());
+    }
+
+    #[test]
+    fn snapshots_keep_the_newest() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = Store::new(Dirs::under(tmp.path()));
+        let dir = store.snapshots_dir();
+        fs::create_dir_all(&dir).unwrap();
+        for day in 1..=20 {
+            fs::write(dir.join(format!("library-2026-09-{day:02}.json")), "{}").unwrap();
+        }
+        fs::write(dir.join("notes.txt"), "kept").unwrap();
+        store.prune_snapshots().unwrap();
+        let snaps = store.snapshots().unwrap();
+        assert_eq!(snaps.len(), SNAPSHOTS_KEPT);
+        assert_eq!(snaps[0].label, "2026-09-20");
+        assert!(dir.join("notes.txt").exists());
     }
 
     #[test]

@@ -19,6 +19,7 @@ const SECTION_GENERAL: &str = "general";
 const SECTION_APPEARANCE: &str = "appearance";
 const SECTION_DOWNLOADS: &str = "downloads";
 const SECTION_SLIDESHOW: &str = "slideshow";
+const SECTION_BACKUP: &str = "backup";
 const SECTION_WALLHAVEN: &str = "wallhaven";
 const SECTION_KONACHAN: &str = "konachan";
 const SECTION_YANDERE: &str = "yandere";
@@ -56,6 +57,12 @@ const SECTIONS: &[Section] = &[
         label: "Slideshow",
         group: "App",
         blurb: "A new wallpaper every few minutes, picked at random.",
+    },
+    Section {
+        slug: SECTION_BACKUP,
+        label: "Backup",
+        group: "App",
+        blurb: "Your favorites, tags and fits: copied every day on their own, and to a file when you want.",
     },
     Section {
         slug: SECTION_WALLHAVEN,
@@ -518,6 +525,7 @@ fn SettingsForm(on_saved: Callback<()>) -> impl IntoView {
                             }
                             .into_any(),
                             SECTION_SLIDESHOW => view! { <SlideshowPane form=show /> }.into_any(),
+                            SECTION_BACKUP => view! { <BackupPane /> }.into_any(),
                             SECTION_WALLHAVEN => view! {
                                 <Field>
                                     <FieldLabel>"API key"</FieldLabel>
@@ -1047,5 +1055,179 @@ fn Conflicts(backend: RwSignal<String>) -> impl IntoView {
                 />
             </div>
         </Show>
+    }
+}
+
+/// Settings → Backup: export, import, and the daily snapshots. These act
+/// at once (not with Save): they're about the library, not the settings.
+#[component]
+fn BackupPane() -> impl IntoView {
+    let ctx = expect_context::<Ctx>();
+    let export_path = RwSignal::new(String::new());
+    let import_path = RwSignal::new(String::new());
+    let replace = RwSignal::new(false);
+    let busy = RwSignal::new(false);
+    let report = RwSignal::new(None::<String>);
+    let snapshots = RwSignal::new(None::<Vec<api::Snapshot>>);
+    // The snapshot whose Restore was pressed once (asks before replacing).
+    let confirming = RwSignal::new(None::<String>);
+    let reload = move || {
+        spawn_local(async move {
+            snapshots.try_set(Some(api::backup_snapshots().await.unwrap_or_default()));
+        });
+    };
+    spawn_local(async move {
+        if let Ok(p) = api::backup_default_path().await {
+            export_path.try_set(p);
+        }
+    });
+    reload();
+
+    let export = move |_| {
+        busy.set(true);
+        let path = Some(export_path.get_untracked()).filter(|p| !p.trim().is_empty());
+        spawn_local(async move {
+            match api::backup_export(path).await {
+                Ok(e) => ctx.info(format!("Exported {} wallpapers to {}", e.items, e.path)),
+                Err(e) => ctx.error_with("Could not export", &e),
+            }
+            busy.try_set(false);
+        });
+    };
+    let import = move |_| {
+        let path = import_path.get_untracked();
+        if path.trim().is_empty() {
+            return;
+        }
+        busy.set(true);
+        report.set(None);
+        let replace = replace.get_untracked();
+        spawn_local(async move {
+            match api::backup_import(&path, replace).await {
+                Ok(r) => {
+                    let mut text = format!("Found {} where they were, {} moved.", r.same_place, r.moved);
+                    if !r.missing.is_empty() {
+                        text.push_str(&format!(" Not in your library now ({}): {}.", r.missing.len(), r.missing.join(", ")));
+                    }
+                    report.try_set(Some(text));
+                    ctx.refresh_catalog().await;
+                    reload();
+                }
+                Err(e) => ctx.error_with("Could not import", &e),
+            }
+            busy.try_set(false);
+        });
+    };
+    let restore = move |id: String| {
+        busy.set(true);
+        spawn_local(async move {
+            match api::backup_restore(&id).await {
+                Ok(c) => {
+                    ctx.info(format!("Library restored ({} wallpapers)", c.items.len()));
+                    ctx.refresh_catalog().await;
+                }
+                Err(e) => ctx.error_with("Could not restore", &e),
+            }
+            confirming.try_set(None);
+            busy.try_set(false);
+            reload();
+        });
+    };
+
+    view! {
+        <div class="flex flex-col gap-6">
+            <Field>
+                <FieldLabel>"Export"</FieldLabel>
+                <div class="flex gap-2">
+                    <Input model=export_path class="flex-1" />
+                    <Button disabled=busy on_click=export>"Export"</Button>
+                </div>
+                <FieldDescription>"Favorites, tags and fits, in one file. ~ is allowed."</FieldDescription>
+            </Field>
+            <Field>
+                <FieldLabel>"Import"</FieldLabel>
+                <div class="flex gap-2">
+                    <Input model=import_path class="flex-1" attr:placeholder="~/wallpicker-backup-2026-10-06.json" />
+                    <Button variant=ButtonVariant::Outline disabled=busy on_click=import>"Import"</Button>
+                </div>
+                <FieldDescription>
+                    "Merged into your library: a wallpaper that moved (another folder, another home) is found "
+                    "by its place in your wallpaper folders, or by name and size."
+                </FieldDescription>
+            </Field>
+            <Field orientation=Orientation::Horizontal>
+                <Switch checked=replace />
+                <FieldLabel>"Replace the library instead of merging"</FieldLabel>
+            </Field>
+            {move || report.get().map(|r| view! { <p class="-mt-3 rounded-xl bg-primary/10 px-3 py-2 text-sm">{r}</p> })}
+            <div class="flex flex-col gap-2">
+                <span class="text-sm font-bold">"Daily snapshots"</span>
+                <p class="text-sm text-muted-foreground">
+                    "A copy of the library before the first change of each day; the last 14 are kept. "
+                    "Restoring keeps what's there now as a snapshot too."
+                </p>
+                {move || match snapshots.get() {
+                    None => view! { <Spinner /> }.into_any(),
+                    Some(list) if list.is_empty() => {
+                        view! { <p class="text-sm text-muted-foreground">"None yet: one is made before your next change."</p> }
+                            .into_any()
+                    }
+                    Some(list) => list
+                        .into_iter()
+                        .map(|s| {
+                            let id = s.id.clone();
+                            let id_ask = s.id.clone();
+                            let id_cancel = s.id.clone();
+                            let asking = Memo::new(move |_| confirming.get().as_deref() == Some(id_cancel.as_str()));
+                            view! {
+                                <div class="flex items-center gap-3 rounded-xl border-2 px-3 py-1.5 text-sm">
+                                    <span class="font-bold tabular-nums">{s.label.clone()}</span>
+                                    <span class="text-muted-foreground">
+                                        {format!("{} wallpaper{}", s.items, if s.items == 1 { "" } else { "s" })}
+                                    </span>
+                                    <span class="ml-auto flex items-center gap-2">
+                                        <Show
+                                            when=move || asking.get()
+                                            fallback=move || {
+                                                let id_ask = id_ask.clone();
+                                                view! {
+                                                    <Button
+                                                        size=ButtonSize::Sm
+                                                        variant=ButtonVariant::Ghost
+                                                        disabled=busy
+                                                        on_click=move |_| confirming.set(Some(id_ask.clone()))
+                                                    >
+                                                        "Restore"
+                                                    </Button>
+                                                }
+                                            }
+                                        >
+                                            <span class="text-muted-foreground">"Replace the library with this?"</span>
+                                            <Button size=ButtonSize::Sm variant=ButtonVariant::Ghost on_click=move |_| confirming.set(None)>
+                                                "Cancel"
+                                            </Button>
+                                            {
+                                                let id = id.clone();
+                                                view! {
+                                                    <Button
+                                                        size=ButtonSize::Sm
+                                                        variant=ButtonVariant::Destructive
+                                                        disabled=busy
+                                                        on_click=move |_| restore(id.clone())
+                                                    >
+                                                        "Restore"
+                                                    </Button>
+                                                }
+                                            }
+                                        </Show>
+                                    </span>
+                                </div>
+                            }
+                        })
+                        .collect_view()
+                        .into_any(),
+                }}
+            </div>
+        </div>
     }
 }

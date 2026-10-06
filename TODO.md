@@ -73,7 +73,8 @@ What stands between "my tool" and one others can install (2026-10-05):
 
 ## Next up (2026-10-06)
 
-- [ ] **Backup**: export / import the library (favorites, tags, fits) as one file.
+- [x] **Backup**: export / import the library (favorites, tags, fits) as one file, finding moved
+  wallpapers; daily automatic snapshots (14 kept) with restore.
 - [ ] **Filter by color**: the duplicates fingerprint already has a 4×4 color grid per image;
   reuse it for "show me blue / dark / warm" in Local.
 - [ ] **Day and night sets**: the slideshow picks from a different set by time of day.

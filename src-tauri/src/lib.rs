@@ -2,6 +2,7 @@
 //! a desktop session lives in `wallpicker-core`; this file wires it to the UI
 //! and does the HTTP calls to Wallhaven.
 
+pub mod backup;
 pub mod cli;
 pub mod open;
 pub mod theme;
@@ -524,6 +525,52 @@ async fn resolve_duplicates(
     others: Vec<String>,
 ) -> CmdResult<ResolveReport> {
     resolve_duplicates_with(&state, &keep, &others).await
+}
+
+/// The library (favorites, tags, fits) to one file; None: the default path.
+#[tauri::command]
+async fn backup_export(state: tauri::State<'_, AppState>, path: Option<String>) -> CmdResult<backup::Exported> {
+    let store = state.store.clone();
+    tauri::async_runtime::spawn_blocking(move || backup::export(&store, path.as_deref())).await.map_err(err)?
+}
+
+/// Where an export goes when no path is given.
+#[tauri::command]
+fn backup_default_path() -> String {
+    backup::default_export_path().display().to_string()
+}
+
+#[tauri::command]
+async fn backup_import(
+    state: tauri::State<'_, AppState>,
+    path: String,
+    replace: bool,
+) -> CmdResult<wallpicker_core::backup::ImportReport> {
+    let store = state.store.clone();
+    let lock = state.catalog_lock.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let _guard = lock.lock().unwrap_or_else(|p| p.into_inner());
+        backup::import(&store, &path, replace)
+    })
+    .await
+    .map_err(err)?
+}
+
+#[tauri::command]
+async fn backup_snapshots(state: tauri::State<'_, AppState>) -> CmdResult<Vec<wallpicker_core::store::Snapshot>> {
+    let store = state.store.clone();
+    blocking(move || store.snapshots()).await
+}
+
+#[tauri::command]
+async fn backup_restore(state: tauri::State<'_, AppState>, id: String) -> CmdResult<Catalog> {
+    let store = state.store.clone();
+    let lock = state.catalog_lock.clone();
+    blocking(move || {
+        let _guard = lock.lock().unwrap_or_else(|p| p.into_inner());
+        store.restore_snapshot(&id)
+    })
+    .await
 }
 
 /// Where `wallpicker --open` asked the window to go, once.
@@ -1051,6 +1098,11 @@ pub fn run(start_hidden: bool) {
             previous_wallpaper,
             wallpaper_palette,
             take_open_request,
+            backup_export,
+            backup_default_path,
+            backup_import,
+            backup_snapshots,
+            backup_restore,
             wallpaper_conflicts,
             stop_wallpaper_program,
             noctalia_colors,

@@ -17,11 +17,13 @@ mod config;
 mod library_edits;
 mod online;
 mod random;
+mod backup;
 pub(crate) mod slideshow;
 
 pub use config::{filters, settings};
 pub use library_edits::{duplicates, favorite, fit, show_in_folder, tag, trash};
 pub use online::{apply_online, collection, collections, details, preview, search, tags};
+pub use backup::backup;
 pub use random::random;
 pub use slideshow::slideshow;
 

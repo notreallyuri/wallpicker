@@ -70,6 +70,10 @@ or **Noctalia**'s wallpaper manager (Settings → General → Wallpaper backend)
   so it matches Noctalia. **Noctalia's colors follow the wallpaper** switches Noctalia's color
   source to the wallpaper too (and back to the scheme it had). The panel uses Noctalia's colors, so
   it follows along. `wallpicker theme` shows the palette; `wallpicker noctalia-colors on|off`.
+- **Backup** (Settings → Backup): your favorites, tags and fits are copied before the first change
+  of each day (the last 14 kept; restore any of them), and can be exported to one file and imported
+  again, merged or replacing. An import finds wallpapers that moved: by their place inside your
+  wallpaper folders, or by name and size. `wallpicker backup export|import|snapshots|restore`.
 - **Previous**: each monitor remembers its last 30 wallpapers; **↶ Previous** (in the monitor
   bar, the tray menu, the panel, or `wallpicker previous` for a keybind) goes back through them.
 - **Saved choices**: every applied wallpaper is written to `state.json`, and

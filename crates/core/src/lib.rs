@@ -4,6 +4,7 @@
 //! desktop session. The Tauri backend is a thin layer over this crate, and the
 //! Leptos UI reuses the data types (built with `default-features = false`).
 
+pub mod backup;
 pub mod catalog;
 pub mod duplicates;
 pub mod error;

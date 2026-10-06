@@ -50,6 +50,54 @@ pub async fn stop_wallpaper_program(name: &str) -> Result<(), String> {
     call("stop_wallpaper_program", &Args { name }).await
 }
 
+/// A library export: where, and how many wallpapers.
+#[derive(Debug, Clone, Deserialize)]
+pub struct Exported {
+    pub path: String,
+    pub items: usize,
+}
+
+pub async fn backup_export(path: Option<String>) -> Result<Exported, String> {
+    #[derive(Serialize)]
+    struct Args {
+        path: Option<String>,
+    }
+    call("backup_export", &Args { path }).await
+}
+
+pub async fn backup_default_path() -> Result<String, String> {
+    call("backup_default_path", &NoArgs {}).await
+}
+
+pub async fn backup_import(path: &str, replace: bool) -> Result<wallpicker_core::backup::ImportReport, String> {
+    #[derive(Serialize)]
+    struct Args<'a> {
+        path: &'a str,
+        replace: bool,
+    }
+    call("backup_import", &Args { path, replace }).await
+}
+
+/// One of the library's automatic daily snapshots.
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+pub struct Snapshot {
+    pub id: String,
+    pub label: String,
+    pub items: usize,
+}
+
+pub async fn backup_snapshots() -> Result<Vec<Snapshot>, String> {
+    call("backup_snapshots", &NoArgs {}).await
+}
+
+pub async fn backup_restore(id: &str) -> Result<Catalog, String> {
+    #[derive(Serialize)]
+    struct Args<'a> {
+        id: &'a str,
+    }
+    call("backup_restore", &Args { id }).await
+}
+
 /// Where `wallpicker --open` asked the window to go: a tab, "settings",
 /// "duplicates", or "tags" with the image.
 #[derive(Debug, Clone, PartialEq, Deserialize)]

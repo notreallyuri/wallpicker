@@ -17,6 +17,7 @@ fn main() {
         Some("random") => std::process::exit(wallpicker_lib::cli::random(&args[1..])),
         Some("favorite") => std::process::exit(wallpicker_lib::cli::favorite(&args[1..])),
         Some("tag") => std::process::exit(wallpicker_lib::cli::tag(&args[1..])),
+        Some("backup") => std::process::exit(wallpicker_lib::cli::backup(&args[1..])),
         Some("duplicates") => std::process::exit(wallpicker_lib::cli::duplicates(&args[1..])),
         Some("fit") => std::process::exit(wallpicker_lib::cli::fit(&args[1..])),
         Some("show-in-folder") => std::process::exit(wallpicker_lib::cli::show_in_folder(&args[1..])),
@@ -61,6 +62,8 @@ fn main() {
              wallpicker fit <image> auto|cover|contain|tile|fill  its own fit on any monitor\n  \
              wallpicker duplicates [--json] | duplicates keep <image> <other>...\n                                     \
              find copies and resized versions; keep one, trash the rest\n  \
+             wallpicker backup export [FILE] | import FILE [--replace] | snapshots | restore ID\n                                     \
+             back up favorites, tags and fits; daily snapshots are automatic\n  \
              wallpicker show-in-folder <image>  open its folder, with it selected\n  \
              wallpicker trash <image>           move to the desktop trash (wallpaper/download folders only)\n  \
              wallpicker filters [<provider> set KEY=VALUE...|reset]  read or change the online filters\n  \
