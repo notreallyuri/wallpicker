@@ -45,6 +45,19 @@ dialogs, wrapping layouts, easier to build and test).
   ~214 MB, plus WebKit helpers). The README now presents `wallpicker --tray` at login as an
   option; the slideshow keeps running from the plugin's service either way.
 
+## Going public (if ever)
+
+What stands between "my tool" and one others can install (2026-10-05):
+
+- [x] **awww (swww) backend**: `awww img` with fit and transitions, the daemon started when
+  needed, a warning when another program draws wallpapers too.
+- [ ] **AUR package** (`wallpicker-git`): builds with trunk and the Tauri CLI, installs the binary,
+  the desktop entry, the icon and the Noctalia plugin.
+- [ ] **One-command hyprpaper setup**: add the `source` line for wallpicker's config to
+  hyprpaper.conf (asking first), instead of documenting it.
+- [ ] **matugen hook** (optional): run matugen on each applied wallpaper, for people theming
+  their whole setup with it.
+
 ## Noctalia
 
 - [x] Wallpaper backend setting: hyprpaper or Noctalia (`noctalia msg wallpaper-set`).

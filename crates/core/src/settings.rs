@@ -40,6 +40,11 @@ pub enum WallpaperBackend {
     /// It keeps the wallpapers itself; fill mode and transitions are set in
     /// Noctalia's settings.
     Noctalia,
+    /// awww (swww before it was renamed), through `awww img`, with
+    /// wallpicker's fit and a transition ([`Transition`]). Its daemon keeps
+    /// the wallpapers across restarts; wallpicker starts it when needed.
+    #[serde(alias = "swww")]
+    Awww,
 }
 
 impl WallpaperBackend {
@@ -47,6 +52,7 @@ impl WallpaperBackend {
         match self {
             WallpaperBackend::Hyprpaper => "hyprpaper",
             WallpaperBackend::Noctalia => "noctalia",
+            WallpaperBackend::Awww => "awww",
         }
     }
 }
@@ -103,6 +109,8 @@ pub struct Settings {
     pub theme_from_wallpaper: bool,
     /// The monitor whose wallpaper the colors come from; None: the first one.
     pub theme_monitor: Option<String>,
+    /// awww's transition (the awww backend).
+    pub transition: Transition,
     /// Noctalia's color scheme before "follow the wallpaper" was turned on
     /// ("community Garnet"), to go back to.
     pub noctalia_previous_scheme: Option<String>,
@@ -130,6 +138,7 @@ impl Default for Settings {
             close_to_tray: true,
             theme_from_wallpaper: true,
             theme_monitor: None,
+            transition: Transition::default(),
             noctalia_previous_scheme: None,
             thumb_width: 360,
         }
@@ -183,6 +192,7 @@ impl Settings {
             .map(|u| u.trim().to_string())
             .filter(|u| crate::wallhaven::is_valid_username(u));
         self.theme_monitor = self.theme_monitor.map(|m| m.trim().to_string()).filter(|m| !m.is_empty());
+        self.transition = self.transition.sanitized();
         self
     }
 }
@@ -196,7 +206,53 @@ pub const FIT_MODES: [(&str, &str); 5] = [
     ("fill", "Fill"),
 ];
 
-pub const BACKENDS: [(&str, &str); 2] = [("hyprpaper", "hyprpaper"), ("noctalia", "Noctalia")];
+pub const BACKENDS: [(&str, &str); 3] =
+    [("hyprpaper", "hyprpaper"), ("awww", "awww (swww)"), ("noctalia", "Noctalia")];
+
+/// awww's transitions, with labels. ("any" and "center" are grow from a
+/// random point and from the middle.)
+pub const TRANSITIONS: [(&str, &str); 14] = [
+    ("fade", "Fade"),
+    ("simple", "Simple fade"),
+    ("wipe", "Wipe"),
+    ("wave", "Wave"),
+    ("grow", "Grow (a circle)"),
+    ("center", "Grow from the middle"),
+    ("any", "Grow from anywhere"),
+    ("outer", "Shrink (a circle)"),
+    ("left", "Slide from the left"),
+    ("right", "Slide from the right"),
+    ("top", "Slide from the top"),
+    ("bottom", "Slide from the bottom"),
+    ("random", "A different one each time"),
+    ("none", "None (instant)"),
+];
+
+/// How awww changes to a new wallpaper.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct Transition {
+    /// One of [`TRANSITIONS`].
+    pub kind: String,
+    /// How long it takes (awww ignores this for "simple").
+    pub duration_ms: u32,
+    /// Frames per second (awww allows up to 255).
+    pub fps: u32,
+}
+
+impl Default for Transition {
+    fn default() -> Self {
+        Transition { kind: "fade".into(), duration_ms: 1000, fps: 60 }
+    }
+}
+
+impl Transition {
+    /// A known kind, a duration up to 10 s and 1 to 255 fps.
+    pub fn sanitized(self) -> Self {
+        let kind = if TRANSITIONS.iter().any(|(k, _)| *k == self.kind) { self.kind } else { Transition::default().kind };
+        Transition { kind, duration_ms: self.duration_ms.min(10_000), fps: self.fps.clamp(1, 255) }
+    }
+}
 
 pub const KONACHAN_SITES: [(&str, &str); 2] = [
     ("net", "konachan.net (safe-for-work only)"),

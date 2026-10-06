@@ -232,9 +232,71 @@ impl Fits {
     }
 }
 
+/// The chosen wallpaper backend and what it needs besides the image, read
+/// once for a batch of monitors.
+pub struct Backend {
+    kind: WallpaperBackend,
+    noctalia_enabled: Option<bool>,
+    transition: crate::settings::Transition,
+}
+
+impl Backend {
+    pub fn new(kind: WallpaperBackend, store: &Store) -> Backend {
+        Backend {
+            kind,
+            noctalia_enabled: match kind {
+                WallpaperBackend::Noctalia => crate::noctalia::wallpaper_enabled_on_disk(),
+                _ => None,
+            },
+            transition: store.load_settings().map(|s| s.transition).unwrap_or_default(),
+        }
+    }
+
+    /// The one in the settings.
+    pub fn from_settings(store: &Store) -> Backend {
+        Backend::new(store.load_settings().map(|s| s.wallpaper_backend).unwrap_or_default(), store)
+    }
+
+    /// Show `path` on `monitor`. With Noctalia, `fit` doesn't apply: its
+    /// fill mode is a setting of its own.
+    pub fn apply(&self, runner: &dyn Runner, monitor: &str, path: &Path, fit: Option<FitMode>) -> Result<()> {
+        match self.kind {
+            WallpaperBackend::Hyprpaper => apply(runner, monitor, path, fit),
+            WallpaperBackend::Awww => crate::awww::apply(runner, monitor, path, fit, &self.transition),
+            WallpaperBackend::Noctalia => crate::noctalia::apply(runner, monitor, path, self.noctalia_enabled),
+        }
+    }
+
+    /// Whether wallpicker's fit modes mean anything to it.
+    pub fn fits(&self) -> bool {
+        self.kind != WallpaperBackend::Noctalia
+    }
+}
+
+/// Other programs drawing wallpapers besides `backend`: two at once fight
+/// over the screen (whichever drew last is on top). Names to show, like
+/// "hyprpaper" or "Noctalia's wallpaper".
+pub fn conflicts(runner: &dyn Runner, backend: WallpaperBackend) -> Vec<String> {
+    const DAEMONS: [&str; 6] = ["hyprpaper", "awww-daemon", "swww-daemon", "swaybg", "mpvpaper", "wpaperd"];
+    let mine: &[&str] = match backend {
+        WallpaperBackend::Hyprpaper => &["hyprpaper"],
+        WallpaperBackend::Awww => &["awww-daemon", "swww-daemon"],
+        WallpaperBackend::Noctalia => &[],
+    };
+    let mut found: Vec<String> = DAEMONS
+        .iter()
+        .filter(|d| !mine.contains(d))
+        .filter(|d| runner.run("pgrep", &["-x", d]).is_ok())
+        .map(|d| d.to_string())
+        .collect();
+    if backend != WallpaperBackend::Noctalia && crate::noctalia::wallpaper_enabled_on_disk() == Some(true) {
+        found.push("Noctalia's wallpaper".into());
+    }
+    found
+}
+
 /// [`apply_and_remember`] through the chosen backend, each monitor with its
-/// fit ([`Fits`]). With Noctalia, fit doesn't apply: its fill mode is a
-/// setting of its own.
+/// fit ([`Fits`]).
 pub fn apply_and_remember_with(
     runner: &dyn Runner,
     store: &Store,
@@ -253,15 +315,9 @@ pub fn apply_and_remember_with(
     }
 
     // Read once, not per monitor.
-    let noctalia_enabled = match backend {
-        WallpaperBackend::Noctalia => crate::noctalia::wallpaper_enabled_on_disk(),
-        WallpaperBackend::Hyprpaper => None,
-    };
+    let backend = Backend::new(backend, store);
     let fits = Fits::load(store);
-    let apply_one = |m: &str| match backend {
-        WallpaperBackend::Hyprpaper => apply(runner, m, path, fits.of(m, path)),
-        WallpaperBackend::Noctalia => crate::noctalia::apply(runner, m, path, noctalia_enabled),
-    };
+    let apply_one = |m: &str| backend.apply(runner, m, path, fits.of(m, path));
 
     let mut report = ApplyReport::default();
     for m in monitors {
@@ -283,20 +339,14 @@ pub fn apply_and_remember_with(
 /// with its fit; monitors with nothing earlier are reported as failed.
 pub fn apply_previous(runner: &dyn Runner, store: &Store, backend: WallpaperBackend, monitors: &[String]) -> Result<ApplyReport> {
     let fits = Fits::load(store);
-    let noctalia_enabled = match backend {
-        WallpaperBackend::Noctalia => crate::noctalia::wallpaper_enabled_on_disk(),
-        WallpaperBackend::Hyprpaper => None,
-    };
+    let backend = Backend::new(backend, store);
     let mut report = ApplyReport::default();
     for m in monitors {
         let Some(path) = store.previous(m)? else {
             report.failed.push((m.clone(), "nothing earlier to go back to".into()));
             continue;
         };
-        let applied = match backend {
-            WallpaperBackend::Hyprpaper => apply(runner, m, &path, fits.of(m, &path)),
-            WallpaperBackend::Noctalia => crate::noctalia::apply(runner, m, &path, noctalia_enabled),
-        };
+        let applied = backend.apply(runner, m, &path, fits.of(m, &path));
         match applied.and_then(|()| store.went_back(m, &path)) {
             Ok(()) => report.applied.push(m.clone()),
             Err(e) => report.failed.push((m.clone(), e.to_string())),
@@ -325,6 +375,7 @@ pub fn restore_with(
 ) -> Result<RestoreReport> {
     let state = store.load_state()?;
     let fits = Fits::load(store);
+    let backend = Backend::from_settings(store);
     let monitors = list_monitors(runner)?;
 
     let mut report = RestoreReport::default();
@@ -345,7 +396,7 @@ pub fn restore_with(
         let mut last_err = None;
         let mut done = false;
         for attempt in 0..attempts.max(1) {
-            match apply(runner, name, path, fits.of(name, path)) {
+            match backend.apply(runner, name, path, fits.of(name, path)) {
                 Ok(()) => {
                     done = true;
                     break;
@@ -369,18 +420,20 @@ pub fn restore_with(
 
 /// Apply again what's on the monitors that `which(monitor, path)` picks,
 /// with their fit as it is now: after a fit changes, so it shows right away.
-/// hyprpaper only (Noctalia keeps its own fill mode). Monitors that aren't
+/// Through the configured backend; callers skip Noctalia, which keeps its own
+/// fill mode ([`Backend::fits`]). Monitors that aren't
 /// connected, or whose file is gone, are left alone.
 pub fn reapply(runner: &dyn Runner, store: &Store, which: &dyn Fn(&str, &Path) -> bool) -> Result<ApplyReport> {
     let state = store.load_state()?;
     let fits = Fits::load(store);
+    let backend = Backend::from_settings(store);
     let connected = list_monitors(runner)?;
     let mut report = ApplyReport::default();
     for (m, path) in &state.current {
         if !which(m, path) || !connected.iter().any(|c| &c.name == m) || !path.is_file() {
             continue;
         }
-        match apply(runner, m, path, fits.of(m, path)) {
+        match backend.apply(runner, m, path, fits.of(m, path)) {
             Ok(()) => report.applied.push(m.clone()),
             Err(e) => report.failed.push((m.clone(), e.to_string())),
         }

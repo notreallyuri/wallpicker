@@ -243,6 +243,10 @@ struct SettingsOutput {
     /// Monitor name -> its own fit, over `fit_mode`.
     monitor_fits: std::collections::BTreeMap<String, &'static str>,
     slideshow: settings::Slideshow,
+    /// awww's transition (the awww backend).
+    transition: settings::Transition,
+    /// Other programs drawing wallpapers besides the backend (they fight).
+    other_wallpaper_programs: Vec<String>,
     close_to_tray: bool,
     thumb_width: u32,
     konachan_site: &'static str,
@@ -257,6 +261,7 @@ struct SettingsOutput {
 struct SettingsOptions {
     backends: Vec<Choice>,
     fit_modes: Vec<Choice>,
+    transitions: Vec<Choice>,
     konachan_sites: Vec<Choice>,
 }
 
@@ -266,6 +271,7 @@ const SETTINGS_USAGE: &str = "usage: wallpicker settings [--json]\n       \
      monitor_fit.NAME (a monitor's own fit; empty to use fit_mode)\n\
      slideshow.enabled slideshow.minutes slideshow.favorites slideshow.tags (comma-separated)\n\
      slideshow.any slideshow.folder slideshow.monitors (comma-separated; empty: all) slideshow.each\n\
+     transition.kind transition.duration_ms transition.fps (the awww backend)\n\
      The Wallhaven API key is set in the app.";
 
 /// `wallpicker settings [--json]`, `settings set KEY=VALUE...`.
@@ -279,6 +285,7 @@ pub fn settings(args: &[String]) -> i32 {
         [] => print_settings(&s),
         [flag] if flag == "--json" => print_settings(&s),
         [action, pairs @ ..] if action == "set" && !pairs.is_empty() => {
+            let backend_before = s.wallpaper_backend;
             if let Err(why) = set_settings(&mut s, pairs) {
                 return usage_for("settings", &why, SETTINGS_USAGE);
             }
@@ -286,12 +293,15 @@ pub fn settings(args: &[String]) -> i32 {
             if let Err(e) = store.save_settings(&s) {
                 return fail(&e);
             }
-            // A fit that changed shows right away where it applies.
+            // A new backend shows what each monitor had; a fit that changed
+            // shows right away where it applies.
+            let switched = s.wallpaper_backend != backend_before;
             let after = hyprpaper::Fits::load(&store);
-            if s.wallpaper_backend == WallpaperBackend::Hyprpaper
-                && let Err(e) = hyprpaper::reapply(&SystemRunner, &store, &|m, p| before.of(m, p) != after.of(m, p))
+            if s.wallpaper_backend != WallpaperBackend::Noctalia
+                && let Err(e) =
+                    hyprpaper::reapply(&SystemRunner, &store, &|m, p| switched || before.of(m, p) != after.of(m, p))
             {
-                eprintln!("wallpicker: could not re-apply with the new fit: {e}");
+                eprintln!("wallpicker: could not re-apply the wallpapers: {e}");
             }
             match store.load_settings() {
                 Ok(saved) => print_settings(&saved),
@@ -314,6 +324,8 @@ fn print_settings(s: &Settings) -> i32 {
         fit_mode: s.fit_mode.map_or("", |f| f.as_str()),
         monitor_fits: s.monitor_fits.iter().map(|(m, f)| (m.clone(), f.as_str())).collect(),
         slideshow: s.slideshow.clone(),
+        transition: s.transition.clone(),
+        other_wallpaper_programs: hyprpaper::conflicts(&wallpicker_core::cmd::SystemRunner, s.wallpaper_backend),
         close_to_tray: s.close_to_tray,
         thumb_width: s.thumb_width,
         konachan_site: s.konachan_site.as_str(),
@@ -322,6 +334,7 @@ fn print_settings(s: &Settings) -> i32 {
         options: SettingsOptions {
             backends: choices(&settings::BACKENDS),
             fit_modes: choices(&settings::FIT_MODES),
+            transitions: choices(&settings::TRANSITIONS),
             konachan_sites: choices(&settings::KONACHAN_SITES),
         },
     })
@@ -368,6 +381,19 @@ fn set_settings(s: &mut Settings, pairs: &[String]) -> Result<(), String> {
                     .ok_or_else(|| format!("thumb_width: a number from 120 to 1024, not {value:?}"))?;
             }
             "konachan_site" => next.konachan_site = enum_value(key, value)?,
+            "transition.kind" => {
+                if !settings::TRANSITIONS.iter().any(|(k, _)| *k == value) {
+                    let known: Vec<&str> = settings::TRANSITIONS.iter().map(|(k, _)| *k).collect();
+                    return Err(format!("{key}: {value}? one of {}", known.join(", ")));
+                }
+                next.transition.kind = value.to_string();
+            }
+            "transition.duration_ms" => {
+                next.transition.duration_ms = value.parse().map_err(|_| format!("{key}: a number of milliseconds"))?;
+            }
+            "transition.fps" => {
+                next.transition.fps = value.parse().map_err(|_| format!("{key}: a number from 1 to 255"))?;
+            }
             "slideshow.enabled" => next.slideshow.enabled = boolean(key, value)?,
             "slideshow.minutes" => {
                 next.slideshow.minutes = value

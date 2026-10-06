@@ -82,6 +82,8 @@ const BACKENDS: &[(&str, &str)] = &settings::BACKENDS;
 
 const KONACHAN_SITES: &[(&str, &str)] = &settings::KONACHAN_SITES;
 
+const TRANSITIONS: &[(&str, &str)] = &settings::TRANSITIONS;
+
 const THEMES: &[(&str, &str)] = &[("system", "Like the system"), ("light", "Off"), ("dark", "On")];
 
 /// Color themes: `data-theme` name ("" is the base one), label, and the
@@ -130,6 +132,10 @@ fn SettingsForm(on_saved: Callback<()>) -> impl IntoView {
     let monitor_fits = RwSignal::new(std::collections::BTreeMap::<String, String>::new());
     let konachan_site = RwSignal::new(KonachanSite::default().as_str().to_string());
     let backend = RwSignal::new(WallpaperBackend::default().as_str().to_string());
+    // awww's transition; the numbers as typed.
+    let transition = RwSignal::new(String::new());
+    let transition_ms = RwSignal::new(String::new());
+    let transition_fps = RwSignal::new(String::new());
     let thumb_width = RwSignal::new(String::new());
     let show = SlideshowForm::new();
     let saving = RwSignal::new(false);
@@ -172,6 +178,9 @@ fn SettingsForm(on_saved: Callback<()>) -> impl IntoView {
             username.set(s.wallhaven_username.clone().unwrap_or_default());
             konachan_site.set(s.konachan_site.as_str().to_string());
             backend.set(s.wallpaper_backend.as_str().to_string());
+            transition.set(s.transition.kind.clone());
+            transition_ms.set(s.transition.duration_ms.to_string());
+            transition_fps.set(s.transition.fps.to_string());
             fit.set(
                 s.fit_mode
                     .map(|f| f.as_str().to_string())
@@ -245,8 +254,17 @@ fn SettingsForm(on_saved: Callback<()>) -> impl IntoView {
         s.wallhaven_username = (!name.is_empty()).then_some(name);
         s.wallpaper_backend = match backend.get_untracked().as_str() {
             "noctalia" => WallpaperBackend::Noctalia,
+            "awww" => WallpaperBackend::Awww,
             _ => WallpaperBackend::Hyprpaper,
         };
+        // Out-of-range numbers are brought into range when saved.
+        s.transition.kind = transition.get_untracked();
+        if let Ok(ms) = transition_ms.get_untracked().trim().parse() {
+            s.transition.duration_ms = ms;
+        }
+        if let Ok(fps) = transition_fps.get_untracked().trim().parse() {
+            s.transition.fps = fps;
+        }
         s.konachan_site = match konachan_site.get_untracked().as_str() {
             "com" => KonachanSite::Com,
             _ => KonachanSite::Net,
@@ -366,6 +384,40 @@ fn SettingsForm(on_saved: Callback<()>) -> impl IntoView {
                                     <Choice items=BACKENDS.to_vec() model=backend />
                                     <FieldDescription>"What draws the wallpaper; wallpicker applies through it."</FieldDescription>
                                 </Field>
+                                <Conflicts backend=backend />
+                                <Show when=move || backend.get() == WallpaperBackend::Awww.as_str()>
+                                    <p class="text-sm text-muted-foreground">
+                                        "awww (called swww before) draws the wallpaper with a transition and keeps it "
+                                        "after a restart. wallpicker starts its daemon when it isn't running; to have "
+                                        "it from login, add awww-daemon to Hyprland's autostart."
+                                    </p>
+                                    <div class="grid gap-6 sm:grid-cols-3">
+                                        <Field>
+                                            <FieldLabel>"Transition"</FieldLabel>
+                                            <Choice items=TRANSITIONS.to_vec() model=transition />
+                                        </Field>
+                                        <Field>
+                                            <FieldLabel>"Duration (ms)"</FieldLabel>
+                                            <Input
+                                                model=transition_ms
+                                                input_type=InputType::Number
+                                                attr:min="0"
+                                                attr:max="10000"
+                                                attr:step="100"
+                                            />
+                                        </Field>
+                                        <Field>
+                                            <FieldLabel>"Frames per second"</FieldLabel>
+                                            <Input
+                                                model=transition_fps
+                                                input_type=InputType::Number
+                                                attr:min="1"
+                                                attr:max="255"
+                                            />
+                                            <FieldDescription>"Your monitors' refresh rate is smoothest."</FieldDescription>
+                                        </Field>
+                                    </div>
+                                </Show>
                                 <Show when=move || backend.get() == WallpaperBackend::Noctalia.as_str()>
                                     <p class="text-sm text-muted-foreground">
                                         "Noctalia keeps the wallpapers itself, so they come back after a restart. "
@@ -375,12 +427,19 @@ fn SettingsForm(on_saved: Callback<()>) -> impl IntoView {
                                     </p>
                                 </Show>
                                 <div class="grid gap-6 sm:grid-cols-2">
-                                    <Show when=move || backend.get() == WallpaperBackend::Hyprpaper.as_str()>
+                                    // Noctalia keeps its own fill mode.
+                                    <Show when=move || backend.get() != WallpaperBackend::Noctalia.as_str()>
                                         <Field>
                                             <FieldLabel>"Fit mode"</FieldLabel>
                                             <Choice items=FIT_MODES.to_vec() model=fit />
                                             <FieldDescription>
-                                                "For every monitor, unless it has its own below; a wallpaper's own fit (right-click → Fit) wins over both. Needs a newer hyprpaper: leave it on default if applying fails."
+                                                {move || {
+                                                    if backend.get() == WallpaperBackend::Awww.as_str() {
+                                                        "For every monitor, unless it has its own below; a wallpaper's own fit (right-click → Fit) wins over both. awww can't tile: Tile shows the image centered at its own size."
+                                                    } else {
+                                                        "For every monitor, unless it has its own below; a wallpaper's own fit (right-click → Fit) wins over both. Needs a newer hyprpaper: leave it on default if applying fails."
+                                                    }
+                                                }}
                                             </FieldDescription>
                                         </Field>
                                         <Show when=move || ctx.monitors.with(|m| !m.is_empty())>
@@ -899,5 +958,38 @@ fn ColorsMonitor(model: RwSignal<String>) -> impl IntoView {
                     .collect_view()
             }}
         </div>
+    }
+}
+
+/// A warning when something besides the picked backend draws wallpapers
+/// too (hyprpaper still running, Noctalia's own wallpaper on...): they fight
+/// over the screen. Checked again whenever the backend is changed.
+#[component]
+fn Conflicts(backend: RwSignal<String>) -> impl IntoView {
+    let found = RwSignal::new(Vec::<String>::new());
+    Effect::new(move |_| {
+        let b = backend.get();
+        if b.is_empty() {
+            return;
+        }
+        spawn_local(async move {
+            let list = api::wallpaper_conflicts(&b).await.unwrap_or_default();
+            if backend.get_untracked() == b {
+                found.try_set(list);
+            }
+        });
+    });
+    view! {
+        <Show when=move || found.with(|f| !f.is_empty())>
+            <div class="rounded-2xl border-2 border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">
+                <p class="font-bold text-amber-600 dark:text-amber-400">
+                    {move || format!("Also drawing wallpapers: {}", found.get().join(", "))}
+                </p>
+                <p class="mt-1 text-muted-foreground">
+                    "Only one should: they cover each other. Stop the others (and take them out of "
+                    "Hyprland's autostart); for Noctalia's, turn its wallpaper off in its settings."
+                </p>
+            </div>
+        </Show>
     }
 }

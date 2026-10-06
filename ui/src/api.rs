@@ -31,6 +31,16 @@ pub fn listen(event: &str, mut f: impl FnMut() + 'static) {
     }
 }
 
+/// Other programs drawing wallpapers besides `backend` ("hyprpaper",
+/// "Noctalia's wallpaper"...): they'd fight over the screen.
+pub async fn wallpaper_conflicts(backend: &str) -> Result<Vec<String>, String> {
+    #[derive(Serialize)]
+    struct Args<'a> {
+        backend: &'a str,
+    }
+    call("wallpaper_conflicts", &Args { backend }).await
+}
+
 /// Where `wallpicker --open` asked the window to go: a tab, "settings",
 /// "duplicates", or "tags" with the image.
 #[derive(Debug, Clone, PartialEq, Deserialize)]

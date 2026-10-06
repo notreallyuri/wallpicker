@@ -99,13 +99,18 @@ async fn save_settings(
     let store = state.store.clone();
     blocking(move || {
         let before = hyprpaper::Fits::load(&store);
+        let backend_before = store.load_settings()?.wallpaper_backend;
         store.save_settings(&settings)?;
         let saved = store.load_settings()?;
-        // A fit that changed shows right away where it applies.
-        if saved.wallpaper_backend == WallpaperBackend::Hyprpaper {
+        // A new backend shows what each monitor had; a fit that changed shows
+        // right away where it applies.
+        if saved.wallpaper_backend != WallpaperBackend::Noctalia {
+            let switched = saved.wallpaper_backend != backend_before;
             let after = hyprpaper::Fits::load(&store);
-            if let Err(e) = hyprpaper::reapply(&SystemRunner, &store, &|m, p| before.of(m, p) != after.of(m, p)) {
-                eprintln!("wallpicker: could not re-apply with the new fit: {e}");
+            if let Err(e) =
+                hyprpaper::reapply(&SystemRunner, &store, &|m, p| switched || before.of(m, p) != after.of(m, p))
+            {
+                eprintln!("wallpicker: could not re-apply the wallpapers: {e}");
             }
         }
         Ok(saved)
@@ -527,6 +532,13 @@ fn take_open_request() -> Option<open::Place> {
     open::take()
 }
 
+/// Other programs drawing wallpapers besides the chosen backend (they'd
+/// fight over the screen), for Settings.
+#[tauri::command]
+async fn wallpaper_conflicts(backend: WallpaperBackend) -> CmdResult<Vec<String>> {
+    blocking(move || Ok(hyprpaper::conflicts(&SystemRunner, backend))).await
+}
+
 /// The app's colors, from the current wallpaper (None: its own).
 #[tauri::command]
 async fn wallpaper_palette(state: tauri::State<'_, AppState>) -> CmdResult<Option<theme::Palette>> {
@@ -576,7 +588,7 @@ async fn set_fit(state: &AppState, path: &str, fit: Option<FitMode>) -> CmdResul
     let catalog = update_catalog(state, move |c| c.set_fit(&p, fit)).await?;
     let store = state.store.clone();
     blocking(move || {
-        if store.load_settings()?.wallpaper_backend == WallpaperBackend::Hyprpaper
+        if store.load_settings()?.wallpaper_backend != WallpaperBackend::Noctalia
             && let Err(e) = hyprpaper::reapply(&SystemRunner, &store, &|_, shown| shown == path)
         {
             eprintln!("wallpicker: could not re-apply with the new fit: {e}");
@@ -1033,6 +1045,7 @@ pub fn run(start_hidden: bool) {
             previous_wallpaper,
             wallpaper_palette,
             take_open_request,
+            wallpaper_conflicts,
             noctalia_colors,
             set_noctalia_colors,
             wallhaven_collections,

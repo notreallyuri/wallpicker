@@ -1,7 +1,7 @@
 # wallpicker
 
-A visual wallpaper picker for Hyprland, drawing through **hyprpaper** or **Noctalia**'s wallpaper
-manager (Settings → General → Wallpaper backend).
+A visual wallpaper picker for Hyprland, drawing through **hyprpaper**, **awww** (formerly swww)
+or **Noctalia**'s wallpaper manager (Settings → General → Wallpaper backend).
 
 - **Local**: a thumbnail grid of the images in your wallpaper folders. Click one to apply it.
   Right-click any wallpaper (Local or Online) to apply it to a specific monitor. Right-click →
@@ -84,13 +84,14 @@ Built with Tauri 2 + Leptos 0.8 (CSR), with the UI on
 On Arch:
 
 ```bash
-sudo pacman -S --needed base-devel webkit2gtk-4.1 hyprpaper
+sudo pacman -S --needed base-devel webkit2gtk-4.1 hyprpaper   # or awww instead of hyprpaper
 rustup target add wasm32-unknown-unknown
 cargo install trunk --locked
 cargo install tauri-cli --version "^2" --locked
 ```
 
-hyprpaper must be running with IPC enabled, which is its default.
+With hyprpaper, it must be running with IPC enabled, which is its default. With awww, wallpicker
+starts its daemon when needed.
 
 ## Run and build
 
@@ -225,6 +226,22 @@ Its fill mode and transitions are Noctalia's own settings; wallpicker's fit mode
 - Turn Noctalia's wallpaper on in its settings. While it's off, wallpicker refuses to apply rather
   than appear to work.
 - Stop hyprpaper (take it out of your Hyprland autostart): both draw the background.
+
+## awww (swww) as the backend
+
+With **awww (swww)** picked in Settings → General, wallpicker applies through
+`awww img <image> --outputs <monitor> --resize <fit> --transition-type <…>` (or `swww`, on an
+install from before the rename). Its daemon keeps the wallpapers across restarts.
+
+- **Daemon**: when `awww-daemon` isn't running, wallpicker starts it and applies. To have it from
+  login, add it to Hyprland's autostart (`exec-once = awww-daemon`), or run `wallpicker --restore`
+  there, which starts it and puts your wallpapers back.
+- **Fit**: wallpicker's fit modes map to awww's: Cover → crop, Contain → fit, Fill → stretch.
+  awww can't tile, so Tile shows the image centered at its own size.
+- **Transition**: Settings → General (Transition, Duration, Frames per second), or
+  `wallpicker settings set transition.kind=wipe transition.duration_ms=800 transition.fps=144`.
+- Only one program should draw the wallpaper. Settings warns when another one is running
+  (hyprpaper, Noctalia's own wallpaper, swaybg…); stop it and take it out of your autostart.
 
 ## Keeping wallpapers after hyprpaper restarts
 

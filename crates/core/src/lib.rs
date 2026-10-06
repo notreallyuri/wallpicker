@@ -15,6 +15,8 @@ pub mod settings;
 pub mod wallhaven;
 
 #[cfg(feature = "native")]
+pub mod awww;
+#[cfg(feature = "native")]
 pub mod cmd;
 #[cfg(feature = "native")]
 pub mod hyprpaper;

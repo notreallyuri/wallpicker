@@ -13,6 +13,11 @@ pub trait Runner {
     fn hyprpaper_socket(&self) -> Option<std::path::PathBuf> {
         None
     }
+
+    /// Start `program` in the background and leave it running (a daemon).
+    fn spawn(&self, program: &str, _args: &[&str]) -> Result<()> {
+        Err(Error::Command { cmd: program.to_string(), msg: "can't start programs here".into() })
+    }
 }
 
 /// Runs real processes.
@@ -21,6 +26,21 @@ pub struct SystemRunner;
 impl Runner for SystemRunner {
     fn hyprpaper_socket(&self) -> Option<std::path::PathBuf> {
         crate::hyprpaper::socket_path()
+    }
+
+    fn spawn(&self, program: &str, args: &[&str]) -> Result<()> {
+        use std::os::unix::process::CommandExt;
+        use std::process::Stdio;
+        Command::new(program)
+            .args(args)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            // Its own process group: it outlives wallpicker (and the app).
+            .process_group(0)
+            .spawn()
+            .map(drop)
+            .map_err(|e| Error::Command { cmd: program.to_string(), msg: e.to_string() })
     }
 
     fn run(&self, program: &str, args: &[&str]) -> Result<String> {
