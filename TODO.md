@@ -107,7 +107,8 @@ and feels like the app (real transitions and easing, glass, shadows); the scroll
 
 ### Phases (each ends with something usable; the Tauri app stays until phase 6)
 
-- [ ] **0. Foundation**: the `quickshell/` layout; `serve` with the library, monitors, theme and
+- [x] **0. Foundation** (done 2026-10-06; the color themes and light mode move to phase 4 with
+  their settings, qmltestrunner to when components need unit tests): the `quickshell/` layout; `serve` with the library, monitors, theme and
   apply methods (the shared command layer started); `Backend` service (requests, events);
   `Theme` (palette like palette.rs, the color themes, dark/light, Nunito weights); the base
   components; smooth wheel scrolling (ScrollArea: a notch glides, touchpads 1:1, kinetic

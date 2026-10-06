@@ -17,6 +17,7 @@ mod config;
 mod library_edits;
 pub(crate) mod online;
 mod random;
+mod ui;
 mod workspaces;
 mod backup;
 pub(crate) mod slideshow;
@@ -26,6 +27,7 @@ pub use library_edits::{adjust, colors, duplicates, favorite, show_in_folder, ta
 pub use online::{apply_online, collection, collections, details, preview, search, tags};
 pub use backup::backup;
 pub use random::random;
+pub use ui::ui;
 pub use workspaces::workspaces;
 pub use slideshow::slideshow;
 

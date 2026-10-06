@@ -163,7 +163,21 @@ details, another provider, Local) in a headless copy with a throwaway profile, a
 process's memory every second. The `automation` feature only exists for this; normal builds
 don't have it.
 
-## Command line
+## The new interface (Quickshell, in progress)
+
+The interface is moving to [Quickshell](https://quickshell.org) (QML) for a lighter, faster
+window; the plan is in TODO.md ("Quickshell frontend"). `wallpicker ui` opens it (the Local tab
+so far), `wallpicker ui --toggle` opens or closes it (a keybind). Closing exits: nothing stays in
+memory between opens. It needs `qs` (the quickshell package).
+
+- `quickshell/`: the interface, split by focus: `services/` (state and the connection to Rust),
+  `components/`, `bar/`, `views/`, `windows/`.
+- `wallpicker serve`: its backend, JSON lines over stdin/stdout (`src-tauri/src/serve/`), on the
+  same logic as the Tauri app's commands (`src-tauri/src/service/`).
+- `scripts/ui-check.sh`: runs it headless with a throwaway profile, clicks and scrolls through
+  test hooks, screenshots, and fails on QML errors.
+
+
 
 The same library, settings and backend as the app, without the window, for scripts and keybinds:
 

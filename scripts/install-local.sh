@@ -10,6 +10,10 @@ apps="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
 icons="${XDG_DATA_HOME:-$HOME/.local/share}/icons/hicolor/512x512/apps"
 
 install -Dm755 target/release/wallpicker "$bin"
+# The Quickshell interface (`wallpicker ui`), copied over the last one.
+ui="${XDG_DATA_HOME:-$HOME/.local/share}/wallpicker/ui"
+mkdir -p "$ui"
+cp -r quickshell/. "$ui/"
 install -Dm644 src-tauri/icons/icon.png "$icons/wallpicker.png"
 mkdir -p "$apps"
 # A full path: launchers (and Noctalia) often run with a PATH that doesn't
@@ -19,4 +23,4 @@ chmod 644 "$apps/wallpicker.desktop"
 
 command -v update-desktop-database >/dev/null && update-desktop-database "$apps" 2>/dev/null || true
 command -v gtk-update-icon-cache >/dev/null && gtk-update-icon-cache -q -t "$(dirname "$(dirname "$icons")")" 2>/dev/null || true
-echo "installed: $bin, $apps/wallpicker.desktop"
+echo "installed: $bin, $apps/wallpicker.desktop, $ui"

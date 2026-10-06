@@ -1,6 +1,6 @@
-// wallpicker's interface (Quickshell). The entry only: the window, made when
-// it's opened and gone when it's closed, and the IPC a keybind uses:
-//   qs -p quickshell ipc call wallpicker toggle
+// wallpicker's interface (Quickshell). The entry only: the window, and the
+// IPC a keybind uses (`wallpicker ui --toggle` calls it). Closing exits, the
+// backend with it: nothing stays in memory between opens.
 // The Rust side runs as `wallpicker serve` (services/Backend.qml).
 import QtQuick
 import Quickshell
@@ -8,19 +8,17 @@ import Quickshell.Io
 import qs.windows
 
 ShellRoot {
-    id: root
-
-    property bool open: true
-
     IpcHandler {
         target: "wallpicker"
+        /// Close (the launcher only calls it when it's open).
         function toggle(): void {
-            root.open = !root.open;
+            Qt.quit();
         }
     }
 
-    LazyLoader {
-        active: root.open
-        MainWindow {}
+    MainWindow {
+        // Closed by the window manager: done.
+        onVisibleChanged: if (!visible)
+            Qt.quit()
     }
 }
