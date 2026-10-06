@@ -6,8 +6,18 @@ use crate::components::nc::prelude::*;
 
 pub(crate) mod local;
 pub(crate) mod online;
+pub(crate) mod pager;
 pub(crate) mod settings;
 mod workspaces;
+
+/// A new page of results starts at the top, not where the last one was
+/// scrolled to. `view` is the tab's scroll area: "local", "online",
+/// "collections".
+pub(crate) fn scroll_to_top(view: &str) {
+    if let Ok(Some(el)) = document().query_selector(&format!("[data-scroll-root={view}]")) {
+        el.set_scroll_top(0);
+    }
+}
 
 /// A nocomponents `Select` over `(value, label)` pairs, bound to a plain
 /// `String` model like the other form fields.

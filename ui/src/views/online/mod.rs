@@ -5,7 +5,6 @@
 pub(crate) mod collections;
 mod details;
 mod moebooru;
-mod pager;
 mod sizes;
 mod tile;
 mod wallhaven;
@@ -30,7 +29,7 @@ use crate::components::tip::Tip;
 
 use details::DetailsDialog;
 use moebooru::{MoebooruFilters, MoebooruForm, ratings_apply};
-use pager::Pager;
+use crate::views::pager::Pager;
 use tile::{RemoteTile, RemoteTiles};
 use wallhaven::{WallhavenFilters, WallhavenForm};
 
@@ -69,13 +68,7 @@ impl Online {
     }
 }
 
-/// A new page of results starts at the top, not where the last one was
-/// scrolled to. `view` is the tab's scroll area: "online", "collections".
-fn scroll_to_top(view: &str) {
-    if let Ok(Some(el)) = document().query_selector(&format!("[data-scroll-root={view}]")) {
-        el.set_scroll_top(0);
-    }
-}
+use crate::views::scroll_to_top;
 
 fn placeholder(p: Provider) -> &'static str {
     match p {

@@ -1,14 +1,16 @@
-//! The pager under the online results.
+//! The pager under Local's and Online's results: previous, numbered pages,
+//! next, and a box to jump to any page.
 
 use leptos::prelude::*;
 use wallpicker_core::wallhaven::page_window;
 
 use crate::components::nc::prelude::*;
 
-/// Previous / numbered pages / next. Links get `href="#"` so they stay
+/// Previous / numbered pages / next, then "Jump to" (a page number and
+/// Enter; kept to the pages there are). Links get `href="#"` so they stay
 /// focusable; the click is handled here instead of navigating.
 #[component]
-pub(super) fn Pager(
+pub(crate) fn Pager(
     pages: impl Fn() -> Option<(u64, u64)> + Copy + Send + Sync + 'static,
     loading: RwSignal<bool>,
     go_to: Callback<u64>,
@@ -29,9 +31,18 @@ pub(super) fn Pager(
             go_to.run(page);
         }
     };
+    let jump = RwSignal::new(String::new());
+    let jump_to = move || {
+        let Ok(n) = jump.get_untracked().trim().parse::<u64>() else { return };
+        let page = n.clamp(1, last());
+        jump.set(String::new());
+        if !loading.get_untracked() && page != current() {
+            go_to.run(page);
+        }
+    };
 
     view! {
-        <Pagination>
+        <Pagination class="flex-wrap items-center gap-x-3 gap-y-2">
             <PaginationContent>
                 <PaginationItem>
                     <PaginationPrevious
@@ -78,6 +89,24 @@ pub(super) fn Pager(
                     />
                 </PaginationItem>
             </PaginationContent>
+            // Many pages online: the numbered ones only reach a few.
+            <label class="flex items-center gap-2 text-xs text-muted-foreground">
+                "Jump to"
+                <Input
+                    model=jump
+                    class="h-8 w-16 text-center"
+                    attr:inputmode="numeric"
+                    attr:placeholder="page"
+                    attr:aria-label=move || format!("Page, 1 to {}", last())
+                    on:keydown=move |e: leptos::ev::KeyboardEvent| {
+                        if e.key() == "Enter" {
+                            e.prevent_default();
+                            jump_to();
+                        }
+                    }
+                />
+                {move || format!("of {}", last())}
+            </label>
         </Pagination>
     }
 }

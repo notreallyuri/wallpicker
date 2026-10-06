@@ -14,7 +14,7 @@ use wallpicker_core::online::{OnlineWallpaper, Page};
 use wallpicker_core::wallhaven::Collection;
 
 use super::details::DetailsDialog;
-use super::pager::Pager;
+use crate::views::pager::Pager;
 use super::tile::{RemoteTile, RemoteTiles};
 use super::{Online, RemoteMenuItems, scroll_to_top};
 use crate::api;

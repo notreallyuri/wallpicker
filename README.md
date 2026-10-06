@@ -3,7 +3,8 @@
 A visual wallpaper picker for Hyprland, drawing through **hyprpaper**, **awww** (formerly swww)
 or **Noctalia**'s wallpaper manager (Settings → General → Wallpaper backend).
 
-- **Local**: a thumbnail grid of the images in your wallpaper folders. Click one to apply it.
+- **Local**: a thumbnail grid of the images in your wallpaper folders, 60 a page (only one page
+  is on screen, so memory stays the same however far you go). Click one to apply it.
   Right-click any wallpaper (Local or Online) to apply it to a specific monitor. Right-click →
   **Move to trash…** (or the **Delete** key on a tile) moves a local wallpaper to your trash, after
   a confirmation; restore it from your file manager. Only images inside your wallpaper or download
@@ -364,7 +365,8 @@ Paths containing a comma can't be applied: hyprpaper splits its argument on comm
 - The provider and each provider's filters are remembered between sessions; the search text
   isn't (it's shared between providers, so a term can be tried on each). Sorting starts on
   **Latest**.
-- Results come in pages of 24, with a pager under the grid. Pages re-run the last search, so
+- Results come in pages of 24, with a pager under the grid; **Jump to** takes a page number
+  (Local has it too). Pages re-run the last search, so
   changing the filters takes effect on the next search (the dialog's **Search** button runs it).
 - Downloads are only accepted from each provider's image host (`https://w.wallhaven.cc/`,
   `https://konachan.net/image/` or `.com`, `https://files.yande.re/image/`), must be images, and

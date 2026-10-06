@@ -31,7 +31,7 @@ use tags::{TagFilter, TagFilterRow, TagsDialog};
 use tile::LocalTile;
 use trash::{TrashConfirm, TrashDialog};
 
-/// Local tiles rendered per "Show more" step.
+/// Local tiles per page: only one page is on screen (and decoded) at a time.
 const PAGE: usize = 60;
 
 const SORTS: &[(&str, &str)] = &[
@@ -80,7 +80,8 @@ pub(crate) fn LocalView() -> impl IntoView {
     let loading = RwSignal::new(true);
     let filter = RwSignal::new(String::new());
     let tag_filter = TagFilter::new();
-    let limit = RwSignal::new(PAGE);
+    // 1-based; kept within the pages there are when the list shrinks.
+    let page = RwSignal::new(1usize);
     let favorites_only = RwSignal::new(false);
     let duplicates_open = RwSignal::new(false);
     // The "⋯" menu.
@@ -163,8 +164,8 @@ pub(crate) fn LocalView() -> impl IntoView {
         spawn_local(async move {
             match api::scan_local().await {
                 Ok(list) => {
+                    // A rescan (a download, a trash) keeps the page.
                     images.set(list);
-                    limit.set(PAGE);
                 }
                 Err(e) => ctx.error_with("Scanning folders failed", &e),
             }
@@ -221,7 +222,7 @@ pub(crate) fn LocalView() -> impl IntoView {
         sort.track();
         layout.track();
         place.track();
-        limit.set(PAGE);
+        page.set(1);
     });
 
     // Tags of the wallpapers on disk, for the filter row.
@@ -353,10 +354,17 @@ pub(crate) fn LocalView() -> impl IntoView {
     };
     let open_folder = Callback::new(move |to: Option<Place>| place.set(to));
 
+    let last_page = move || shown.with(|v| v.images.len().div_ceil(PAGE)).max(1);
+    let current_page = move || page.get().clamp(1, last_page());
     let visible = move || {
-        let n = limit.get();
-        shown.with(|v| v.images.iter().take(n).cloned().collect::<Vec<_>>())
+        let skip = (current_page() - 1) * PAGE;
+        shown.with(|v| v.images.iter().skip(skip).take(PAGE).cloned().collect::<Vec<_>>())
     };
+    let pages = move || Some((current_page() as u64, last_page() as u64));
+    let go_to = Callback::new(move |p: u64| {
+        page.set(p as usize);
+        crate::views::scroll_to_top("local");
+    });
 
     let folders = move || {
         ctx.settings.with(|s| {
@@ -541,7 +549,8 @@ pub(crate) fn LocalView() -> impl IntoView {
             extra=std::sync::Arc::new(|| view! { <LocalMenuItems /> }.into_any())
         >
             <For
-                each=move || shown.with(|s| s.folders.clone())
+                // Folders lead the first page only.
+                each=move || if current_page() == 1 { shown.with(|s| s.folders.clone()) } else { Vec::new() }
                 key=|(f, _)| f.place.clone()
                 children=move |(f, cover): (Subfolder, String)| {
                     view! { <FolderCard sub=f cover=cover on_open=open_folder /> }
@@ -560,14 +569,9 @@ pub(crate) fn LocalView() -> impl IntoView {
             <p class="py-10 text-center text-sm text-muted-foreground">"No wallpapers match."</p>
         </Show>
 
-        <Show when=move || { shown.with(|v| v.images.len()) > limit.get() }>
+        <Show when=move || { last_page() > 1 }>
             <div class="mt-6 flex justify-center">
-                <Button
-                    variant=ButtonVariant::Outline
-                    on_click=move |_| limit.update(|l| *l += PAGE)
-                >
-                    "Show more"
-                </Button>
+                <crate::views::pager::Pager pages=pages loading=loading go_to=go_to />
             </div>
         </Show>
 
