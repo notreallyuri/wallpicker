@@ -525,5 +525,5 @@ fn color(key: &str, value: &str) -> Result<Option<String>, String> {
     }
     settings::known_color(Some(v.to_string()))
         .map(Some)
-        .ok_or_else(|| format!("{key}: {v}? one of red orange yellow green teal blue purple pink dark light muted, or empty"))
+        .ok_or_else(|| format!("{key}: {v}? one of red orange yellow green teal blue purple pink dark light warm muted, or empty"))
 }

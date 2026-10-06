@@ -14,7 +14,7 @@ use super::{fail, usage_for};
 
 const USAGE: &str = "usage: wallpicker random [--favorites] [--tag TAG]... [--any] [--folder DIR] [--color C] [--monitor NAME]... [--each]\n\
      --favorites  only favorites\n\
-     --color C    only wallpapers with this color (a hue, dark, light or muted; see `wallpicker colors`)\n\
+     --color C    only wallpapers with this color (a hue, dark, light, warm or muted; see `wallpicker colors`)\n\
      --tag TAG    only wallpapers with this tag (repeat: all of them; with --any: any of them)\n\
      --folder DIR only wallpapers inside DIR\n\
      --monitor    where to apply (repeat; default: every monitor)\n\
@@ -71,7 +71,7 @@ pub fn random(args: &[String]) -> i32 {
             },
             "--color" => match rest.next() {
                 Some(c) if wallpicker_core::settings::known_color(Some(c.clone())).is_some() => color = Some(c.clone()),
-                _ => return usage_for("random", "--color needs a color: red orange yellow green teal blue purple pink dark light muted", USAGE),
+                _ => return usage_for("random", "--color needs a color: red orange yellow green teal blue purple pink dark light warm muted", USAGE),
             },
             "--monitor" | "-m" => match rest.next() {
                 Some(m) => monitors.push(m.clone()),

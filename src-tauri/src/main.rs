@@ -66,7 +66,7 @@ fn main() {
              wallpicker backup export [FILE] | import FILE [--replace] | snapshots | restore ID\n                                     \
              back up favorites, tags and fits; daily snapshots are automatic\n  \
              wallpicker colors [COLOR] [--json]  the library's colors, or the images that are COLOR\n                                     \
-             (red orange yellow green teal blue purple pink, dark light muted)\n  \
+             (red orange yellow green teal blue purple pink, dark light warm muted)\n  \
              wallpicker show-in-folder <image>  open its folder, with it selected\n  \
              wallpicker trash <image>           move to the desktop trash (wallpaper/download folders only)\n  \
              wallpicker filters [<provider> set KEY=VALUE...|reset]  read or change the online filters\n  \

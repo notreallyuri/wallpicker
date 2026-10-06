@@ -73,8 +73,10 @@ or **Noctalia**'s wallpaper manager (Settings → General → Wallpaper backend)
   source to the wallpaper too (and back to the scheme it had). The panel uses Noctalia's colors, so
   it follows along. `wallpicker theme` shows the palette; `wallpicker noctalia-colors on|off`.
 - **Color** (Local, next to the sort): show the wallpapers with a color (red, orange, yellow, green,
-  teal, blue, purple, pink) or tone (Dark, Light, Muted: mostly white, grey or black), the most of
-  it first. Read from the thumbnails once, then cached. `wallpicker colors [COLOR]`.
+  teal, blue, purple, pink) or tone (Dark, Light, Warm: golden, brown, firelight; Muted: mostly
+  white, grey or black), the most of it first. Each pixel is named by the nearest of a set of
+  reference colors, so skin and wood aren't "red", gold is yellow and light pink is pink. Read
+  from the thumbnails once, then cached. `wallpicker colors [COLOR]`.
 - **Backup** (Settings → Backup): your favorites, tags and fits are copied before the first change
   of each day (the last 14 kept; restore any of them), in a folder you can choose (a synced one
   makes them off-machine backups). **Export…** and **Import…** use the system's file dialog; an

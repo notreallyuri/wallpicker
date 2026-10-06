@@ -199,7 +199,7 @@ pub fn show_in_folder(args: &[String]) -> i32 {
 }
 
 /// `wallpicker colors [COLOR] [--json]`: the library's colors, or the images
-/// that are COLOR (a hue, dark, light or muted), strongest first.
+/// that are COLOR (a hue, dark, light, warm or muted), strongest first.
 pub fn colors(args: &[String]) -> i32 {
     use wallpicker_core::colors::{self, HUES, TONES};
     let store = Store::new(Dirs::from_env());
@@ -220,7 +220,7 @@ pub fn colors(args: &[String]) -> i32 {
         None => {
             for (path, p) in &profiles {
                 let mut tops: Vec<(f32, &str)> =
-                    HUES.iter().enumerate().map(|(i, (k, _))| (p.hues[i], *k)).filter(|(s, _)| *s >= colors::HUE_SHARE).collect();
+                    HUES.iter().enumerate().map(|(i, (k, _))| (p.hues[i], *k)).filter(|(_, k)| colors::matches(p, k)).collect();
                 tops.sort_by(|a, b| b.0.total_cmp(&a.0));
                 let tones: Vec<&str> = TONES.iter().map(|(k, _)| *k).filter(|k| colors::matches(p, k)).collect();
                 let hues: Vec<String> = tops.iter().map(|(s, k)| format!("{k} {:.0}%", s * 100.0)).collect();

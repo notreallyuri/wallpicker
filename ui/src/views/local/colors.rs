@@ -1,5 +1,5 @@
 //! Local's color filter: a button that opens a panel of swatches (the eight
-//! hues, then Dark, Light and Muted). Picking one shows the wallpapers that
+//! hues, then Dark, Light, Warm and Muted). Picking one shows the wallpapers that
 //! have that color, the most of it first; picking it again, or "Any color",
 //! clears it.
 //!
@@ -27,6 +27,7 @@ fn swatch(key: &str) -> &'static str {
         "pink" => "#ec4899",
         "dark" => "#1c1917",
         "light" => "#f5f5f4",
+        "warm" => "linear-gradient(135deg, #b45309, #f59e0b 55%, #fcd34d)",
         // Muted: a soft grey with a hint of color.
         _ => "linear-gradient(135deg, #a8a29e, #d6d3d1 60%, #fda4af)",
     }
@@ -132,7 +133,7 @@ pub(super) fn ColorPicker(color: RwSignal<String>, #[prop(into)] loading: Signal
                             })
                             .collect_view()}
                     </div>
-                    <div class="mt-2 grid grid-cols-3 gap-2 border-t-2 border-border/60 pt-2">
+                    <div class="mt-2 grid grid-cols-2 gap-2 border-t-2 border-border/60 pt-2">
                         {TONES
                             .iter()
                             .map(|&(key, name)| {
