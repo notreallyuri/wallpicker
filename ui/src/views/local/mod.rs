@@ -383,7 +383,7 @@ pub(crate) fn LocalView() -> impl IntoView {
 
     view! {
         // Floats over the grid's scroll area (see heads.rs).
-        <div data-tab-head class="absolute top-0 left-0 right-[var(--sb-w,0px)] z-20 border-b border-border/60 bg-background/70 px-5 pt-3 pb-2.5 backdrop-blur-xl flex flex-col gap-2">
+        <div data-tab-head class="absolute top-3 left-3 right-[calc(var(--sb-w,0px)+0.75rem)] z-20 rounded-2xl border border-border/60 bg-background/70 shadow-lg shadow-black/15 px-4 pt-2.5 pb-2 backdrop-blur-xl flex flex-col gap-2">
         // Wraps only in a narrow window, rather than pushing buttons off the edge.
         <div class="flex flex-wrap items-center gap-x-2 gap-y-2">
             // Takes what the row has left (160 to 320 px): everything else in
@@ -530,7 +530,7 @@ pub(crate) fn LocalView() -> impl IntoView {
         </Show>
         </div>
 
-        <div data-scroll-root="local" class="relative min-h-0 flex-1 scroll-pt-[var(--head-h,0px)] overflow-y-auto px-5 pb-5 pt-[calc(var(--head-h,0px)+1rem)]">
+        <div data-scroll-root="local" class="relative min-h-0 flex-1 scroll-pt-[calc(var(--head-h,0px)+0.75rem)] overflow-y-auto px-5 pb-5 pt-[calc(var(--head-h,0px)+1.75rem)]">
         <Show when=move || !loading.get() && images.with(|v| v.is_empty())>
             <Empty>
                 <EmptyHeader>
