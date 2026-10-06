@@ -17,6 +17,7 @@ mod config;
 mod library_edits;
 pub(crate) mod online;
 mod random;
+mod workspaces;
 mod backup;
 pub(crate) mod slideshow;
 
@@ -25,6 +26,7 @@ pub use library_edits::{adjust, colors, duplicates, favorite, show_in_folder, ta
 pub use online::{apply_online, collection, collections, details, preview, search, tags};
 pub use backup::backup;
 pub use random::random;
+pub use workspaces::workspaces;
 pub use slideshow::slideshow;
 
 #[derive(Serialize)]
@@ -224,6 +226,7 @@ pub fn apply(args: &[String]) -> i32 {
         &path,
     ) {
         Ok(report) => {
+            wallpicker_core::workspaces::remember_shown(&SystemRunner, &store, &report.applied);
             for m in &report.applied {
                 println!("applied to {m}");
             }
@@ -264,6 +267,7 @@ pub fn previous(args: &[String]) -> i32 {
     }
     match hyprpaper::apply_previous(&SystemRunner, &store, settings.wallpaper_backend, &monitors) {
         Ok(report) => {
+            wallpicker_core::workspaces::remember_shown(&SystemRunner, &store, &report.applied);
             let state = store.load_state().unwrap_or_default();
             for m in &report.applied {
                 println!("{m}: back to {}", state.current.get(m).map_or(String::new(), |p| p.display().to_string()));

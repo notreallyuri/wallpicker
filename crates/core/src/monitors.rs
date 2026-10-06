@@ -20,6 +20,18 @@ pub struct Monitor {
     pub focused: bool,
     #[serde(default)]
     pub disabled: bool,
+    /// The workspace it shows ("2"), when Hyprland says.
+    #[serde(default, rename = "activeWorkspace", skip_serializing_if = "Option::is_none")]
+    pub active_workspace: Option<WorkspaceRef>,
+}
+
+/// A workspace as Hyprland names it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct WorkspaceRef {
+    #[serde(default)]
+    pub id: i64,
+    #[serde(default)]
+    pub name: String,
 }
 
 /// Parse the JSON printed by `hyprctl monitors -j`.

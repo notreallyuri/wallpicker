@@ -191,6 +191,20 @@ impl Store {
         Ok(())
     }
 
+    /// `monitor` shows `path` because its workspace changed: what it shows
+    /// now, but not something chosen, so it doesn't go into the history
+    /// (Previous stays "the wallpaper I picked before").
+    pub fn show_for_workspace(&self, monitor: &str, path: &Path) -> Result<()> {
+        let mut state = self.load_state()?;
+        if state.current.get(monitor).is_some_and(|p| p != path) {
+            state.adjust.remove(monitor);
+        }
+        state.current.insert(monitor.to_string(), path.to_path_buf());
+        self.save_state(&state)?;
+        crate::transform::prune(&self.dirs.cache, &state);
+        Ok(())
+    }
+
     /// Adjust what `monitor` shows (None-like: back to as it is). Applying it
     /// is the caller's (`hyprpaper::reapply`).
     pub fn set_adjust(&self, monitor: &str, mut adjust: crate::settings::Adjust) -> Result<State> {

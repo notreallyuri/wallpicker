@@ -30,5 +30,7 @@ pub mod store;
 pub mod thumbs;
 #[cfg(feature = "native")]
 pub mod transform;
+#[cfg(feature = "native")]
+pub mod workspaces;
 
 pub use error::{Error, Result};

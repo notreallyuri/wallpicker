@@ -677,6 +677,7 @@ pub fn apply_online(args: &[String]) -> i32 {
         &path,
     ) {
         Ok(report) => {
+            wallpicker_core::workspaces::remember_shown(&SystemRunner, &store, &report.applied);
             for m in &report.applied {
                 println!("applied to {m}");
             }

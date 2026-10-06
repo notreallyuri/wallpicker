@@ -106,6 +106,8 @@ async fn save_settings(
         // The snapshot folder is set from Settings → Backup on its own (it
         // moves the snapshots); a form opened before that mustn't undo it.
         settings.snapshot_dir = on_disk.snapshot_dir;
+        // Workspace wallpapers change as you apply (and from their own list).
+        settings.workspaces.wallpapers = on_disk.workspaces.wallpapers;
         store.save_settings(&settings)?;
         let saved = store.load_settings()?;
         // A new backend shows what each monitor had; a fit that changed shows
@@ -169,13 +171,15 @@ async fn apply_wallpaper(
     let store = state.store.clone();
     blocking(move || {
         let settings = store.load_settings()?;
-        hyprpaper::apply_and_remember_with(
+        let report = hyprpaper::apply_and_remember_with(
             &SystemRunner,
             &store,
             settings.wallpaper_backend,
             &monitors,
             &PathBuf::from(path),
-        )
+        )?;
+        wallpicker_core::workspaces::remember_shown(&SystemRunner, &store, &report.applied);
+        Ok(report)
     })
     .await
 }
@@ -186,9 +190,26 @@ async fn previous_wallpaper(state: tauri::State<'_, AppState>, monitors: Vec<Str
     let store = state.store.clone();
     blocking(move || {
         let backend = store.load_settings()?.wallpaper_backend;
-        hyprpaper::apply_previous(&SystemRunner, &store, backend, &monitors)
+        let report = hyprpaper::apply_previous(&SystemRunner, &store, backend, &monitors)?;
+        wallpicker_core::workspaces::remember_shown(&SystemRunner, &store, &report.applied);
+        Ok(report)
     })
     .await
+}
+
+/// Hyprland's workspaces and those with a wallpaper, for Settings.
+#[tauri::command]
+async fn workspace_rows(state: tauri::State<'_, AppState>) -> CmdResult<Vec<wallpicker_core::workspaces::WorkspaceRow>> {
+    let store = state.store.clone();
+    blocking(move || wallpicker_core::workspaces::rows(&SystemRunner, &store)).await
+}
+
+/// Set or clear (`path` None) a workspace's wallpaper.
+#[tauri::command]
+async fn set_workspace_wallpaper(state: tauri::State<'_, AppState>, workspace: String, path: Option<String>) -> CmdResult<()> {
+    let store = state.store.clone();
+    let path = path.map(|p| wallpaper_path(&p)).transpose()?;
+    blocking(move || wallpicker_core::workspaces::assign(&store, &workspace, path)).await
 }
 
 /// Move a wallpaper to the trash (recoverable from the file manager), and
@@ -1180,6 +1201,16 @@ pub fn run(start_hidden: bool) {
             // XDG_CACHE_HOME, so it is allowed here instead of in tauri.conf.
             std::fs::create_dir_all(&cache)?;
             app.asset_protocol_scope().allow_directory(&cache, true)?;
+            // A wallpaper per workspace: follows Hyprland while the app runs
+            // (waits while it's off, or while `wallpicker workspaces run` has it).
+            let handle = app.handle().clone();
+            let listener_store = store.clone();
+            std::thread::spawn(move || {
+                use tauri::Emitter;
+                wallpicker_core::workspaces::listen(&SystemRunner, &listener_store, &|| true, &|| {
+                    let _ = handle.emit("state-changed", ());
+                });
+            });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -1212,6 +1243,8 @@ pub fn run(start_hidden: bool) {
             wallpaper_palette,
             take_open_request,
             set_monitor_adjust,
+            workspace_rows,
+            set_workspace_wallpaper,
             framing_image,
             app_usage,
             online_preview,

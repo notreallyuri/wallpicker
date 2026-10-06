@@ -103,6 +103,8 @@ pub struct Settings {
     pub monitor_fits: BTreeMap<String, FitMode>,
     pub konachan_site: KonachanSite,
     pub slideshow: Slideshow,
+    /// A wallpaper per Hyprland workspace.
+    pub workspaces: Workspaces,
     /// Closing the window hides it to the tray (the app keeps running).
     pub close_to_tray: bool,
     /// The app's colors come from the current wallpaper (through Noctalia's
@@ -142,6 +144,7 @@ impl Default for Settings {
             monitor_fits: BTreeMap::new(),
             konachan_site: KonachanSite::default(),
             slideshow: Slideshow::default(),
+            workspaces: Workspaces::default(),
             close_to_tray: true,
             theme_from_wallpaper: true,
             theme_monitor: None,
@@ -422,6 +425,24 @@ pub struct Slideshow {
     pub color: Option<String>,
     /// Another set for the night (its own picks, in a time window).
     pub night: NightSet,
+}
+
+/// A wallpaper per workspace: when a monitor switches to a workspace that
+/// has one, it goes on that monitor. `remember`: a wallpaper put on a monitor
+/// by hand becomes the wallpaper of the workspace it's showing.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct Workspaces {
+    pub enabled: bool,
+    pub remember: bool,
+    /// Workspace name ("3", "web") -> wallpaper.
+    pub wallpapers: BTreeMap<String, PathBuf>,
+}
+
+impl Default for Workspaces {
+    fn default() -> Self {
+        Workspaces { enabled: false, remember: true, wallpapers: BTreeMap::new() }
+    }
 }
 
 /// The slideshow's night: between `from` and `to` (local time, "HH:MM"; the
