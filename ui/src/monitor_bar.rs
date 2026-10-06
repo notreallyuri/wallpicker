@@ -1,4 +1,6 @@
-//! The "Apply to" bar: which monitors a click applies to.
+//! "Apply to", in the top bar: which monitors a click applies to, each a
+//! pill with a little screen showing its wallpaper (the file's name in its
+//! tooltip), and Previous.
 
 use leptos::prelude::*;
 use leptos::task::spawn_local;
@@ -29,15 +31,15 @@ pub(crate) fn MonitorBar() -> impl IntoView {
     });
 
     view! {
-        <div class="flex flex-wrap items-center gap-3 border-b border-border/60 bg-background/35 px-5 py-2.5 backdrop-blur-xl">
-            <span class="text-xs font-extrabold tracking-wider text-muted-foreground uppercase">"Apply to"</span>
+        <div class="ml-auto flex flex-wrap items-center gap-2">
+            <span class="text-[11px] font-extrabold tracking-wider text-muted-foreground uppercase">"Apply to"</span>
             <Show
                 when=move || ctx.monitors.with(|m| !m.is_empty())
                 fallback=|| {
                     view! { <span class="text-sm text-muted-foreground">"No monitors found."</span> }
                 }
             >
-                <ToggleGroup kind=ToggleGroupType::Single value=ctx.selection class="gap-2">
+                <ToggleGroup kind=ToggleGroupType::Single value=ctx.selection class="gap-1.5">
                     <For
                         each=move || ctx.monitors.get()
                         key=|m| m.name.clone()
@@ -60,45 +62,39 @@ pub(crate) fn MonitorBar() -> impl IntoView {
                                     })
                                     .unwrap_or_else(|| "nothing set".into())
                             });
+                            let size = format!("{}×{}", m.width, m.height);
+                            let label = m.name.clone();
+                            // The name, its size, and the file it's showing.
+                            let tip = move || format!("{label} · {size}\nShowing {}", current.get());
                             view! {
-                                <ToggleGroupItem value=m.name.clone() class=CARD>
+                                <ToggleGroupItem value=m.name.clone() class=CARD attr:title=tip>
                                     <MiniScreen path=shown width=m.width height=m.height />
-                                    <span class="flex min-w-0 flex-col items-start gap-0.5 leading-tight">
-                                        <span class="flex items-center gap-1.5 font-extrabold">
-                                            {m.name.clone()}
-                                            <Picked />
-                                        </span>
-                                        <span class="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground">
-                                            <span>{format!("{}×{}", m.width, m.height)}</span>
-                                            <span class="opacity-50">"·"</span>
-                                            <span class="max-w-44 truncate" title=current>{current}</span>
-                                        </span>
-                                    </span>
+                                    <span class="font-extrabold">{m.name.clone()}</span>
+                                    <Picked />
                                 </ToggleGroupItem>
                             }
                         }
                     />
                     <Show when=move || ctx.monitors.with(|m| m.len() > 1)>
-                        <ToggleGroupItem value=ALL_MONITORS class=CARD>
+                        <ToggleGroupItem value=ALL_MONITORS class=CARD attr:title="Every monitor">
                             // Two little screens side by side, on one stand.
                             <span class="flex shrink-0 flex-col items-center" aria-hidden="true">
-                                <span class="flex h-9 items-end gap-1">
-                                    <span class="block h-7 w-9 rounded-[5px] bg-gradient-to-br from-primary/60 to-primary/25 ring-2 ring-foreground/20" />
-                                    <span class="block h-7 w-9 rounded-[5px] bg-gradient-to-br from-primary/40 to-primary/15 ring-2 ring-foreground/20" />
+                                <span class="flex h-5 items-end gap-0.5">
+                                    <span class="block h-4 w-6 rounded-[4px] bg-gradient-to-br from-primary/60 to-primary/25 ring-[1.5px] ring-foreground/25" />
+                                    <span class="block h-4 w-6 rounded-[4px] bg-gradient-to-br from-primary/40 to-primary/15 ring-[1.5px] ring-foreground/25" />
                                 </span>
-                                <span class="block h-1 w-2 bg-foreground/20" />
-                                <span class="block h-0.5 w-10 rounded-full bg-foreground/25" />
+                                <span class="block h-0.5 w-1.5 bg-foreground/25" />
+                                <span class="block h-0.5 w-7 rounded-full bg-foreground/25" />
                             </span>
-                            <span class="flex flex-col items-start gap-0.5 leading-tight">
-                                <span class="flex items-center gap-1.5 font-extrabold">"All" <Picked /></span>
-                                <span class="text-[11px] font-semibold text-muted-foreground">"every monitor"</span>
-                            </span>
+                            <span class="font-extrabold">"All"</span>
+                            <Picked />
                         </ToggleGroupItem>
                     </Show>
                 </ToggleGroup>
                 <Button
-                    class="ml-auto"
-                    variant=ButtonVariant::Outline
+                    variant=ButtonVariant::Ghost
+                    size=ButtonSize::Icon
+                    attr:aria-label="Previous wallpaper"
                     attr:title="Back to the wallpaper before, on the selected monitors"
                     on_click=move |_| {
                         let targets = ctx.targets.get_untracked();
@@ -117,15 +113,15 @@ pub(crate) fn MonitorBar() -> impl IntoView {
                         <path d="M3 3v5h5" />
                         <path d="M12 7v5l4 2" />
                     </Lucide>
-                    "Previous"
                 </Button>
             </Show>
         </div>
     }
 }
 
-/// A monitor's (or All's) card in the bar: soft, raised when picked.
-const CARD: &str = "group/mon h-auto gap-3 rounded-2xl border-2 border-transparent bg-card/60 py-1.5 pr-4 pl-2 text-left shadow-sm ring-1 ring-foreground/5 hover:bg-card data-[state=on]:border-primary data-[state=on]:bg-primary/15 data-[state=on]:shadow-[0_3px_0_0_color-mix(in_oklab,var(--primary)_45%,transparent)]";
+/// A monitor's (or All's) pill in the bar: soft, raised when picked; as tall
+/// as the buttons beside it.
+const CARD: &str = "group/mon h-9 gap-2 rounded-xl border-2 border-transparent bg-card/60 py-0 pr-3 pl-1.5 shadow-sm ring-1 ring-foreground/5 hover:bg-card data-[state=on]:border-primary data-[state=on]:bg-primary/15 data-[state=on]:shadow-[0_3px_0_0_color-mix(in_oklab,var(--primary)_45%,transparent)]";
 
 /// A check in a bubble, shown on the picked card.
 #[component]
@@ -159,11 +155,11 @@ fn MiniScreen(path: Signal<Option<String>>, width: u32, height: u32) -> impl Int
     let ratio = if width > 0 && height > 0 { format!("aspect-ratio: {width} / {height}") } else { "aspect-ratio: 16 / 9".into() };
     view! {
         <span class="flex shrink-0 flex-col items-center" aria-hidden="true">
-            <span class="block h-9 overflow-hidden rounded-lg bg-muted ring-2 ring-foreground/20" style=ratio>
+            <span class="block h-5 overflow-hidden rounded-[4px] bg-muted ring-[1.5px] ring-foreground/25" style=ratio>
                 {move || src.get().map(|s| view! { <img src=s alt="" class="size-full object-cover" /> })}
             </span>
-            <span class="block h-1 w-2 bg-foreground/20" />
-            <span class="block h-0.5 w-6 rounded-full bg-foreground/25" />
+            <span class="block h-0.5 w-1.5 bg-foreground/25" />
+            <span class="block h-0.5 w-4 rounded-full bg-foreground/25" />
         </span>
     }
 }

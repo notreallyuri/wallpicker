@@ -330,10 +330,11 @@ pub(crate) fn LocalView() -> impl IntoView {
 
     view! {
         // Floats over the grid's scroll area (see heads.rs).
-        <div data-tab-head class="absolute top-0 left-0 right-[var(--sb-w,0px)] z-20 border-b border-border/60 bg-background/70 px-5 pt-5 pb-3 backdrop-blur-xl flex flex-col gap-3">
-        <div class="flex items-center gap-3">
+        <div data-tab-head class="absolute top-0 left-0 right-[var(--sb-w,0px)] z-20 border-b border-border/60 bg-background/70 px-5 pt-3 pb-2.5 backdrop-blur-xl flex flex-col gap-2">
+        // Wraps only in a narrow window, rather than pushing buttons off the edge.
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
             // A fixed width: the row's other parts (the count) change, the box doesn't.
-            <div class="relative w-80 shrink-0">
+            <div class="relative w-64 shrink-0 lg:w-80">
                 <SearchIcon class="pointer-events-none absolute top-2 left-2.5 text-muted-foreground" />
                 <Input
                     model=filter
@@ -414,21 +415,34 @@ pub(crate) fn LocalView() -> impl IntoView {
                     }
                 }}
             </span>
+            // Icons, with their names in tooltips: the row stays one line.
             <Button
                 class="ml-auto"
                 variant=ButtonVariant::Ghost
-                attr:title="Find copies and the same picture at other sizes"
+                size=ButtonSize::Icon
+                attr:aria-label="Duplicates"
+                attr:title="Duplicates: copies and the same picture at other sizes"
                 on_click=move |_| duplicates_open.set(true)
             >
-                "Duplicates"
+                <Lucide class="size-4">
+                    <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                    <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+                </Lucide>
             </Button>
             <Button
                 variant=ButtonVariant::Outline
-                size=ButtonSize::Lg
+                size=ButtonSize::Icon
+                attr:aria-label="Rescan"
+                attr:title="Rescan the wallpaper folders"
                 disabled=loading
                 on_click=move |_| ctx.library_rev.update(|r| *r += 1)
             >
-                "Rescan"
+                <Lucide class="size-4">
+                    <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                    <path d="M21 3v5h-5" />
+                    <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+                    <path d="M8 16H3v5" />
+                </Lucide>
             </Button>
         </div>
 
@@ -439,7 +453,7 @@ pub(crate) fn LocalView() -> impl IntoView {
         </Show>
         </div>
 
-        <div data-scroll-root="local" class="relative min-h-0 flex-1 scroll-pt-[var(--head-h,0px)] overflow-y-auto px-5 pb-5 pt-[calc(var(--head-h,0px)+1.25rem)]">
+        <div data-scroll-root="local" class="relative min-h-0 flex-1 scroll-pt-[var(--head-h,0px)] overflow-y-auto px-5 pb-5 pt-[calc(var(--head-h,0px)+1rem)]">
         <Show when=move || !loading.get() && images.with(|v| v.is_empty())>
             <Empty>
                 <EmptyHeader>

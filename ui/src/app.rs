@@ -76,7 +76,8 @@ fn Shell() -> impl IntoView {
     view! {
         <crate::palette::Backdrop />
         <Tabs default_value=TAB_LOCAL class="relative z-10 flex h-screen flex-col gap-0">
-            <header class="flex items-center gap-4 border-b border-border/60 bg-background/55 px-5 py-3 backdrop-blur-xl">
+            // One bar: the tabs, then which monitors a click applies to.
+            <header class="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border/60 bg-background/55 px-5 py-2 backdrop-blur-xl">
                 <span class="bg-gradient-to-r from-primary to-foreground/80 bg-clip-text text-xl font-black tracking-tight text-transparent">
                     "wallpicker"
                 </span>
@@ -85,8 +86,8 @@ fn Shell() -> impl IntoView {
                     <TabsTrigger value=TAB_ONLINE>"Online"</TabsTrigger>
                     <TabsTrigger value=TAB_COLLECTIONS>"Collections"</TabsTrigger>
                 </TabsList>
+                <MonitorBar />
                 <Button
-                    class="ml-auto"
                     variant=ButtonVariant::Ghost
                     size=ButtonSize::Icon
                     attr:aria-label="Settings"
@@ -96,7 +97,6 @@ fn Shell() -> impl IntoView {
                     <CogIcon />
                 </Button>
             </header>
-            <MonitorBar />
             // Every panel stays mounted (inactive ones are only hidden), so
             // switching tabs keeps search results and scroll position.
             // Each tab is a header floating over its own scroll area
