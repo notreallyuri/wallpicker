@@ -32,6 +32,15 @@ pub(crate) fn Pager(
         }
     };
     let jump = RwSignal::new(String::new());
+    // Digits only (a paste or a drop can bring anything else). Not
+    // type=number: its spinner arrows don't fit the look.
+    Effect::new(move |_| {
+        let typed = jump.get();
+        let digits: String = typed.chars().filter(char::is_ascii_digit).take(6).collect();
+        if digits != typed {
+            jump.set(digits);
+        }
+    });
     let jump_to = move || {
         let Ok(n) = jump.get_untracked().trim().parse::<u64>() else { return };
         let page = n.clamp(1, last());
@@ -99,9 +108,19 @@ pub(crate) fn Pager(
                     attr:placeholder="page"
                     attr:aria-label=move || format!("Page, 1 to {}", last())
                     on:keydown=move |e: leptos::ev::KeyboardEvent| {
-                        if e.key() == "Enter" {
+                        let key = e.key();
+                        if key == "Enter" {
                             e.prevent_default();
                             jump_to();
+                        } else if key.chars().count() == 1
+                            && !key.chars().all(|c| c.is_ascii_digit())
+                            && !e.ctrl_key()
+                            && !e.meta_key()
+                            && !e.alt_key()
+                        {
+                            // A letter or a sign never shows up, not even
+                            // for a moment (shortcuts like Ctrl+V still work).
+                            e.prevent_default();
                         }
                     }
                 />
