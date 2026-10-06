@@ -492,13 +492,32 @@ struct TagOut {
 }
 
 /// A local copy of the image `w`'s details show (cached), if it can be had.
-async fn fetch_preview(state: &AppState, w: &OnlineWallpaper) -> Option<PathBuf> {
+/// Previews (the app's details, the panel's) are fitted inside this many
+/// pixels: an 8K original decoded where it's shown is ~130 MB, a fitted one
+/// a few MB, and still sharp in a details view. Settings → Performance can
+/// ask for originals.
+const FITTED_PREVIEW: u32 = 1600;
+
+/// The sharpest image for `w`'s details, downloaded (cached), then fitted to
+/// [`FITTED_PREVIEW`] unless originals are wanted or it's already small.
+pub(crate) async fn fetch_preview(state: &AppState, w: &OnlineWallpaper) -> Option<PathBuf> {
     let dir = state.store.dirs().cache.join("online").join("preview");
     std::fs::create_dir_all(&dir).ok()?;
     prune_cache(&dir);
     let url = w.details_image().to_string();
     let dest = cache_path(&dir, w, &url)?;
-    cache_image(state.http.clone(), url, dest, MAX_PREVIEW_BYTES).await
+    let original = cache_image(state.http.clone(), url, dest, MAX_PREVIEW_BYTES).await?;
+    if state.store.load_settings().is_ok_and(|s| s.full_previews) {
+        return Some(original);
+    }
+    let fit_dir = state.store.dirs().cache.join("online").join("preview-fit");
+    prune_cache(&fit_dir.join("thumbs"));
+    tauri::async_runtime::spawn_blocking(move || {
+        wallpicker_core::thumbs::fit_within(&fit_dir, &original, FITTED_PREVIEW).ok()
+    })
+    .await
+    .ok()
+    .flatten()
 }
 
 #[derive(Serialize)]

@@ -212,9 +212,19 @@ fn DetailsBody(w: OnlineWallpaper, info: RwSignal<Loaded>) -> impl IntoView {
     }
     let title = format!("{} · {}", w.resolution(), w.category);
     let preview = w.preview.clone();
-    // The sharp image (Wallhaven's original) fades in over the quick one
-    // once it has loaded; Moebooru's preview already is the sharp one.
-    let sharp = Some(w.details_image().to_string()).filter(|s| *s != preview && !s.is_empty());
+    // The sharp image fades in over the quick one once it has loaded. The
+    // app downloads it and fits it to the screen first: an 8K original
+    // decoded here would cost over 100 MB. Moebooru's preview already is
+    // the sharp one.
+    let sharp = RwSignal::new(None::<String>);
+    if w.details_image() != preview && !w.details_image().is_empty() {
+        let w = w.clone();
+        spawn_local(async move {
+            if let Ok(Some(path)) = api::online_preview(&w).await {
+                sharp.try_set(Some(api::asset_url(&path)));
+            }
+        });
+    }
     let sharp_loaded = RwSignal::new(false);
 
     view! {
@@ -226,7 +236,8 @@ fn DetailsBody(w: OnlineWallpaper, info: RwSignal<Loaded>) -> impl IntoView {
         </DialogHeader>
         <div class="relative aspect-[16/10] max-h-[45vh] w-full overflow-hidden rounded-lg bg-muted">
             <img src=preview alt="" class="absolute inset-0 size-full object-cover" />
-            {sharp
+            {move || sharp
+                .get()
                 .map(|src| {
                     view! {
                         <img

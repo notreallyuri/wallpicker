@@ -6,6 +6,7 @@ pub mod backup;
 pub mod cli;
 pub mod open;
 pub mod theme;
+mod usage;
 mod tray;
 
 use std::path::{Path, PathBuf};
@@ -653,6 +654,19 @@ fn window_background(app: tauri::AppHandle, r: u8, g: u8, b: u8) {
     tray::set_background(&app, (r, g, b));
 }
 
+/// The image for an online wallpaper's details: downloaded, cached and fitted
+/// to the screen (see `cli::online::fetch_preview`); None when it can't be.
+#[tauri::command]
+async fn online_preview(state: tauri::State<'_, AppState>, wallpaper: OnlineWallpaper) -> CmdResult<Option<PathBuf>> {
+    Ok(cli::online::fetch_preview(&state, &wallpaper).await)
+}
+
+/// Memory and CPU right now (Settings → Performance).
+#[tauri::command]
+async fn app_usage() -> CmdResult<usage::Usage> {
+    tauri::async_runtime::spawn_blocking(usage::usage).await.map_err(err)
+}
+
 /// Where `wallpicker --open` asked the window to go, once.
 #[tauri::command]
 fn take_open_request() -> Option<open::Place> {
@@ -1188,6 +1202,8 @@ pub fn run(start_hidden: bool) {
             previous_wallpaper,
             wallpaper_palette,
             take_open_request,
+            app_usage,
+            online_preview,
             window_background,
             backup_export_pick,
             backup_import_pick,

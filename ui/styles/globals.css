@@ -810,3 +810,23 @@
 body:has([data-slot="dialog-portal"]) [data-scroll-root] {
   overflow-y: hidden;
 }
+
+/* Settings → Performance (attributes set by app.rs and early-theme.js).
+   No frosted glass: no backdrop blur anywhere, and the bars that relied on it
+   become solid. No animations: transitions and animations end at once. */
+html[data-glass="off"] *,
+html[data-glass="off"] *::before,
+html[data-glass="off"] *::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+html[data-glass="off"] header,
+html[data-glass="off"] [data-tab-head] {
+  background-color: var(--background) !important;
+}
+html[data-motion="off"] *,
+html[data-motion="off"] *::before,
+html[data-motion="off"] *::after {
+  transition-duration: 0s !important;
+  animation-duration: 0s !important;
+}

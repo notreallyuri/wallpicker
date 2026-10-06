@@ -15,7 +15,7 @@ use wallpicker_core::thumbs;
 
 mod config;
 mod library_edits;
-mod online;
+pub(crate) mod online;
 mod random;
 mod backup;
 pub(crate) mod slideshow;

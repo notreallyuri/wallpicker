@@ -13,6 +13,8 @@
     if (dark) html.classList.add("dark");
     var color = store.getItem("ui-color-theme");
     if (color && /^[a-z0-9-]+$/.test(color)) html.setAttribute("data-theme", color);
+    if (store.getItem("wallpicker.ui.glass") === "0") html.setAttribute("data-glass", "off");
+    if (store.getItem("wallpicker.ui.motion") === "0") html.setAttribute("data-motion", "off");
     var css = store.getItem("wallpicker.ui.palette_css");
     if (css) {
       var style = document.createElement("style");

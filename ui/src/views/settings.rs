@@ -21,6 +21,7 @@ const SECTION_APPEARANCE: &str = "appearance";
 const SECTION_DOWNLOADS: &str = "downloads";
 const SECTION_SLIDESHOW: &str = "slideshow";
 const SECTION_BACKUP: &str = "backup";
+const SECTION_PERFORMANCE: &str = "performance";
 const SECTION_WALLHAVEN: &str = "wallhaven";
 const SECTION_KONACHAN: &str = "konachan";
 const SECTION_YANDERE: &str = "yandere";
@@ -58,6 +59,12 @@ const SECTIONS: &[Section] = &[
         label: "Slideshow",
         group: "App",
         blurb: "A new wallpaper every few minutes, picked at random.",
+    },
+    Section {
+        slug: SECTION_PERFORMANCE,
+        label: "Performance",
+        group: "App",
+        blurb: "What wallpicker uses right now, and the effects that cost the most.",
     },
     Section {
         slug: SECTION_BACKUP,
@@ -130,6 +137,7 @@ fn SettingsForm(on_saved: Callback<()>) -> impl IntoView {
     let recursive = RwSignal::new(true);
     let close_to_tray = RwSignal::new(true);
     let theme_from_wallpaper = RwSignal::new(true);
+    let full_previews = RwSignal::new(false);
     // "" is the first monitor.
     let theme_monitor = RwSignal::new(String::new());
     let api_key = RwSignal::new(String::new());
@@ -180,6 +188,7 @@ fn SettingsForm(on_saved: Callback<()>) -> impl IntoView {
             recursive.set(s.recursive);
             close_to_tray.set(s.close_to_tray);
             theme_from_wallpaper.set(s.theme_from_wallpaper);
+            full_previews.set(s.full_previews);
             theme_monitor.set(s.theme_monitor.clone().unwrap_or_default());
             api_key.set(s.wallhaven_api_key.clone().unwrap_or_default());
             username.set(s.wallhaven_username.clone().unwrap_or_default());
@@ -250,6 +259,7 @@ fn SettingsForm(on_saved: Callback<()>) -> impl IntoView {
         s.recursive = recursive.get_untracked();
         s.close_to_tray = close_to_tray.get_untracked();
         s.theme_from_wallpaper = theme_from_wallpaper.get_untracked();
+        s.full_previews = full_previews.get_untracked();
         s.theme_monitor = Some(theme_monitor.get_untracked()).filter(|m| !m.is_empty());
         let key = api_key.get_untracked().trim().to_string();
         s.wallhaven_api_key = (!key.is_empty()).then_some(key);
@@ -527,6 +537,7 @@ fn SettingsForm(on_saved: Callback<()>) -> impl IntoView {
                             .into_any(),
                             SECTION_SLIDESHOW => view! { <SlideshowPane form=show /> }.into_any(),
                             SECTION_BACKUP => view! { <BackupPane /> }.into_any(),
+                            SECTION_PERFORMANCE => view! { <PerformancePane full_previews=full_previews /> }.into_any(),
                             SECTION_WALLHAVEN => view! {
                                 <Field>
                                     <FieldLabel>"API key"</FieldLabel>
@@ -1339,5 +1350,98 @@ fn PickFields(set: PickForm, tags: Memo<Vec<String>>) -> impl IntoView {
             <FieldLabel>"Only in folder"</FieldLabel>
             <Input model=set.folder class="font-mono text-xs" attr:placeholder="Any folder" attr:spellcheck="false" />
         </Field>
+    }
+}
+
+/// Settings → Performance: a live reading of what wallpicker uses, and the
+/// switches for what costs the most. The effects apply at once (per machine);
+/// the preview size is a setting (Save).
+#[component]
+fn PerformancePane(full_previews: RwSignal<bool>) -> impl IntoView {
+    let ctx = expect_context::<Ctx>();
+    let usage = RwSignal::new(None::<api::Usage>);
+    // Every two seconds while this section is shown.
+    let alive = RwSignal::new(true);
+    on_cleanup(move || alive.set(false));
+    let poll = move || {
+        spawn_local(async move {
+            if let Ok(u) = api::app_usage().await {
+                usage.try_set(Some(u));
+            }
+        });
+    };
+    poll();
+    let _ = set_interval_with_handle(
+        move || {
+            if alive.get_untracked() {
+                poll();
+            }
+        },
+        std::time::Duration::from_secs(2),
+    )
+    .map(|h| on_cleanup(move || h.clear()));
+    let part = |label: &'static str, mb: Box<dyn Fn(&api::Usage) -> u32 + Send + Sync>| {
+        view! {
+            <div class="flex flex-col rounded-xl bg-muted/60 px-3 py-2">
+                <span class="text-xs text-muted-foreground">{label}</span>
+                <span class="font-extrabold tabular-nums">
+                    {move || usage.with(|u| u.as_ref().map_or("…".to_string(), |u| format!("{} MB", mb(u))))}
+                </span>
+            </div>
+        }
+    };
+    view! {
+        <div class="flex flex-col gap-2 rounded-2xl border-2 border-border/60 p-4">
+            <div class="flex items-baseline justify-between">
+                <span class="text-sm font-bold">"Right now"</span>
+                <span class="text-2xl font-black tabular-nums">
+                    {move || usage.with(|u| u.as_ref().map_or("…".to_string(), |u| format!("{} MB", u.total_mb)))}
+                </span>
+            </div>
+            <div class="grid grid-cols-4 gap-2">
+                {part("App", Box::new(|u| u.app_mb))}
+                {part("Interface", Box::new(|u| u.interface_mb))}
+                {part("Helpers", Box::new(|u| u.helpers_mb))}
+                <div class="flex flex-col rounded-xl bg-muted/60 px-3 py-2">
+                    <span class="text-xs text-muted-foreground">"CPU"</span>
+                    <span class="font-extrabold tabular-nums">
+                        {move || usage.with(|u| u.as_ref().and_then(|u| u.cpu).map_or("…".to_string(), |c| format!("{c:.0}%")))}
+                    </span>
+                </div>
+            </div>
+            <p class="text-xs text-muted-foreground">
+                "Closing the window to the tray frees the interface; the tray alone is a fraction of this."
+            </p>
+        </div>
+        <Field orientation=Orientation::Horizontal>
+            <Switch checked=ctx.glass />
+            <FieldLabel>"Frosted glass"</FieldLabel>
+        </Field>
+        <p class="-mt-2 text-sm text-muted-foreground">
+            "The blur behind the bars. It's redrawn whenever what's under it moves, which is most of "
+            "the CPU while scrolling. Off: solid bars. Applies right away."
+        </p>
+        <Field orientation=Orientation::Horizontal>
+            <Switch checked=ctx.backdrop />
+            <FieldLabel>"Wallpaper behind the app"</FieldLabel>
+        </Field>
+        <p class="-mt-2 text-sm text-muted-foreground">
+            "A big blurred picture under everything (also in Appearance). Applies right away."
+        </p>
+        <Field orientation=Orientation::Horizontal>
+            <Switch checked=ctx.motion />
+            <FieldLabel>"Animations"</FieldLabel>
+        </Field>
+        <p class="-mt-2 text-sm text-muted-foreground">
+            "Hops, slides and fades. Off: things change at once. Applies right away."
+        </p>
+        <Field orientation=Orientation::Horizontal>
+            <Switch checked=full_previews />
+            <FieldLabel>"Full-size previews in Online details"</FieldLabel>
+        </Field>
+        <p class="-mt-2 text-sm text-muted-foreground">
+            "Off: the preview is fitted to 1600 px, plenty for the details view. On: the original, "
+            "which for an 8K wallpaper is over 100 MB while it's shown. Save to apply."
+        </p>
     }
 }

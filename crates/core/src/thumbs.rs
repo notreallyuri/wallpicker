@@ -60,6 +60,16 @@ pub fn ensure_thumb(cache_dir: &Path, src: &Path, width: u32) -> Result<PathBuf>
     Ok(out)
 }
 
+/// `src` fitted inside `max`×`max` (a cached JPEG, as [`ensure_thumb`]), or
+/// `src` itself when it already fits: never made bigger.
+pub fn fit_within(cache_dir: &Path, src: &Path, max: u32) -> Result<PathBuf> {
+    let (w, h) = image::image_dimensions(src).map_err(|e| Error::Image(format!("{}: {e}", src.display())))?;
+    if w <= max && h <= max {
+        return Ok(src.to_path_buf());
+    }
+    ensure_thumb(cache_dir, src, max)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -84,6 +94,19 @@ mod tests {
         let (w, h) = image::image_dimensions(&thumb).unwrap();
         assert_eq!(w, 320);
         assert_eq!(h, 180);
+    }
+
+    #[test]
+    fn fit_within_shrinks_big_and_keeps_small() {
+        let tmp = tempfile::tempdir().unwrap();
+        let cache = tmp.path().join("cache");
+        let big = tmp.path().join("big.png");
+        write_png(&big, 2400, 1350);
+        let fitted = fit_within(&cache, &big, 1600).unwrap();
+        assert_eq!(image::image_dimensions(&fitted).unwrap(), (1600, 900));
+        let small = tmp.path().join("small.png");
+        write_png(&small, 800, 600);
+        assert_eq!(fit_within(&cache, &small, 1600).unwrap(), small);
     }
 
     #[test]

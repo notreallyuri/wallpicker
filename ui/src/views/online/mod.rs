@@ -234,11 +234,18 @@ pub(crate) fn OnlineView() -> impl IntoView {
     // search runs must not let the old answer land afterwards.
     let latest = StoredValue::new(0u64);
     let searched_with = StoredValue::new(None::<Provider>);
+    // The provider of the results shown; another one's results are cleared
+    // while the new ones load (placeholders), not left looking current.
+    let shown_provider = RwSignal::new(None::<Provider>);
 
     let fetch = move |q: OnlineQuery| {
         let id = latest.get_value() + 1;
         latest.set_value(id);
         searched_with.set_value(Some(q.provider()));
+        if shown_provider.get_untracked() != Some(q.provider()) {
+            results.set(Vec::new());
+            page_info.set(None);
+        }
         loading.set(true);
         spawn_local(async move {
             let result = api::online_search(&q).await;
@@ -256,6 +263,7 @@ pub(crate) fn OnlineView() -> impl IntoView {
                             .collect(),
                     );
                     page_info.set(Some(page));
+                    shown_provider.set(Some(q.provider()));
                     last_query.set_value(Some(q));
                     scroll_to_top("online");
                 }
@@ -502,6 +510,19 @@ pub(crate) fn OnlineView() -> impl IntoView {
             </Empty>
         </Show>
 
+        // Loading with nothing to show yet (a new provider): placeholders.
+        <Show when=move || loading.get() && results.with(Vec::is_empty)>
+            <LoadingTiles label=Signal::derive(move || format!("Loading {}…", provider.get().label())) />
+        </Show>
+        // Loading another page or search of the same provider: what's there
+        // dims until the new results land.
+        <div class=move || {
+            if loading.get() && results.with(|r| !r.is_empty()) {
+                "pointer-events-none opacity-40 transition-opacity duration-300"
+            } else {
+                "transition-opacity duration-300"
+            }
+        }>
         <TileMenu
             on_apply=Callback::new(move |(key, monitors): (String, Vec<String>)| {
                 if let Some(w) = online.wallpaper(&key) {
@@ -516,6 +537,7 @@ pub(crate) fn OnlineView() -> impl IntoView {
                 children=|w: OnlineWallpaper| view! { <RemoteTile w=w /> }
             />
         </TileMenu>
+        </div>
 
         <div class="mt-6 flex flex-col items-center gap-3">
             <Show when=move || pages().is_some_and(|(_, last)| last > 1)>
@@ -545,5 +567,34 @@ pub(crate) fn OnlineView() -> impl IntoView {
         </div>
 
         <DetailsDialog />
+    }
+}
+
+/// Placeholder tiles while a provider's first results load: the grid's
+/// shape, softly pulsing, and what's loading.
+#[component]
+fn LoadingTiles(label: Signal<String>) -> impl IntoView {
+    view! {
+        <div class="flex flex-col gap-4" aria-busy="true">
+            <div class="flex items-center gap-2 text-sm font-bold text-muted-foreground">
+                <Spinner />
+                {move || label.get()}
+            </div>
+            <div class=crate::tile_menu::GRID>
+                {(0..12)
+                    .map(|i| {
+                        view! {
+                            <div class="flex flex-col gap-1.5" style=format!("animation-delay: {}ms", i * 60)>
+                                <Skeleton class="aspect-[16/10] w-full rounded-2xl" />
+                                <div class="flex items-center justify-between gap-2 px-1">
+                                    <Skeleton class="h-3 w-24 rounded-full" />
+                                    <Skeleton class="h-3 w-12 rounded-full" />
+                                </div>
+                            </div>
+                        }
+                    })
+                    .collect_view()}
+            </div>
+        </div>
     }
 }

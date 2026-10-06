@@ -42,6 +42,10 @@ pub(crate) struct Ctx {
     pub(crate) backdrop: RwSignal<bool>,
     /// The monitor drawer under the top bar is open (remembered).
     pub(crate) monitors_open: RwSignal<bool>,
+    /// Frosted glass on the bars (backdrop blur), and animations
+    /// (Settings → Performance; per machine, in localStorage).
+    pub(crate) glass: RwSignal<bool>,
+    pub(crate) motion: RwSignal<bool>,
     /// Where `wallpicker --open` asked to go, until the part that shows it
     /// (the shell for tabs and Settings, Local for Duplicates and tags)
     /// takes it.
@@ -72,6 +76,8 @@ impl Ctx {
             online_search: RwSignal::new(None),
             backdrop: RwSignal::new(crate::prefs::get("ui.backdrop").as_deref() != Some("0")),
             monitors_open: RwSignal::new(crate::prefs::get("ui.monitors_open").as_deref() == Some("1")),
+            glass: RwSignal::new(crate::prefs::get("ui.glass").as_deref() != Some("0")),
+            motion: RwSignal::new(crate::prefs::get("ui.motion").as_deref() != Some("0")),
             open_place: RwSignal::new(None),
             toasts,
         }

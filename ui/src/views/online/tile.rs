@@ -107,7 +107,7 @@ pub(super) fn RemoteTile(w: OnlineWallpaper) -> impl IntoView {
             <div class=format!(
                 "relative aspect-[16/10] w-full overflow-hidden rounded-2xl bg-muted shadow-md shadow-black/10 ring-2 {ring} transition group-hover:shadow-lg group-hover:ring-[3px]",
             )>
-                <img src=w.thumb.clone() alt="" loading="lazy" class="size-full object-cover" />
+                <img src=w.thumb.clone() alt="" loading="lazy" decoding="async" class="size-full object-cover" />
                 // Clicking the picture itself (not a button) opens the details.
                 <div
                     class="absolute inset-0 flex cursor-pointer items-end justify-end gap-2 bg-gradient-to-t from-black/60 to-transparent p-2 opacity-0 transition group-focus-within:opacity-100 group-hover:opacity-100"

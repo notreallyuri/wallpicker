@@ -29,7 +29,7 @@ pub(super) fn FolderCard(sub: Subfolder, cover: String, on_open: Callback<Option
                 {move || {
                     src.get()
                         .map(|s| {
-                            view! { <img src=s alt="" class="size-full object-cover opacity-50 transition group-hover:opacity-70" /> }
+                            view! { <img src=s alt="" loading="lazy" decoding="async" class="size-full object-cover opacity-50 transition group-hover:opacity-70" /> }
                         })
                 }}
                 <div class="absolute inset-0 flex items-center justify-center text-foreground">

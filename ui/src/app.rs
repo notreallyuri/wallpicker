@@ -43,6 +43,22 @@ fn Shell() -> impl IntoView {
     // After the first render, when the tabs' headers exist.
     Effect::new(move |_| crate::heads::install());
     crate::palette::install(ctx);
+    // Performance switches, as attributes on <html> that globals.css reads
+    // (early-theme.js sets them before the first frame too).
+    Effect::new(move |_| {
+        let (glass, motion) = (ctx.glass.get(), ctx.motion.get());
+        crate::prefs::set("ui.glass", if glass { "1" } else { "0" });
+        crate::prefs::set("ui.motion", if motion { "1" } else { "0" });
+        if let Some(html) = document().document_element() {
+            for (name, on) in [("data-glass", glass), ("data-motion", motion)] {
+                if on {
+                    let _ = html.remove_attribute(name);
+                } else {
+                    let _ = html.set_attribute(name, "off");
+                }
+            }
+        }
+    });
     // Back from the tray (or after the slideshow, the tray's Random, a
     // keybind...): what each monitor shows may have changed meanwhile.
     let _ = window_event_listener(leptos::ev::focus, move |_| {

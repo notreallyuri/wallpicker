@@ -111,6 +111,9 @@ pub struct Settings {
     pub theme_monitor: Option<String>,
     /// awww's transition (the awww backend).
     pub transition: Transition,
+    /// Online details show the original image (else one fitted to 1600 px,
+    /// which costs a fraction of the memory: an 8K original decoded is 130 MB).
+    pub full_previews: bool,
     /// Where the library's daily snapshots go (None: wallpicker's data
     /// folder). A synced folder makes them off-machine backups.
     pub snapshot_dir: Option<PathBuf>,
@@ -143,6 +146,7 @@ impl Default for Settings {
             theme_monitor: None,
             transition: Transition::default(),
             snapshot_dir: None,
+            full_previews: false,
             noctalia_previous_scheme: None,
             thumb_width: 360,
         }

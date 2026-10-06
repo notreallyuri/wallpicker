@@ -122,6 +122,31 @@ pub async fn window_background(r: u8, g: u8, b: u8) -> Result<(), String> {
     call("window_background", &Args { r, g, b }).await
 }
 
+/// An online wallpaper's details image, downloaded and fitted to the screen
+/// by the app (a local file), or None when it couldn't be.
+pub async fn online_preview(wallpaper: &OnlineWallpaper) -> Result<Option<String>, String> {
+    #[derive(Serialize)]
+    struct Args<'a> {
+        wallpaper: &'a OnlineWallpaper,
+    }
+    call("online_preview", &Args { wallpaper }).await
+}
+
+/// What wallpicker uses right now: memory (MB) per part, and CPU (% of one
+/// core) since the previous call.
+#[derive(Debug, Clone, Deserialize)]
+pub struct Usage {
+    pub app_mb: u32,
+    pub interface_mb: u32,
+    pub helpers_mb: u32,
+    pub total_mb: u32,
+    pub cpu: Option<f32>,
+}
+
+pub async fn app_usage() -> Result<Usage, String> {
+    call("app_usage", &NoArgs {}).await
+}
+
 /// Where `wallpicker --open` asked the window to go: a tab, "settings",
 /// "duplicates", or "tags" with the image.
 #[derive(Debug, Clone, PartialEq, Deserialize)]

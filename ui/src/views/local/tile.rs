@@ -92,6 +92,9 @@ pub(super) fn LocalTile(img: LocalImage) -> impl IntoView {
                                 <img
                                     src=s
                                     alt=""
+                                    // Decoded only near the visible part of the grid.
+                                    loading="lazy"
+                                    decoding="async"
                                     class="size-full object-cover transition duration-300 group-hover:scale-[1.03]"
                                 />
                             }
