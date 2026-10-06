@@ -177,7 +177,8 @@ fn TagsBody(path: String) -> impl IntoView {
     view! {
         <DialogHeader>
             <DialogTitle>"Tags"</DialogTitle>
-            <DialogDescription class="truncate">{name}</DialogDescription>
+            // Long names have no spaces to wrap at: up to two lines, broken anywhere.
+            <DialogDescription class="line-clamp-2 break-all">{name}</DialogDescription>
         </DialogHeader>
         <div class="flex min-h-7 flex-wrap gap-1.5">
             <Show

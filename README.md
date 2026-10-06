@@ -50,7 +50,7 @@ or **Noctalia**'s wallpaper manager (Settings → General → Wallpaper backend)
 - The search bar (and the tags and folder path under it) stays at the top while you scroll.
 - **Keys**: Ctrl+F search field, Ctrl+R random, Alt+Up parent folder, Alt+Left/Right online pages,
   Ctrl+1/2/3 Local/Online/Collections.
-- **Duplicates** (Local → **Duplicates**): exact copies and the same picture at another size or
+- **Duplicates** (Local → **⋯** → **Find duplicates…**): exact copies and the same picture at another size or
   re-saved, a group at a time. The largest copy is picked to keep; the others go to the trash, and
   their favorite and tags move to the kept one (a monitor showing one of them gets it instead).
   Pictures that only look alike (the same artist's figure on white) aren't matched.

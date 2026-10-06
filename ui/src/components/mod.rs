@@ -3,4 +3,5 @@
 // expected (only part of each component's API is used), so don't warn on them.
 #[allow(dead_code, unused_imports)]
 pub mod nc;
+pub(crate) mod popover;
 pub(crate) mod tip;

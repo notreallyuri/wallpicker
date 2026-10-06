@@ -92,7 +92,7 @@ pub fn DialogPortal(
 
                 <DialogContentRoot class=move || {
                     cn!(
-                        "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-3xl border-2 border-primary/15 bg-popover p-5 text-sm text-popover-foreground shadow-2xl ring-0 duration-200 ease-bounce outline-none sm:max-w-sm data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-90 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=closed]:pointer-events-none",
+                        "fixed top-1/2 left-1/2 z-50 grid w-full grid-cols-1 max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-3xl border-2 border-primary/15 bg-popover p-5 text-sm text-popover-foreground shadow-2xl ring-0 duration-200 ease-bounce outline-none sm:max-w-sm data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-90 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=closed]:pointer-events-none",
                             class.get()
                     )
                 }>

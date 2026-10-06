@@ -22,6 +22,7 @@ use crate::components::nc::prelude::*;
 use crate::ctx::Ctx;
 use crate::tile_menu::{MenuTarget, TileMenu};
 use crate::views::{Choice, fit_from};
+use crate::components::popover::{Popover, PopoverPanel};
 use crate::components::tip::Tip;
 
 use duplicates::DuplicatesDialog;
@@ -91,6 +92,8 @@ pub(crate) fn LocalView() -> impl IntoView {
     let limit = RwSignal::new(PAGE);
     let favorites_only = RwSignal::new(false);
     let duplicates_open = RwSignal::new(false);
+    // The "⋯" menu.
+    let more_open = RwSignal::new(false);
     // The color filter: a hue, "dark", "light" or "muted"; "" is none.
     let color = RwSignal::new(String::new());
     // Every image's colors, read when a color is first picked (and again
@@ -471,36 +474,53 @@ pub(crate) fn LocalView() -> impl IntoView {
                     }
                 }}
             </span>
-            // Icons, with their names in tooltips: the row stays one line.
-            <Tip text="Duplicates: copies and the same picture at other sizes" class="ml-auto">
-            <Button
-                variant=ButtonVariant::Ghost
-                size=ButtonSize::Icon
-                attr:aria-label="Duplicates"
-                on_click=move |_| duplicates_open.set(true)
-            >
-                <Lucide class="size-4">
-                    <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
-                    <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
-                </Lucide>
-            </Button>
-            </Tip>
-            <Tip text="Rescan the wallpaper folders">
-            <Button
-                variant=ButtonVariant::Outline
-                size=ButtonSize::Icon
-                attr:aria-label="Rescan"
-                disabled=loading
-                on_click=move |_| ctx.library_rev.update(|r| *r += 1)
-            >
-                <Lucide class="size-4">
-                    <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
-                    <path d="M21 3v5h-5" />
-                    <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
-                    <path d="M8 16H3v5" />
-                </Lucide>
-            </Button>
-            </Tip>
+            // Things used now and then, out of the row: one "⋯" menu.
+            <div class="ml-auto">
+                <Popover open=more_open>
+                    <Tip text="More">
+                        <Button
+                            variant=ButtonVariant::Ghost
+                            size=ButtonSize::Icon
+                            attr:aria-label="More"
+                            attr:aria-expanded=move || more_open.get().to_string()
+                            on_click=move |_| more_open.update(|o| *o = !*o)
+                        >
+                            <Lucide class="size-4">
+                                <circle cx="5" cy="12" r="1" />
+                                <circle cx="12" cy="12" r="1" />
+                                <circle cx="19" cy="12" r="1" />
+                            </Lucide>
+                        </Button>
+                    </Tip>
+                    <PopoverPanel open=more_open end=true class="w-72 p-1.5">
+                        <MoreItem
+                            title="Find duplicates…"
+                            text="Copies, and the same picture at other sizes"
+                            on_pick=Callback::new(move |()| {
+                                more_open.set(false);
+                                duplicates_open.set(true);
+                            })
+                        >
+                            <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                            <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+                        </MoreItem>
+                        <MoreItem
+                            title="Rescan the folders"
+                            text="Look for new, moved or deleted wallpapers"
+                            disabled=loading
+                            on_pick=Callback::new(move |()| {
+                                more_open.set(false);
+                                ctx.library_rev.update(|r| *r += 1);
+                            })
+                        >
+                            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                            <path d="M21 3v5h-5" />
+                            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+                            <path d="M8 16H3v5" />
+                        </MoreItem>
+                    </PopoverPanel>
+                </Popover>
+            </div>
         </div>
 
         <TagFilterRow filter=tag_filter counts=counts />
@@ -665,5 +685,31 @@ fn LocalMenuItems() -> impl IntoView {
         >
             "Move to trash…"
         </ContextMenuItem>
+    }
+}
+
+/// A line in Local's "⋯" menu: an icon (its paths as children), a name, and
+/// what it does.
+#[component]
+fn MoreItem(
+    title: &'static str,
+    text: &'static str,
+    #[prop(optional, into)] disabled: Signal<bool>,
+    on_pick: Callback<()>,
+    children: Children,
+) -> impl IntoView {
+    view! {
+        <button
+            type="button"
+            disabled=move || disabled.get()
+            on:click=move |_| on_pick.run(())
+            class="flex w-full items-start gap-3 rounded-xl px-2.5 py-2 text-left transition-colors hover:bg-accent disabled:opacity-50"
+        >
+            <Lucide class="mt-0.5 size-4 shrink-0 text-primary">{children()}</Lucide>
+            <span class="flex flex-col leading-tight">
+                <span class="text-sm font-bold">{title}</span>
+                <span class="text-xs text-muted-foreground">{text}</span>
+            </span>
+        </button>
     }
 }

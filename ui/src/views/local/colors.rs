@@ -3,16 +3,13 @@
 //! have that color, the most of it first; picking it again, or "Any color",
 //! clears it.
 //!
-//! A small popover of its own rather than nocomponents' dropdown: it closes
-//! on a pick, a click outside or Esc.
+//! In a `Popover`: it closes on a pick, a click outside or Esc.
 
-use leptos::ev;
-use leptos::html;
 use leptos::prelude::*;
 use wallpicker_core::colors::{HUES, TONES};
-use wasm_bindgen::JsCast;
 
 use crate::components::nc::prelude::*;
+use crate::components::popover::{Popover, PopoverPanel};
 use crate::components::tip::Tip;
 
 /// What a swatch looks like (CSS background), by key.
@@ -41,24 +38,6 @@ fn label(key: &str) -> &'static str {
 #[component]
 pub(super) fn ColorPicker(color: RwSignal<String>, #[prop(into)] loading: Signal<bool>) -> impl IntoView {
     let open = RwSignal::new(false);
-    let root = NodeRef::<html::Div>::new();
-    // A click anywhere else, or Esc, closes it.
-    let _ = window_event_listener(ev::pointerdown, move |e| {
-        if !open.get_untracked() {
-            return;
-        }
-        let inside = root.get_untracked().zip(e.target()).is_some_and(|(el, t)| {
-            t.dyn_ref::<web_sys::Node>().is_some_and(|n| el.contains(Some(n)))
-        });
-        if !inside {
-            open.set(false);
-        }
-    });
-    let _ = window_event_listener(ev::keydown, move |e| {
-        if e.key() == "Escape" && open.get_untracked() {
-            open.set(false);
-        }
-    });
     let pick = move |key: &'static str| {
         color.update(|c| *c = if c == key { String::new() } else { key.to_string() });
         open.set(false);
@@ -73,7 +52,7 @@ pub(super) fn ColorPicker(color: RwSignal<String>, #[prop(into)] loading: Signal
     };
 
     view! {
-        <div node_ref=root class="relative">
+        <Popover open=open>
             <Tip text="Show the wallpapers with a color">
             <Button
                 variant=ButtonVariant::Outline
@@ -112,8 +91,7 @@ pub(super) fn ColorPicker(color: RwSignal<String>, #[prop(into)] loading: Signal
                 </Show>
             </Button>
             </Tip>
-            <Show when=move || open.get()>
-                <div class="absolute top-full left-0 z-30 mt-2 w-72 rounded-2xl border-2 bg-popover p-3 shadow-xl">
+            <PopoverPanel open=open class="w-72 p-3">
                     <div class="grid grid-cols-4 gap-2">
                         {HUES
                             .iter()
@@ -171,8 +149,7 @@ pub(super) fn ColorPicker(color: RwSignal<String>, #[prop(into)] loading: Signal
                         </button>
                     </Show>
                     <p class="mt-2 px-1 text-[11px] text-muted-foreground">"The most of the color first."</p>
-                </div>
-            </Show>
-        </div>
+            </PopoverPanel>
+        </Popover>
     }
 }
