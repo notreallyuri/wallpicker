@@ -13,39 +13,23 @@ use crate::components::nc::prelude::*;
 use crate::ctx::Ctx;
 use crate::components::tip::Tip;
 
-const MATCH_ALL: &str = "all";
-const MATCH_ANY: &str = "any";
 
 /// Tag filter state, shared by the filter row and the grid.
 #[derive(Clone, Copy)]
 pub(super) struct TagFilter {
     /// Selected tags. Bound to a multi-select ToggleGroup.
     pub(super) selected: RwSignal<Vec<String>>,
-    /// [`MATCH_ALL`] or [`MATCH_ANY`]. Bound to a single-select ToggleGroup.
-    mode: RwSignal<Vec<String>>,
+    /// How several selected tags combine. Bound to [`MatchSwitch`].
+    mode: RwSignal<TagMatch>,
 }
 
 impl TagFilter {
     pub(super) fn new() -> TagFilter {
-        let mode = RwSignal::new(vec![MATCH_ALL.to_string()]);
-        // Clicking the active All/Any again would clear it; keep one chosen.
-        Effect::new(move |_| {
-            if mode.with(Vec::is_empty) {
-                mode.set(vec![MATCH_ALL.to_string()]);
-            }
-        });
-        TagFilter {
-            selected: RwSignal::new(Vec::new()),
-            mode,
-        }
+        TagFilter { selected: RwSignal::new(Vec::new()), mode: RwSignal::new(TagMatch::All) }
     }
 
     pub(super) fn mode(self) -> TagMatch {
-        if self.mode.with(|m| m.iter().any(|m| m == MATCH_ANY)) {
-            TagMatch::Any
-        } else {
-            TagMatch::All
-        }
+        self.mode.get()
     }
 }
 
@@ -112,19 +96,7 @@ pub(super) fn TagFilterRow(
                     </ToggleGroup>
                 </div>
                 <Show when=move || filter.selected.with(|s| s.len() > 1)>
-                    <ToggleGroup
-                        kind=ToggleGroupType::Single
-                        variant=ToggleVariant::Outline
-                        size=ToggleSize::Sm
-                        value=filter.mode
-                    >
-                        <Tip text="Wallpapers with every selected tag">
-                            <ToggleGroupItem value=MATCH_ALL>"All"</ToggleGroupItem>
-                        </Tip>
-                        <Tip text="Wallpapers with any selected tag">
-                            <ToggleGroupItem value=MATCH_ANY>"Any"</ToggleGroupItem>
-                        </Tip>
-                    </ToggleGroup>
+                    <MatchSwitch mode=filter.mode />
                 </Show>
                 <Show when=move || filter.selected.with(|s| !s.is_empty())>
                     <Button
@@ -268,5 +240,46 @@ fn TagsBody(path: String) -> impl IntoView {
                 />
             </div>
         </Show>
+    }
+}
+
+/// All · Any as one switch: a knob slides under the active word while the
+/// other fades, and a click anywhere flips it.
+#[component]
+fn MatchSwitch(mode: RwSignal<TagMatch>) -> impl IntoView {
+    let any = move || mode.get() == TagMatch::Any;
+    let tip = Signal::derive(move || {
+        if any() { "Wallpapers with any selected tag" } else { "Wallpapers with every selected tag" }.to_string()
+    });
+    let word = move |active: bool| {
+        format!(
+            "relative z-10 px-3 transition-colors duration-200 {}",
+            if active { "text-primary-foreground" } else { "text-muted-foreground/60 hover:text-muted-foreground" },
+        )
+    };
+    view! {
+        <Tip text=tip>
+            <button
+                type="button"
+                role="switch"
+                aria-label="Any selected tag (off: all of them)"
+                aria-checked=move || any().to_string()
+                on:click=move |_| mode.update(|m| *m = if *m == TagMatch::Any { TagMatch::All } else { TagMatch::Any })
+                class="relative grid h-7 cursor-pointer grid-cols-2 items-center rounded-full bg-muted p-0.5 text-xs font-bold shadow-inner ring-1 ring-foreground/10 select-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            >
+                // The knob: half the width, under the active word.
+                <span
+                    aria-hidden="true"
+                    class=move || {
+                        format!(
+                            "absolute top-0.5 bottom-0.5 left-0.5 w-[calc(50%-2px)] rounded-full bg-primary shadow-[0_2px_0_0_color-mix(in_oklab,var(--primary)_55%,black)] transition-transform duration-300 ease-bounce {}",
+                            if any() { "translate-x-full" } else { "" },
+                        )
+                    }
+                />
+                <span class=move || word(!any())>"All"</span>
+                <span class=move || word(any())>"Any"</span>
+            </button>
+        </Tip>
     }
 }
