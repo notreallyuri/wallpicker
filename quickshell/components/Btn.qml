@@ -13,6 +13,9 @@ Item {
     property string variant: "outline"
     property real minWidth: 0
     property bool active: false
+    /// Text at the left and the extras (an icon) at the right, instead of
+    /// all centered (Select).
+    property bool spread: false
     property alias hovered: mouse.containsMouse
     default property alias extra: row.data
     signal clicked
@@ -57,7 +60,10 @@ Item {
         }
         RowLayout {
             id: row
-            anchors.centerIn: parent
+            anchors.centerIn: btn.spread ? undefined : parent
+            anchors.fill: btn.spread ? parent : undefined
+            anchors.leftMargin: 14
+            anchors.rightMargin: 10
             spacing: 6
             Icon {
                 visible: btn.icon !== ""
@@ -66,6 +72,8 @@ Item {
             }
             Text {
                 visible: btn.text !== ""
+                Layout.fillWidth: btn.spread
+                elide: Text.ElideRight
                 text: btn.text
                 color: btn.ink
                 font.family: Theme.font

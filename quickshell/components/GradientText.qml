@@ -1,7 +1,7 @@
 // Text filled with a left-to-right gradient (Tailwind's bg-gradient-to-r +
 // bg-clip-text): the real text (so its true weight; a canvas tops out at
-// bold), recolored by a small shader that keeps its smooth edges (a mask
-// made them jagged). shaders/gradient-text.frag.
+// bold), recolored by a small shader that keeps its antialiased edges (a
+// mask made them jagged). shaders/gradient-text.frag.
 import QtQuick
 import qs.services
 
@@ -13,8 +13,10 @@ Item {
     property color to: Theme.a(Theme.foreground, 0.8)
     property alias font: label.font
 
-    implicitWidth: label.implicitWidth
-    implicitHeight: label.implicitHeight
+    implicitWidth: Math.ceil(label.implicitWidth)
+    // Even: centered in a row it lands on whole pixels (a half pixel blurs
+    // the texture across two rows).
+    implicitHeight: Math.ceil(label.implicitHeight / 2) * 2
 
     Text {
         id: label
@@ -25,6 +27,10 @@ Item {
         // black lighter than Qt draws a fixed one: ExtraBold matches it.
         font.weight: Font.ExtraBold
         font.letterSpacing: -0.5
+        // Hinted to the pixel grid like the browser's text, into a texture
+        // the shader reads pixel for pixel: crisp. (Scaled-down bigger
+        // textures came out soft.)
+        renderType: Text.NativeRendering
         layer.enabled: true
         visible: false
     }

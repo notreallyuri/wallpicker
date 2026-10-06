@@ -1,8 +1,9 @@
 // Smooth mouse-wheel scrolling for any Flickable (a GridView, ListView...):
 // put it inside the view. A wheel notch sets a target `step` px further and
 // the view glides there (ease-out); notches in a row add to the target, so a
-// fast spin goes further without stutter. Touchpads send exact pixels and
-// keep Qt's own scrolling (1:1, with momentum).
+// fast spin goes further without stutter. Only mice: touchpads keep Qt's own
+// scrolling (1:1, with momentum). A mouse on Wayland also reports a few
+// pixels per notch; those are ignored for the notch (120 angle units).
 import QtQuick
 
 WheelHandler {
@@ -12,7 +13,7 @@ WheelHandler {
     /// its contentItem: set this.)
     property Flickable flickable
     /// Pixels per notch (120 units of a wheel's angle).
-    property real step: 120
+    property real step: 180
     property int duration: 260
 
     // Where the glide is heading (null: not gliding).
@@ -24,13 +25,7 @@ WheelHandler {
     acceptedDevices: PointerDevice.Mouse
     target: null
     // Ours, not the view's: it would jump a step at once.
-    onWheel: event => {
-        if (event.pixelDelta.y !== 0) {
-            event.accepted = false;
-            return;
-        }
-        smooth.notches(-event.angleDelta.y / 120);
-    }
+    onWheel: event => smooth.notches(-event.angleDelta.y / 120)
 
     /// Scroll by `n` notches (positive: down).
     function notches(n) {

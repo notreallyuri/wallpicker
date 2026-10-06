@@ -17,6 +17,7 @@ Btn {
     }
 
     text: label
+    spread: true
     onClicked: list.open()
 
     Icon {

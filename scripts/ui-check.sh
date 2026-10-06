@@ -1,5 +1,6 @@
 #!/bin/bash
-# Runs the Quickshell interface headless (cage) with a throwaway profile made
+# Runs the Quickshell interface headless (cage; as a window: cage has no
+# layer-shell for the floating panel) with a throwaway profile made
 # from yours (no API key, a stand-in hyprctl with two 1920x1080 monitors),
 # then the given test-hook calls, a screenshot, and the log's warnings.
 # Fails if QML reported errors or warnings.
@@ -36,7 +37,7 @@ chmod +x "$tmp/bin/hyprctl"
 {
     echo '#!/bin/bash'
     echo 'wlr-randr --output HEADLESS-1 --custom-mode 1920x1080'
-    echo "WALLPICKER_TEST=1 WALLPICKER_BIN='$here/target/debug/wallpicker' qs -p '$here/quickshell' > '$tmp/ui.log' 2>&1 &"
+    echo "WALLPICKER_TEST=1 WALLPICKER_WINDOW=1 WALLPICKER_BIN='$here/target/debug/wallpicker' qs -p '$here/quickshell' > '$tmp/ui.log' 2>&1 &"
     echo 'sleep 6'
     for call in "$@"; do
         echo "echo \"$call -> \$(qs -p '$here/quickshell' ipc call wallpicker-test $call 2>&1)\" >> '$tmp/calls.txt'"

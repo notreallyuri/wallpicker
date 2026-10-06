@@ -24,6 +24,13 @@ Item {
             "check": '<path d="M20 6 9 17l-5-5"/>'
         })
 
+    // #rrggbb and the alpha apart: a color with alpha prints as #AARRGGBB,
+    // which SVG reads as #RRGGBBAA, and Qt's SVG (Tiny 1.2) has no rgba().
+    function hex(c) {
+        const h = v => ("0" + Math.round(v * 255).toString(16)).slice(-2);
+        return "#" + h(c.r) + h(c.g) + h(c.b);
+    }
+
     implicitWidth: size
     implicitHeight: size
     width: size
@@ -32,6 +39,6 @@ Item {
     Image {
         anchors.fill: parent
         sourceSize: Qt.size(icon.size * 2, icon.size * 2)
-        source: "data:image/svg+xml;utf8," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="${icon.filled ? icon.color : "none"}" stroke="${icon.color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${icon.paths[icon.name] || ""}</svg>`)
+        source: "data:image/svg+xml;utf8," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="${icon.filled ? icon.hex(icon.color) : "none"}" fill-opacity="${icon.color.a}" stroke="${icon.hex(icon.color)}" stroke-opacity="${icon.color.a}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${icon.paths[icon.name] || ""}</svg>`)
     }
 }
