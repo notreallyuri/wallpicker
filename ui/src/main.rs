@@ -1,3 +1,4 @@
+mod perf;
 mod api;
 mod app;
 mod components;
@@ -11,6 +12,8 @@ mod tile_menu;
 mod views;
 
 fn main() {
+    perf::mark("main");
     console_error_panic_hook::set_once();
     leptos::mount::mount_to_body(app::App);
+    perf::mark("mounted");
 }

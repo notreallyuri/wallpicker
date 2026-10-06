@@ -15,5 +15,5 @@ serde = { version = "1", features = ["derive"] }
 serde-wasm-bindgen = "0.6"
 console_error_panic_hook = "0.1"
 js-sys = "0.3"
-web-sys = { version = "0.3", features = ["CanvasRenderingContext2d", "CssStyleDeclaration", "Document", "HtmlCanvasElement", "ImageData", "DomRect", "Element", "EventTarget", "HtmlImageElement", "Node", "HtmlElement", "KeyboardEvent", "NodeList", "ResizeObserver", "ResizeObserverEntry", "Storage", "Window"] }
+web-sys = { version = "0.3", features = ["CanvasRenderingContext2d", "CssStyleDeclaration", "Document", "HtmlCanvasElement", "ImageData", "DomRect", "Element", "EventTarget", "HtmlImageElement", "Node", "HtmlElement", "KeyboardEvent", "NodeList", "Performance", "ResizeObserver", "ResizeObserverEntry", "Storage", "Window"] }
 nocomponents = { version = "0.1.0", features = ["badge", "button", "card", "checkbox", "context_menu", "dialog", "dropdown_menu", "empty", "field", "icons", "input", "label", "native_select", "pagination", "primitives", "select", "separator", "sheet", "sidebar", "skeleton", "spinner", "switch", "tabs", "textarea", "theme", "toast", "toggle", "toggle_group", "tooltip"] }

@@ -214,6 +214,7 @@ pub fn run(start_hidden: bool) {
         .invoke_handler(tauri::generate_handler![
             commands::wallpapers::list_monitors,
             commands::app::get_settings,
+            commands::app::open_timing,
             commands::app::save_settings,
             commands::app::get_state,
             commands::library::scan_local,

@@ -14,11 +14,15 @@ use crate::components::tip::Tip;
 #[component]
 pub(super) fn LocalTile(img: LocalImage) -> impl IntoView {
     let ctx = expect_context::<Ctx>();
+    crate::perf::once_and_painted("tiles");
     let src = RwSignal::new(None::<String>);
     let broken = RwSignal::new(false);
     let path = img.path.to_string_lossy().into_owned();
 
-    {
+    // Cached already (the scan says where): shown at once. Else made now.
+    if let Some(thumb) = &img.thumb {
+        src.set(Some(api::asset_url(&thumb.to_string_lossy())));
+    } else {
         let path = path.clone();
         spawn_local(async move {
             match api::thumbnail(&path).await {
@@ -95,6 +99,7 @@ pub(super) fn LocalTile(img: LocalImage) -> impl IntoView {
                                     // Decoded only near the visible part of the grid.
                                     loading="lazy"
                                     decoding="async"
+                                    on:load=|_| crate::perf::thumbnail()
                                     class="size-full object-cover transition duration-300 group-hover:scale-[1.03]"
                                 />
                             }

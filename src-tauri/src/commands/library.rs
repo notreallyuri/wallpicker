@@ -18,7 +18,7 @@ pub(crate) async fn scan_local(state: tauri::State<'_, AppState>) -> CmdResult<V
     let store = state.store.clone();
     blocking(move || {
         let s = store.load_settings()?;
-        Ok(library::scan(&s.folders, s.recursive))
+        Ok(library::with_cached_thumbs(library::scan(&s.folders, s.recursive), &store.dirs().cache, s.thumb_width))
     })
     .await
 }

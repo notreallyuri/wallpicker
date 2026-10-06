@@ -54,10 +54,20 @@ fn background(app: &AppHandle) -> Option<tauri::window::Color> {
 /// The window, made from tauri.conf's "main" when there's none: it isn't
 /// made at startup (`create: false`), and closing to the tray destroys it,
 /// so its WebKit processes go away while it isn't needed.
+/// When the window was last asked for and when it was built (ms since the
+/// epoch), for measuring a cold open (`open_timing`).
+pub static OPEN_ASKED: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+pub static OPEN_BUILT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+fn now_ms() -> u64 {
+    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_millis() as u64)
+}
+
 fn ensure_window(app: &AppHandle) -> Option<WebviewWindow> {
     if let Some(w) = main_window(app) {
         return Some(w);
     }
+    OPEN_ASKED.store(now_ms(), Ordering::Relaxed);
     let config = app.config().app.windows.iter().find(|w| w.label == "main")?.clone();
     let built = tauri::WebviewWindowBuilder::from_config(app, &config).and_then(|b| {
         match background(app) {
@@ -68,6 +78,7 @@ fn ensure_window(app: &AppHandle) -> Option<WebviewWindow> {
     });
     match built {
         Ok(w) => {
+            OPEN_BUILT.store(now_ms(), Ordering::Relaxed);
             keep_little_cached(&w);
             #[cfg(feature = "automation")]
             automate(&w);

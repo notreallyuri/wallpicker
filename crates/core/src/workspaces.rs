@@ -167,10 +167,14 @@ pub fn assign(store: &Store, workspace: &str, path: Option<PathBuf>) -> Result<(
 /// would both apply): held while listening, a name only this user's
 /// session sees.
 fn claim() -> Option<UnixListener> {
-    use std::os::linux::net::SocketAddrExt;
     let runtime = std::env::var("XDG_RUNTIME_DIR").unwrap_or_default();
     let sig = std::env::var("HYPRLAND_INSTANCE_SIGNATURE").unwrap_or_default();
-    let addr = std::os::unix::net::SocketAddr::from_abstract_name(format!("wallpicker-workspaces:{runtime}:{sig}")).ok()?;
+    claim_named(&format!("wallpicker-workspaces:{runtime}:{sig}"))
+}
+
+fn claim_named(name: &str) -> Option<UnixListener> {
+    use std::os::linux::net::SocketAddrExt;
+    let addr = std::os::unix::net::SocketAddr::from_abstract_name(name).ok()?;
     UnixListener::bind_addr(&addr).ok()
 }
 
@@ -262,10 +266,12 @@ mod tests {
 
     #[test]
     fn one_listener_at_a_time() {
-        let first = claim().expect("free");
-        assert!(claim().is_none());
+        // Its own name: a running wallpicker holds the session's.
+        let name = format!("wallpicker-workspaces-test:{}", std::process::id());
+        let first = claim_named(&name).expect("free");
+        assert!(claim_named(&name).is_none());
         drop(first);
-        assert!(claim().is_some());
+        assert!(claim_named(&name).is_some());
     }
 
     #[test]

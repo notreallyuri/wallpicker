@@ -81,6 +81,16 @@ What stands between "my tool" and one others can install (2026-10-05):
 - [x] **Day and night sets**: the slideshow's night set (its own favorites, tags, folder,
   color) in a local time window that may cross midnight; it switches right away at the edges.
   Each set can filter by color (light by day, dark by night).
+- [ ] **A faster cold open**: closing destroys the window (that's what gives the memory back), so
+  every open rebuilds the page: WebKit's page process, the 2.5 MB WebAssembly UI, monitors,
+  settings, the library, thumbnails. Measure each step (timestamps from the open request to a
+  filled grid, headless, a few cycles), then cut the slow ones (e.g. draw the frame before the
+  data, fewer requests at once, a smaller bundle). First of the two.
+- [ ] **Keep the window warm after closing**: closing only hides it, so reopening is instant (page
+  and scroll kept); it's destroyed after it has stayed closed for a while, and the memory goes
+  back. The while is a setting (Settings → Performance, "Free the memory after"): 5 min by
+  default; 30 min, always ready (never freed), or at once (today's behavior). After the cold open
+  is fast.
 
 ## Planned (each needs a plan before starting)
 

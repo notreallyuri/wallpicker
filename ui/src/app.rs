@@ -69,6 +69,8 @@ fn Shell() -> impl IntoView {
     });
     let settings_open = RwSignal::new(false);
 
+    // All at once: each is a round trip to the app, and none needs another.
+    crate::perf::mark("fetching");
     spawn_local(async move {
         match api::list_monitors().await {
             Ok(monitors) => {
@@ -82,12 +84,22 @@ fn Shell() -> impl IntoView {
             }
             Err(e) => ctx.error_with("Could not list monitors (is Hyprland running?)", &e),
         }
+        crate::perf::mark("monitors");
+    });
+    spawn_local(async move {
         match api::get_settings().await {
             Ok(s) => ctx.settings.set(Some(s)),
             Err(e) => ctx.error_with("Could not load settings", &e),
         }
+        crate::perf::mark("settings");
+    });
+    spawn_local(async move {
         ctx.refresh_state().await;
+        crate::perf::mark("state");
+    });
+    spawn_local(async move {
         ctx.refresh_catalog().await;
+        crate::perf::mark("catalog");
     });
 
     view! {

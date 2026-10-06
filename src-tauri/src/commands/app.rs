@@ -8,6 +8,23 @@ use wallpicker_core::settings::{Settings, State as SavedState, WallpaperBackend}
 use crate::{AppState, CmdResult, blocking, err};
 use crate::{cli, open, theme, tray, usage};
 
+/// The automation build's open-timing script reports here: printed with
+/// when the window was asked for and built. Nothing in normal builds.
+#[tauri::command]
+pub(crate) fn open_timing(report: String) {
+    #[cfg(feature = "automation")]
+    {
+        use std::sync::atomic::Ordering;
+        println!(
+            "open-timing {{\"asked\":{},\"built\":{},\"page\":{report}}}",
+            crate::tray::OPEN_ASKED.load(Ordering::Relaxed),
+            crate::tray::OPEN_BUILT.load(Ordering::Relaxed)
+        );
+    }
+    #[cfg(not(feature = "automation"))]
+    let _ = report;
+}
+
 #[tauri::command]
 pub(crate) async fn get_settings(state: tauri::State<'_, AppState>) -> CmdResult<Settings> {
     let store = state.store.clone();

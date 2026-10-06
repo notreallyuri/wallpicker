@@ -164,6 +164,7 @@ pub(crate) fn LocalView() -> impl IntoView {
         spawn_local(async move {
             match api::scan_local().await {
                 Ok(list) => {
+                    crate::perf::mark("scan");
                     // A rescan (a download, a trash) keeps the page.
                     images.set(list);
                 }

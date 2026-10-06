@@ -25,6 +25,10 @@ pub struct LocalImage {
     pub width: u32,
     #[serde(default)]
     pub height: u32,
+    /// Its thumbnail, when one is already cached (filled in by
+    /// [`with_cached_thumbs`]): the grid shows it without asking.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub thumb: Option<PathBuf>,
 }
 
 impl LocalImage {
@@ -54,6 +58,18 @@ pub fn scan(folders: &[PathBuf], recursive: bool) -> Vec<LocalImage> {
     });
     out.dedup_by(|a, b| a.path == b.path);
     out
+}
+
+/// Each image's cached thumbnail at `width`, where one exists (a stat each:
+/// the name comes from the file's path, date and size, as the scan read
+/// them). Saves the grid a request per tile when it opens.
+#[cfg(feature = "native")]
+pub fn with_cached_thumbs(mut images: Vec<LocalImage>, cache_dir: &Path, width: u32) -> Vec<LocalImage> {
+    for img in &mut images {
+        let thumb = crate::thumbs::thumb_path(cache_dir, &img.path, img.modified, img.size, width);
+        img.thumb = thumb.is_file().then_some(thumb);
+    }
+    images
 }
 
 #[cfg(feature = "native")]
@@ -91,6 +107,7 @@ fn walk(dir: &Path, recursive: bool, depth: usize, out: &mut Vec<LocalImage>) {
                 modified,
                 width,
                 height,
+                thumb: None,
             });
         }
     }
@@ -351,7 +368,7 @@ mod folder_tests {
 
     #[test]
     fn smaller_than_needs_a_known_size() {
-        let img = |width, height| LocalImage { path: "/a.jpg".into(), name: "a.jpg".into(), size: 1, modified: 0, width, height };
+        let img = |width, height| LocalImage { path: "/a.jpg".into(), name: "a.jpg".into(), size: 1, modified: 0, width, height, thumb: None };
         assert!(img(1920, 1080).smaller_than(2560, 1440));
         assert!(!img(2560, 1440).smaller_than(2560, 1440));
         // Wide but short: smaller on one side counts.
