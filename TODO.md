@@ -71,17 +71,51 @@ What stands between "my tool" and one others can install (2026-10-05):
   the app's still do (it reads the image).
 - [ ] Use the current wallpaper for hyprlock and Noctalia's greeter (`noctalia msg greeter-sync`).
 
+## Next up (2026-10-06)
+
+- [ ] **Backup**: export / import the library (favorites, tags, fits) as one file.
+- [ ] **Filter by color**: the duplicates fingerprint already has a 4×4 color grid per image;
+  reuse it for "show me blue / dark / warm" in Local.
+- [ ] **Day and night sets**: the slideshow picks from a different set by time of day.
+
+## Planned (each needs a plan before starting)
+
+- [ ] **Frame a wallpaper per monitor (zoom and pan)**. Neither hyprpaper nor awww can zoom or
+  offset (awww only anchors its crop: `--crop-gravity`), so wallpicker makes the image itself.
+  - In the app: a live preview in the monitor's own proportions; a zoom slider, drag (or
+    horizontal / vertical sliders) to move. All in the browser (CSS transform), so it's instant.
+  - On release: crop and scale to the monitor's exact size, save in the cache (keyed by image,
+    monitor size and frame), and apply that file. Works with every backend, Noctalia too.
+  - Stored per wallpaper and monitor (or monitor size) in the library, as a normalized rectangle
+    (0..1), so it survives resolution changes; "Reset" goes back to the plain fit.
+  - Not live on the desktop while dragging: re-encoding a 4K image and re-applying dozens of
+    times a second would stutter. Apply on release (awww's transition makes it smooth).
+  - Open questions: per monitor or per monitor size; what Previous and the slideshow do with
+    framed wallpapers (use the frame, presumably); cache pruning.
+- [ ] **Span one wallpaper across monitors**: cut it to each monitor's place and size in the
+  layout (`hyprctl monitors` has x, y, scale), mixed resolutions too. Shares the crop-and-cache
+  step with framing above, so it's cheaper after that. Bezels: optional gap per monitor.
+- [ ] **Animated wallpapers**. awww plays GIFs itself; hyprpaper and Noctalia don't.
+  - Library: accept .gif (and maybe .webp animations); thumbnails from the first frame, with a
+    "▶" badge; preview animates in the details view.
+  - Applying an animated file through a backend that can't animate: warn, or apply the first
+    frame.
+  - Video (mp4/webm) means mpvpaper as a fourth backend: a bigger step, decide separately
+    (CPU/GPU cost, pause on fullscreen).
+- [ ] **A wallpaper per workspace**: listen to Hyprland's event socket (`workspace>>`) and apply
+  that workspace's wallpaper; the set is chosen in the app. Best with awww's transitions.
+- [ ] Lock and login screens: the current wallpaper for hyprlock, and Noctalia's greeter
+  (`noctalia msg greeter-sync`). (Also listed under Noctalia.)
+
 ## Monitors
 
-- [ ] Span one wallpaper across monitors: cut it to each monitor's place and size in the layout
-  (mixed resolutions too).
 - [ ] When the QHD/HDR monitor arrives (mid-October 2026): check three monitors end to end, and
-  how HDR affects wallpapers under hyprpaper.
+  how HDR affects wallpapers under hyprpaper. Then the "All" pill's picture: one little screen
+  per monitor, in their proportions.
 
 ## Library
 
 - [x] History per monitor: `wallpicker previous`, "Previous" in the app, tray and panel.
-- [ ] Export / import favorites, tags and fits (one file), for backups and moving machines.
 - [ ] Wallhaven: skip what your account blacklists (tags and uploaders, from `/api/v1/settings`).
 
 ## Project
