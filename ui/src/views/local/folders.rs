@@ -115,7 +115,7 @@ pub(super) fn Breadcrumb(
 
 /// A Lucide icon's frame; the shapes go inside.
 #[component]
-pub(super) fn Lucide(#[prop(into)] class: String, children: Children) -> impl IntoView {
+pub(crate) fn Lucide(#[prop(into)] class: String, children: Children) -> impl IntoView {
     view! {
         <svg
             xmlns="http://www.w3.org/2000/svg"

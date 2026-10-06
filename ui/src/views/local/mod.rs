@@ -2,7 +2,7 @@
 //! pinned first, a tag filter, a sort, and a Flat or Folders layout.
 
 mod duplicates;
-mod folders;
+pub(crate) mod folders;
 mod tags;
 mod tile;
 mod trash;

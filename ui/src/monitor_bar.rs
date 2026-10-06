@@ -8,6 +8,7 @@ use wallpicker_core::monitors::Monitor;
 use crate::api;
 use crate::components::nc::prelude::*;
 use crate::ctx::{ALL_MONITORS, Ctx};
+use crate::views::local::folders::Lucide;
 
 #[component]
 pub(crate) fn MonitorBar() -> impl IntoView {
@@ -29,18 +30,14 @@ pub(crate) fn MonitorBar() -> impl IntoView {
 
     view! {
         <div class="flex flex-wrap items-center gap-3 border-b border-border/60 bg-background/35 px-5 py-2.5 backdrop-blur-xl">
-            <span class="text-sm text-muted-foreground">"Apply to"</span>
+            <span class="text-xs font-extrabold tracking-wider text-muted-foreground uppercase">"Apply to"</span>
             <Show
                 when=move || ctx.monitors.with(|m| !m.is_empty())
                 fallback=|| {
                     view! { <span class="text-sm text-muted-foreground">"No monitors found."</span> }
                 }
             >
-                <ToggleGroup
-                    kind=ToggleGroupType::Single
-                    variant=ToggleVariant::Outline
-                    value=ctx.selection
-                >
+                <ToggleGroup kind=ToggleGroupType::Single value=ctx.selection class="gap-2">
                     <For
                         each=move || ctx.monitors.get()
                         key=|m| m.name.clone()
@@ -52,7 +49,8 @@ pub(crate) fn MonitorBar() -> impl IntoView {
                                     s.current.get(&shown_name).map(|p| p.to_string_lossy().into_owned())
                                 })
                             });
-                            let current = move || {
+                            // A Memo: it's used twice (text and tooltip).
+                            let current = Memo::new(move |_| {
                                 ctx.state
                                     .with(|s| {
                                         s.current
@@ -61,31 +59,46 @@ pub(crate) fn MonitorBar() -> impl IntoView {
                                             .map(|f| f.to_string_lossy().into_owned())
                                     })
                                     .unwrap_or_else(|| "nothing set".into())
-                            };
+                            });
                             view! {
-                                <ToggleGroupItem value=m.name.clone() class="h-auto gap-2 py-1 pl-1 pr-3">
-                                    <NowShowing path=shown />
-                                    <span class="font-medium">{m.name.clone()}</span>
-                                    <span class="text-xs text-muted-foreground">
-                                        {format!("{}×{}", m.width, m.height)}
-                                    </span>
-                                    <span class="max-w-40 truncate text-xs text-muted-foreground">
-                                        {current}
+                                <ToggleGroupItem value=m.name.clone() class=CARD>
+                                    <MiniScreen path=shown width=m.width height=m.height />
+                                    <span class="flex min-w-0 flex-col items-start gap-0.5 leading-tight">
+                                        <span class="flex items-center gap-1.5 font-extrabold">
+                                            {m.name.clone()}
+                                            <Picked />
+                                        </span>
+                                        <span class="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground">
+                                            <span>{format!("{}×{}", m.width, m.height)}</span>
+                                            <span class="opacity-50">"·"</span>
+                                            <span class="max-w-44 truncate" title=current>{current}</span>
+                                        </span>
                                     </span>
                                 </ToggleGroupItem>
                             }
                         }
                     />
                     <Show when=move || ctx.monitors.with(|m| m.len() > 1)>
-                        // As tall as the monitors (their thumbnail is h-7).
-                        <ToggleGroupItem value=ALL_MONITORS class="h-auto py-1 px-3">
-                            <span class="flex h-7 items-center font-medium">"All"</span>
+                        <ToggleGroupItem value=ALL_MONITORS class=CARD>
+                            // Two little screens side by side, on one stand.
+                            <span class="flex shrink-0 flex-col items-center" aria-hidden="true">
+                                <span class="flex h-9 items-end gap-1">
+                                    <span class="block h-7 w-9 rounded-[5px] bg-gradient-to-br from-primary/60 to-primary/25 ring-2 ring-foreground/20" />
+                                    <span class="block h-7 w-9 rounded-[5px] bg-gradient-to-br from-primary/40 to-primary/15 ring-2 ring-foreground/20" />
+                                </span>
+                                <span class="block h-1 w-2 bg-foreground/20" />
+                                <span class="block h-0.5 w-10 rounded-full bg-foreground/25" />
+                            </span>
+                            <span class="flex flex-col items-start gap-0.5 leading-tight">
+                                <span class="flex items-center gap-1.5 font-extrabold">"All" <Picked /></span>
+                                <span class="text-[11px] font-semibold text-muted-foreground">"every monitor"</span>
+                            </span>
                         </ToggleGroupItem>
                     </Show>
                 </ToggleGroup>
                 <Button
                     class="ml-auto"
-                    variant=ButtonVariant::Ghost
+                    variant=ButtonVariant::Outline
                     attr:title="Back to the wallpaper before, on the selected monitors"
                     on_click=move |_| {
                         let targets = ctx.targets.get_untracked();
@@ -99,17 +112,38 @@ pub(crate) fn MonitorBar() -> impl IntoView {
                         });
                     }
                 >
-                    "↶ Previous"
+                    <Lucide class="size-4">
+                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                        <path d="M3 3v5h5" />
+                        <path d="M12 7v5l4 2" />
+                    </Lucide>
+                    "Previous"
                 </Button>
             </Show>
         </div>
     }
 }
 
-/// A small picture of what a monitor shows (its library thumbnail), or an
-/// empty box when wallpicker hasn't set anything there.
+/// A monitor's (or All's) card in the bar: soft, raised when picked.
+const CARD: &str = "group/mon h-auto gap-3 rounded-2xl border-2 border-transparent bg-card/60 py-1.5 pr-4 pl-2 text-left shadow-sm ring-1 ring-foreground/5 hover:bg-card data-[state=on]:border-primary data-[state=on]:bg-primary/15 data-[state=on]:shadow-[0_3px_0_0_color-mix(in_oklab,var(--primary)_45%,transparent)]";
+
+/// A check in a bubble, shown on the picked card.
 #[component]
-fn NowShowing(path: Signal<Option<String>>) -> impl IntoView {
+fn Picked() -> impl IntoView {
+    view! {
+        <span class="hidden size-4 items-center justify-center rounded-full bg-primary text-primary-foreground group-data-[state=on]/mon:flex">
+            <Lucide class="size-3">
+                <path d="M20 6 9 17l-5-5" />
+            </Lucide>
+        </span>
+    }
+}
+
+/// A little monitor showing what it shows (its library thumbnail, in the
+/// monitor's own proportions), on a stand; an empty screen when wallpicker
+/// hasn't set anything there.
+#[component]
+fn MiniScreen(path: Signal<Option<String>>, width: u32, height: u32) -> impl IntoView {
     let src = RwSignal::new(None::<String>);
     Effect::new(move |_| {
         let Some(p) = path.get() else {
@@ -122,9 +156,14 @@ fn NowShowing(path: Signal<Option<String>>) -> impl IntoView {
             src.try_set(url);
         });
     });
+    let ratio = if width > 0 && height > 0 { format!("aspect-ratio: {width} / {height}") } else { "aspect-ratio: 16 / 9".into() };
     view! {
-        <span class="block h-7 w-12 shrink-0 overflow-hidden rounded bg-muted">
-            {move || src.get().map(|s| view! { <img src=s alt="" class="size-full object-cover" /> })}
+        <span class="flex shrink-0 flex-col items-center" aria-hidden="true">
+            <span class="block h-9 overflow-hidden rounded-lg bg-muted ring-2 ring-foreground/20" style=ratio>
+                {move || src.get().map(|s| view! { <img src=s alt="" class="size-full object-cover" /> })}
+            </span>
+            <span class="block h-1 w-2 bg-foreground/20" />
+            <span class="block h-0.5 w-6 rounded-full bg-foreground/25" />
         </span>
     }
 }
