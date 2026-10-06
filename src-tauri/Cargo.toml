@@ -28,3 +28,11 @@ tokio = { version = "1", features = ["sync", "macros"] }
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
 # Moves deleted wallpapers to the freedesktop trash instead of removing them.
 trash = "5"
+
+[features]
+# Test builds: replay a scripted session in the window (tray.rs).
+automation = []
+
+[target.'cfg(target_os = "linux")'.dependencies]
+# The webview's cache settings (tray.rs); the version wry uses.
+webkit2gtk = "2.0"

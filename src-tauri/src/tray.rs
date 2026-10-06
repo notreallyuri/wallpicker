@@ -67,12 +67,50 @@ fn ensure_window(app: &AppHandle) -> Option<WebviewWindow> {
         .build()
     });
     match built {
-        Ok(w) => Some(w),
+        Ok(w) => {
+            keep_little_cached(&w);
+            #[cfg(feature = "automation")]
+            automate(&w);
+            Some(w)
+        }
         Err(e) => {
             eprintln!("wallpicker: could not open the window: {e}");
             None
         }
     }
+}
+
+/// WebKitGTK assumes a web browser: it keeps decoded images of what was
+/// shown (pages, details) for going back to them, and the memory only grows
+/// while browsing. An app's one page needs none of it. Measured with the
+/// same replayed session (see `automate`): the page process levels off at
+/// ~90-100 MB instead of climbing past 135 MB.
+fn keep_little_cached(w: &WebviewWindow) {
+    #[cfg(target_os = "linux")]
+    let _ = w.with_webview(|view| {
+        use webkit2gtk::{CacheModel, WebContextExt, WebViewExt};
+        if let Some(context) = view.inner().context() {
+            context.set_cache_model(CacheModel::DocumentViewer);
+        }
+    });
+}
+
+/// Test builds only (`--features automation`): run the script in
+/// `WALLPICKER_AUTOMATE` in the window once it has loaded, to replay a
+/// session (clicks, scrolls) for measuring. Not in normal builds.
+#[cfg(feature = "automation")]
+fn automate(w: &WebviewWindow) {
+    let Some(file) = std::env::var_os("WALLPICKER_AUTOMATE") else { return };
+    let w = w.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_secs(4));
+        match std::fs::read_to_string(&file) {
+            Ok(script) => {
+                let _ = w.eval(&script);
+            }
+            Err(e) => eprintln!("wallpicker: automation script: {e}"),
+        }
+    });
 }
 
 pub fn show(app: &AppHandle) {

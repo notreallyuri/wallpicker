@@ -156,6 +156,12 @@ work in it). `--no-bundle` skips making .deb/AppImage packages.
 
 The first trunk build downloads the Tailwind binary (pinned to 4.3.0 in `ui/Trunk.toml`).
 
+**Measuring memory**: `cargo tauri build --no-bundle --features automation`, then
+`scripts/memory/run.sh [default|nofx|noimg]`. It replays a browsing session (Online pages,
+details, another provider, Local) in a headless copy with a throwaway profile, and records each
+process's memory every second. The `automation` feature only exists for this; normal builds
+don't have it.
+
 ## Command line
 
 The same library, settings and backend as the app, without the window, for scripts and keybinds:

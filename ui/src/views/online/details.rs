@@ -226,6 +226,8 @@ fn DetailsBody(w: OnlineWallpaper, info: RwSignal<Loaded>) -> impl IntoView {
         });
     }
     let sharp_loaded = RwSignal::new(false);
+    // The quick one leaves once the sharp one has faded in over it.
+    let faded_in = RwSignal::new(false);
 
     view! {
         <DialogHeader>
@@ -235,7 +237,10 @@ fn DetailsBody(w: OnlineWallpaper, info: RwSignal<Loaded>) -> impl IntoView {
             </DialogDescription>
         </DialogHeader>
         <div class="relative aspect-[16/10] max-h-[45vh] w-full overflow-hidden rounded-lg bg-muted">
-            <img src=preview alt="" class="absolute inset-0 size-full object-cover" />
+            // Gone once the sharp one is in: two decoded copies otherwise.
+            <Show when=move || !faded_in.get()>
+                <img src=preview.clone() alt="" class="absolute inset-0 size-full object-cover" />
+            </Show>
             {move || sharp
                 .get()
                 .map(|src| {
@@ -243,7 +248,10 @@ fn DetailsBody(w: OnlineWallpaper, info: RwSignal<Loaded>) -> impl IntoView {
                         <img
                             src=src
                             alt=""
-                            on:load=move |_| sharp_loaded.set(true)
+                            on:load=move |_| {
+                                sharp_loaded.set(true);
+                                set_timeout(move || { faded_in.try_set(true); }, std::time::Duration::from_millis(350));
+                            }
                             class=move || {
                                 format!(
                                     "absolute inset-0 size-full object-cover transition-opacity duration-300 {}",
