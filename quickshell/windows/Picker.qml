@@ -70,6 +70,13 @@ Item {
         }
     }
 
+    ToastStack {
+        anchors.right: panel.right
+        anchors.bottom: panel.bottom
+        anchors.margins: 20
+        z: 10
+    }
+
     // Swallow clicks on the panel (a click outside closes it).
     MouseArea {
         anchors.fill: panel

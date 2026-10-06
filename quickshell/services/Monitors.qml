@@ -38,14 +38,14 @@ Singleton {
             path: path
         }, () => setApplying(path, false), e => {
             setApplying(path, false);
-            console.warn("apply:", e);
+            Toasts.error("Could not apply it", e);
         });
     }
 
     function previous() {
         Backend.request("wallpapers.previous", {
             monitors: targets
-        });
+        }, null, e => Toasts.error("Could not go back", e));
     }
 
     function setApplying(path, on) {

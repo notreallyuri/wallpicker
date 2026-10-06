@@ -12,7 +12,9 @@ QtObject {
 
     property string query: ""
     property bool favoritesOnly: false
-    property string sort: "newest"
+    // Remembered between opens.
+    property string sort: Prefs.localSort
+    onSortChanged: Prefs.localSort = sort
     property var tagFilter: []
     property int page: 1
 

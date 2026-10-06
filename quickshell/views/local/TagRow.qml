@@ -9,7 +9,8 @@ RowLayout {
     id: row
 
     required property LocalModel local
-    property bool expanded: false
+    property bool expanded: Prefs.tagsExpanded
+    onExpandedChanged: Prefs.tagsExpanded = expanded
 
     spacing: 8
 

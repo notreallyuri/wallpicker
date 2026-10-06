@@ -1,5 +1,7 @@
 // The local library: every image in the wallpaper folders (with its cached
-// thumbnail, when there is one), favorites and tags, and the tags' counts.
+// thumbnail when there is one, and its place: `root` and `folder`), the
+// wallpaper folders, favorites and tags, and the tags' counts. Rescans when
+// the backend says the library changed (a trash, duplicates resolved).
 pragma Singleton
 import QtQuick
 import Quickshell
@@ -8,6 +10,8 @@ Singleton {
     id: library
 
     property var images: []
+    /// The wallpaper folders: [{path, name}].
+    property var roots: []
     /// path -> {favorite, tags}
     property var entries: ({})
     property bool loading: true
@@ -40,9 +44,13 @@ Singleton {
     }
 
     function reload() {
-        Backend.request("library.scan", {}, list => {
-            library.images = list || [];
+        Backend.request("library.scan", {}, lib => {
+            library.images = lib.images || [];
+            library.roots = lib.roots || [];
             library.loading = false;
+        }, e => {
+            library.loading = false;
+            Toasts.error("Scanning the folders failed", e);
         });
         Backend.request("library.catalog", {}, c => library.entries = c && c.items ? c.items : {});
     }
@@ -69,5 +77,41 @@ Singleton {
         }, done);
     }
 
+    function addTag(path, tag, done) {
+        Backend.request("library.add_tag", {
+            path: path,
+            tag: tag
+        }, c => {
+            library.entries = c.items || {};
+            if (done)
+                done();
+        }, e => Toasts.error("Could not add the tag", e));
+    }
+
+    function removeTag(path, tag) {
+        Backend.request("library.remove_tag", {
+            path: path,
+            tag: tag
+        }, c => library.entries = c.items || {}, e => Toasts.error("Could not remove the tag", e));
+    }
+
+    /// Paths with `color`, the most of it first; `done(paths)`.
+    function withColor(color, done) {
+        Backend.request("library.with_color", {
+            color: color
+        }, found => done(found.map(f => f[0])), e => {
+            Toasts.error("Could not read the wallpapers' colors", e);
+            done([]);
+        });
+    }
+
     Component.onCompleted: reload()
+
+    Connections {
+        target: Backend
+        function onEvent(name) {
+            if (name === "library-changed")
+                library.reload();
+        }
+    }
 }
