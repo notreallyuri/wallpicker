@@ -382,9 +382,11 @@ pub(crate) fn LocalView() -> impl IntoView {
         // Floats over the grid's scroll area (see heads.rs).
         <div data-tab-head class="absolute top-0 left-0 right-[var(--sb-w,0px)] z-20 border-b border-border/60 bg-background/70 px-5 pt-3 pb-2.5 backdrop-blur-xl flex flex-col gap-2">
         // Wraps only in a narrow window, rather than pushing buttons off the edge.
-        <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
-            // A fixed width: the row's other parts (the count) change, the box doesn't.
-            <div class="relative w-64 shrink-0 xl:w-80">
+        <div class="flex flex-wrap items-center gap-x-2 gap-y-2">
+            // Takes what the row has left (160 to 320 px): everything else in
+            // the row keeps one width, so the box only changes with the window,
+            // and the row stays one line down to small windows.
+            <div class="relative max-w-80 min-w-40 flex-1">
                 <SearchIcon class="pointer-events-none absolute top-2 left-2.5 text-muted-foreground" />
                 <Input
                     model=filter
@@ -412,6 +414,8 @@ pub(crate) fn LocalView() -> impl IntoView {
             <Tip text="Show everything at once, or browse folder by folder">
             <Button
                 variant=ButtonVariant::Outline
+                // One width for Flat and Folders.
+                class="w-28"
                 on_click=move |_| layout.update(|l| *l = if l == "folders" { "flat".into() } else { "folders".into() })
             >
                 {move || {
@@ -455,7 +459,7 @@ pub(crate) fn LocalView() -> impl IntoView {
                 "Random"
             </Button>
             </Tip>
-            <span class="min-w-24 shrink-0 text-sm whitespace-nowrap text-muted-foreground tabular-nums">
+            <span class="min-w-20 shrink-0 text-sm whitespace-nowrap text-muted-foreground tabular-nums">
                 {move || {
                     if loading.get() {
                         "Scanning…".to_string()

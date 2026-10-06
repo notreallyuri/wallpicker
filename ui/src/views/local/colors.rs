@@ -77,6 +77,8 @@ pub(super) fn ColorPicker(color: RwSignal<String>, #[prop(into)] loading: Signal
             <Tip text="Show the wallpapers with a color">
             <Button
                 variant=ButtonVariant::Outline
+                // One width whatever color is picked.
+                class="w-24"
                 attr:aria-expanded=move || open.get().to_string()
                 on_click=move |_| open.update(|o| *o = !*o)
             >

@@ -83,6 +83,9 @@ or **Noctalia**'s wallpaper manager (Settings → General → Wallpaper backend)
   import is merged (or replaces the library) and finds wallpapers that moved, by their place
   inside your wallpaper folders or by name and size.
   `wallpicker backup export|import|snapshots|restore`, `settings set snapshot_dir=…`.
+- **Monitors** (the chevron after "All" in the top bar): a drawer with each monitor bigger, showing
+  its wallpaper in the monitor's own shape and the file; click one to make it the target, or ↶ to
+  go back on that monitor only. Remembered open or closed.
 - **Previous**: each monitor remembers its last 30 wallpapers; **↶ Previous** (in the monitor
   bar, the tray menu, the panel, or `wallpicker previous` for a keybind) goes back through them.
 - **Saved choices**: every applied wallpaper is written to `state.json`, and

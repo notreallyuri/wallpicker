@@ -40,6 +40,8 @@ pub(crate) struct Ctx {
     /// The current wallpaper, blurred, behind the app (Appearance; a
     /// per-machine view preference, kept in localStorage).
     pub(crate) backdrop: RwSignal<bool>,
+    /// The monitor drawer under the top bar is open (remembered).
+    pub(crate) monitors_open: RwSignal<bool>,
     /// Where `wallpicker --open` asked to go, until the part that shows it
     /// (the shell for tabs and Settings, Local for Duplicates and tags)
     /// takes it.
@@ -69,6 +71,7 @@ impl Ctx {
             catalog: RwSignal::new(Catalog::default()),
             online_search: RwSignal::new(None),
             backdrop: RwSignal::new(crate::prefs::get("ui.backdrop").as_deref() != Some("0")),
+            monitors_open: RwSignal::new(crate::prefs::get("ui.monitors_open").as_deref() == Some("1")),
             open_place: RwSignal::new(None),
             toasts,
         }
