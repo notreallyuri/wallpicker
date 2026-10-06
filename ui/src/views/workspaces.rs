@@ -119,6 +119,7 @@ fn WorkspaceItem(
         });
     }
     let name = StoredValue::new(row.name.clone());
+    let has_wallpaper = row.wallpaper.is_some();
     // What its monitor shows now: "Use it" when that's not its wallpaper.
     let shown = {
         let monitor = row.monitor.clone();
@@ -145,12 +146,24 @@ fn WorkspaceItem(
                 type="button"
                 aria-label="Choose a wallpaper"
                 on:click=move |_| choose(name.get_value())
-                class="group/pic relative h-12 w-20 shrink-0 overflow-hidden rounded-lg bg-muted"
+                class=if has_wallpaper {
+                    "group/pic relative h-12 w-20 shrink-0 overflow-hidden rounded-lg bg-muted transition duration-200 ease-bounce hover:-translate-y-0.5"
+                } else {
+                    // Nothing yet: an empty slot that says what it does.
+                    "flex h-12 w-20 shrink-0 items-center justify-center rounded-lg border-2 border-dashed border-border text-xs font-bold text-muted-foreground transition hover:border-primary hover:text-primary"
+                }
             >
-                {move || thumb.get().map(|t| view! { <img src=t alt="" class="size-full object-cover" /> })}
-                <span class="absolute inset-0 flex items-center justify-center bg-black/45 text-xs font-bold text-white opacity-0 transition group-hover/pic:opacity-100">
-                    "Choose"
-                </span>
+                {if has_wallpaper {
+                    view! {
+                        {move || thumb.get().map(|t| view! { <img src=t alt="" class="size-full object-cover" /> })}
+                        <span class="absolute inset-0 flex items-center justify-center bg-black/45 text-xs font-bold text-white opacity-0 transition group-hover/pic:opacity-100">
+                            "Choose"
+                        </span>
+                    }
+                        .into_any()
+                } else {
+                    "+ Choose".into_any()
+                }}
             </button>
             <div class="flex min-w-0 flex-1 flex-col">
                 <span class="truncate text-sm font-bold">
@@ -163,9 +176,6 @@ fn WorkspaceItem(
                     {format!("Use {m}'s")}
                 </Button>
             })}
-            <Button size=ButtonSize::Sm variant=ButtonVariant::Outline on_click=move |_| choose(name.get_value())>
-                "Choose"
-            </Button>
             {row.wallpaper.is_some().then(|| view! {
                 <Button size=ButtonSize::Sm variant=ButtonVariant::Ghost on_click=move |_| assign(name.get_value(), None)>
                     "Clear"
