@@ -18,16 +18,23 @@ use wallpicker_core::library::{self, LocalImage};
 use wallpicker_core::store::{Dirs, Store};
 use wallpicker_core::thumbs;
 
-/// Blossom, dark (the app's default theme).
-const BACKGROUND: u32 = 0x1d1622;
-const CARD: u32 = 0x2a2030;
-const BORDER: u32 = 0x3a2d42;
-const PRIMARY: u32 = 0xf0a6c8;
-const MUTED: u32 = 0xa89bb0;
-const STAR: u32 = 0xfbbf24;
+/// Blossom, dark (the app's default theme): globals.css's oklch values.
+const BACKGROUND: u32 = 0x18141e;
+const FOREGROUND: u32 = 0xf2ecf4;
+const CARD: u32 = 0x221c29;
+const PRIMARY: u32 = 0xf1a1ce;
+const PRIMARY_FOREGROUND: u32 = 0x351929;
+const MUTED: u32 = 0x2c2535;
+const MUTED_FOREGROUND: u32 = 0xb4a9bd;
+/// Tailwind's yellow-400 (a favorite's star).
+const STAR: u32 = 0xfacc15;
+/// `color` with an alpha (0-255), like Tailwind's `bg-card/80`.
+fn with_alpha(color: u32, alpha: u8) -> Rgba {
+    rgba((color << 8) | u32::from(alpha))
+}
 
-/// The narrowest a tile gets before a column goes.
-const TILE_MIN: f32 = 260.0;
+/// The narrowest a tile gets before a column goes (the app's grid: minmax(220px, 1fr)).
+const TILE_MIN: f32 = 220.0;
 const GAP: f32 = 16.0;
 /// Decoded thumbnails kept; the rest are freed (the WebKit app keeps all).
 const IMAGES_KEPT: usize = 150;
@@ -38,6 +45,8 @@ struct Local {
     /// Each image's thumbnail, once made (same cache as the app).
     thumbs: HashMap<PathBuf, PathBuf>,
     catalog: Catalog,
+    /// What each monitor shows (for the badges).
+    current: HashMap<PathBuf, Vec<String>>,
     /// Indexes into `images` that pass the search, favorites first.
     shown: Vec<usize>,
     query: String,
@@ -47,6 +56,8 @@ struct Local {
     status: SharedString,
     columns: usize,
     scroll: UniformListScrollHandle,
+    /// Where a wheel scroll is gliding to (offset y, negative going down).
+    glide_to: Option<f32>,
 }
 
 impl Local {
@@ -65,16 +76,21 @@ impl Local {
         // The library and its thumbnails, off the UI thread.
         let scan_store = store.clone();
         cx.spawn(async move |this, cx| {
-            let (images, catalog) = cx
+            let (images, catalog, current) = cx
                 .background_spawn(async move {
                     let settings = scan_store.load_settings().unwrap_or_default();
-                    (library::scan(&settings.folders, settings.recursive), scan_store.load_catalog().unwrap_or_default())
+                    let mut current: HashMap<PathBuf, Vec<String>> = HashMap::new();
+                    for (m, p) in scan_store.load_state().unwrap_or_default().current {
+                        current.entry(p).or_default().push(m);
+                    }
+                    (library::scan(&settings.folders, settings.recursive), scan_store.load_catalog().unwrap_or_default(), current)
                 })
                 .await;
             let paths: Vec<PathBuf> = images.iter().map(|i| i.path.clone()).collect();
             let _ = this.update(cx, |this, cx| {
                 this.images = images;
                 this.catalog = catalog;
+                this.current = current;
                 this.filter();
                 cx.notify();
             });
@@ -125,6 +141,7 @@ impl Local {
             images: Vec::new(),
             thumbs: HashMap::new(),
             catalog: Catalog::default(),
+            current: HashMap::new(),
             shown: Vec::new(),
             query: String::new(),
             favorites_only: false,
@@ -133,6 +150,7 @@ impl Local {
             status: "".into(),
             columns: 4,
             scroll: UniformListScrollHandle::new(),
+            glide_to: None,
         }
     }
 
@@ -169,14 +187,20 @@ impl Local {
                     let backend = store.load_settings().map(|s| s.wallpaper_backend).unwrap_or_default();
                     let monitors = hyprpaper::list_monitors(&SystemRunner)?;
                     let focused = monitors.iter().find(|m| m.focused).or(monitors.first()).map(|m| m.name.clone());
-                    let Some(m) = focused else { return Ok("no monitor".to_string()) };
+                    let Some(m) = focused else { return Err(wallpicker_core::Error::Invalid("no monitor".into())) };
                     hyprpaper::apply_and_remember_with(&SystemRunner, &store, backend, &[m.clone()], &path)?;
-                    Ok::<_, wallpicker_core::Error>(format!("Applied to {m}"))
+                    Ok::<_, wallpicker_core::Error>((m, path))
                 })
                 .await;
             let _ = this.update(cx, |this, cx| {
                 this.status = match result {
-                    Ok(s) => s.into(),
+                    Ok((m, path)) => {
+                        for shown in this.current.values_mut() {
+                            shown.retain(|x| *x != m);
+                        }
+                        this.current.entry(path).or_default().push(m.clone());
+                        format!("Applied to {m}").into()
+                    }
                     Err(e) => format!("Could not apply: {e}").into(),
                 };
                 cx.notify();
@@ -185,63 +209,190 @@ impl Local {
         .detach();
     }
 
+    /// Star or unstar, through the same catalog the app uses.
+    fn toggle_favorite(&mut self, index: usize, cx: &mut Context<Self>) {
+        let path = self.images[index].path.clone();
+        let on = !self.catalog.is_favorite(&path);
+        match self.store.update_catalog(|c| c.set_favorite(&path, on)) {
+            Ok(c) => self.catalog = c,
+            Err(e) => self.status = format!("Could not save: {e}").into(),
+        }
+        self.filter();
+        cx.notify();
+    }
+
+    /// The WebKit app's tile (views/local/tile.rs), as close as GPUI goes:
+    /// a rounded card with the picture inset, the monitors showing it, the
+    /// name and size, the tags, and the star. No hover transitions (GPUI
+    /// switches styles at once) and no zoom on the picture.
     fn tile(&self, index: usize, tile_w: f32, cx: &mut Context<Self>) -> impl IntoElement + use<> {
-        let img_info = &self.images[index];
-        let favorite = self.catalog.is_favorite(&img_info.path);
-        let tag = self.catalog.tags(&img_info.path).first().cloned();
-        let thumb = self.thumbs.get(&img_info.path).cloned();
-        let name: SharedString = img_info.name.clone().into();
-        let picture_h = tile_w * 9.0 / 16.0;
+        let info = &self.images[index];
+        let favorite = self.catalog.is_favorite(&info.path);
+        let tags = self.catalog.tags(&info.path).to_vec();
+        let shown_on = self.current.get(&info.path).cloned().unwrap_or_default();
+        let thumb = self.thumbs.get(&info.path).cloned();
+        let name: SharedString = info.name.clone().into();
+        let size = (info.width > 0).then(|| format!("{}×{}", info.width, info.height));
+        // p-1.5 around the picture; the picture is 16:10.
+        let inner_w = tile_w - 2.0 * 6.0 - 2.0 * 2.0;
+        let picture_h = inner_w * 10.0 / 16.0;
+        let group: SharedString = format!("tile-{index}").into();
+
         div()
             .id(("tile", index))
+            .group(group.clone())
+            .relative()
             .w(px(tile_w))
             .flex_none()
-            .rounded(px(18.))
-            .bg(rgb(CARD))
+            .p(px(6.))
+            .rounded(px(24.))
+            .bg(with_alpha(CARD, 0xcc))
             .border_2()
-            .border_color(rgb(BORDER))
-            .overflow_hidden()
+            .border_color(with_alpha(FOREGROUND, 0x0d))
+            .shadow(vec![BoxShadow {
+                color: with_alpha(0x000000, 0x1a).into(),
+                offset: point(px(0.), px(4.)),
+                blur_radius: px(6.),
+                spread_radius: px(-1.),
+                inset: false,
+            }])
             .cursor_pointer()
-            .shadow_md()
-            .hover(|s| s.border_color(rgb(PRIMARY)).shadow_lg())
+            // Lifts, rings and glows on hover (the app eases it; GPUI snaps).
+            .hover(|s| {
+                s.top(px(-4.)).border_color(with_alpha(PRIMARY, 0xb3)).shadow(vec![BoxShadow {
+                    color: with_alpha(PRIMARY, 0x33).into(),
+                    offset: point(px(0.), px(10.)),
+                    blur_radius: px(15.),
+                    spread_radius: px(-3.),
+                    inset: false,
+                }])
+            })
             .on_click(cx.listener(move |this, _, _, cx| this.apply(index, cx)))
             .child(
+                // An exact size: a picture that isn't 16:10 would otherwise
+                // grow to its own height over the name.
                 div()
                     .relative()
+                    .w(px(inner_w))
                     .h(px(picture_h))
-                    .w_full()
-                    .bg(rgb(BORDER))
-                    .children(thumb.map(|t| img(t).size_full().object_fit(ObjectFit::Cover)))
-                    .children(favorite.then(|| {
-                        div()
+                    .overflow_hidden()
+                    .rounded(px(17.6))
+                    .bg(rgb(MUTED))
+                    .children(thumb.map(|t| {
+                        img(t)
                             .absolute()
-                            .top_2()
-                            .right_2()
+                            .top_0()
+                            .left_0()
+                            .w(px(inner_w))
+                            .h(px(picture_h))
+                            .rounded(px(17.6))
+                            .object_fit(ObjectFit::Cover)
+                    }))
+                    .child(h_flex().absolute().top_2().left_2().gap_1().children(shown_on.into_iter().map(|m| {
+                        div()
                             .px_2()
-                            .rounded_full()
-                            .bg(rgba(0x00000088))
-                            .text_color(rgb(STAR))
-                            .child("★")
-                    })),
+                            .rounded(px(8.))
+                            .bg(rgb(PRIMARY))
+                            .text_color(rgb(PRIMARY_FOREGROUND))
+                            .text_xs()
+                            .font_weight(FontWeight::SEMIBOLD)
+                            .child(m)
+                    }))),
             )
             .child(
-                h_flex()
+                v_flex()
+                    .h(px(50.))
                     .px_3()
                     .py_2()
-                    .gap_2()
-                    .justify_between()
-                    .child(div().text_sm().font_weight(FontWeight::BOLD).truncate().child(name))
-                    .children(tag.map(|t| {
+                    .gap_1()
+                    .text_xs()
+                    .child(
+                        h_flex()
+                            .gap_2()
+                            .justify_between()
+                            .items_baseline()
+                            .child(div().min_w_0().truncate().text_color(rgb(MUTED_FOREGROUND)).child(name))
+                            .children(size.map(|s| {
+                                div().flex_none().text_size(px(10.)).text_color(with_alpha(MUTED_FOREGROUND, 0xb3)).child(s)
+                            })),
+                    )
+                    .child(h_flex().gap_1().overflow_hidden().children(tags.into_iter().map(|t| {
                         div()
                             .flex_none()
                             .px_2()
+                            .py(px(2.))
                             .rounded_full()
-                            .bg(rgba(0xf0a6c833))
-                            .text_xs()
+                            .bg(with_alpha(PRIMARY, 0x26))
+                            .text_size(px(10.))
+                            .font_weight(FontWeight::MEDIUM)
                             .text_color(rgb(PRIMARY))
                             .child(t)
-                    })),
+                    }))),
             )
+            .child({
+                // The star: yellow on a favorite, else shown on hover.
+                let star = div()
+                    .id(("star", index))
+                    .absolute()
+                    .top(px(14.))
+                    .right(px(14.))
+                    .size(px(28.))
+                    .flex()
+                    .items_center()
+                    .justify_center()
+                    .rounded_full()
+                    .bg(with_alpha(BACKGROUND, 0xcc))
+                    .hover(|s| s.bg(rgb(BACKGROUND)))
+                    .on_click(cx.listener(move |this, _, _, cx| {
+                        cx.stop_propagation();
+                        this.toggle_favorite(index, cx);
+                    }));
+                if favorite {
+                    star.text_color(rgb(STAR)).child("★")
+                } else {
+                    star.text_color(with_alpha(FOREGROUND, 0xcc))
+                        .opacity(0.)
+                        .group_hover(group, |s| s.opacity(1.))
+                        .child("☆")
+                }
+            })
+    }
+}
+
+impl Local {
+    /// A wheel notch moves a fixed step at once in GPUI; here it sets where
+    /// to go and `glide` gets there over a few frames. A touchpad's pixel
+    /// deltas are already smooth: they apply as they come.
+    fn wheel(&mut self, event: &ScrollWheelEvent, window: &mut Window, cx: &mut Context<Self>) {
+        let handle = self.scroll.0.borrow().base_handle.clone();
+        let max = f32::from(handle.max_offset().y);
+        let now = f32::from(handle.offset().y);
+        match event.delta {
+            ScrollDelta::Lines(lines) => {
+                let from = self.glide_to.unwrap_or(now);
+                self.glide_to = Some((from + lines.y * 140.0).clamp(-max, 0.0));
+                window.request_animation_frame();
+            }
+            ScrollDelta::Pixels(delta) => {
+                self.glide_to = None;
+                handle.set_offset(point(px(0.), px((now + f32::from(delta.y)).clamp(-max, 0.0))));
+            }
+        }
+        cx.notify();
+    }
+
+    /// One frame of a glide: a fifth of the way left, so it eases out.
+    fn glide(&mut self, window: &mut Window) {
+        let Some(to) = self.glide_to else { return };
+        let handle = self.scroll.0.borrow().base_handle.clone();
+        let now = f32::from(handle.offset().y);
+        let next = if (to - now).abs() < 0.5 { to } else { now + (to - now) * 0.2 };
+        handle.set_offset(point(px(0.), px(next)));
+        if next == to {
+            self.glide_to = None;
+        } else {
+            window.request_animation_frame();
+        }
     }
 }
 
@@ -252,6 +403,7 @@ fn scan_store_clone(this: &WeakEntity<Local>, cx: &mut AsyncApp) -> Store {
 
 impl Render for Local {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        self.glide(window);
         let width = f32::from(window.viewport_size().width) - 2.0 * 24.0;
         self.columns = (((width + GAP) / (TILE_MIN + GAP)).floor() as usize).max(1);
         let columns = self.columns;
@@ -271,7 +423,7 @@ impl Render for Local {
         v_flex()
             .size_full()
             .bg(rgb(BACKGROUND))
-            .text_color(rgb(0xf4eef6))
+            .text_color(rgb(FOREGROUND))
             .font_family("Nunito")
             .child(
                 // The floating search card.
@@ -283,17 +435,38 @@ impl Render for Local {
                     .rounded(px(22.))
                     .bg(rgb(CARD))
                     .border_2()
-                    .border_color(rgb(BORDER))
+                    .border_color(with_alpha(FOREGROUND, 0x17))
                     .shadow_lg()
                     .child(div().text_lg().font_weight(FontWeight::EXTRA_BOLD).text_color(rgb(PRIMARY)).child("wallpicker"))
                     .child(div().w(px(320.)).child(Input::new(&self.search).rounded(px(14.))))
                     .child(favorites)
-                    .child(div().text_sm().text_color(rgb(MUTED)).child(count))
+                    .child(div().text_sm().text_color(rgb(MUTED_FOREGROUND)).child(count))
                     .child(div().flex_1())
-                    .child(div().text_sm().text_color(rgb(MUTED)).child(self.status.clone())),
+                    .child(div().text_sm().text_color(rgb(MUTED_FOREGROUND)).child(self.status.clone())),
             )
             .child(
-                image_cache(self.image_cache.clone()).flex_1().min_h_0().child(
+                image_cache(self.image_cache.clone())
+                    .relative()
+                    .flex_1()
+                    .min_h_0()
+                    // Catches the wheel before the list does (capture phase).
+                    .child({
+                        let view = cx.entity();
+                        canvas(
+                            |bounds, window, _| window.insert_hitbox(bounds, HitboxBehavior::Normal),
+                            move |_, hitbox, window, _| {
+                                window.on_mouse_event(move |event: &ScrollWheelEvent, phase, window, cx| {
+                                    if phase == DispatchPhase::Capture && hitbox.is_hovered(window) {
+                                        cx.stop_propagation();
+                                        view.update(cx, |this, cx| this.wheel(event, window, cx));
+                                    }
+                                });
+                            },
+                        )
+                        .absolute()
+                        .size_full()
+                    })
+                    .child(
                     uniform_list(
                         "grid",
                         rows,
@@ -354,9 +527,14 @@ impl ImageCache for LruImages {
 fn main() {
     gpui_kit::application().run(move |cx| {
         gpui_kit::init(cx);
-        let _ = cx
-            .text_system()
-            .add_fonts(vec![std::borrow::Cow::Borrowed(include_bytes!("../../../ui/assets/fonts/Nunito.ttf"))]);
+        // The app's Nunito is one variable font; GPUI only uses its default
+        // (light) weight, so fixed weights cut from it (fonts/).
+        let _ = cx.text_system().add_fonts(vec![
+            std::borrow::Cow::Borrowed(include_bytes!("../fonts/Nunito-400.ttf")),
+            std::borrow::Cow::Borrowed(include_bytes!("../fonts/Nunito-600.ttf")),
+            std::borrow::Cow::Borrowed(include_bytes!("../fonts/Nunito-700.ttf")),
+            std::borrow::Cow::Borrowed(include_bytes!("../fonts/Nunito-800.ttf")),
+        ]);
         Theme::change(ThemeMode::Dark, None, cx);
         {
             let theme = Theme::global_mut(cx);
@@ -364,8 +542,8 @@ fn main() {
             theme.colors.primary = rgb(PRIMARY).into();
             theme.colors.primary_foreground = rgb(BACKGROUND).into();
             theme.colors.background = rgb(BACKGROUND).into();
-            theme.colors.border = rgb(BORDER).into();
-            theme.colors.input = rgb(BORDER).into();
+            theme.colors.border = with_alpha(FOREGROUND, 0x17).into();
+            theme.colors.input = with_alpha(FOREGROUND, 0x17).into();
             theme.colors.ring = rgb(PRIMARY).into();
         }
         let bounds = Bounds::centered(None, size(px(1280.), px(860.)), cx);

@@ -7,6 +7,14 @@ tags, applying. Only the grid, search, Favorites and click-to-apply (on the focu
     cd prototype/gpui-local
     cargo run --release
 
+The tiles copy the app's (`ui/src/views/local/tile.rs`): card, inset picture, monitor badges,
+name and size, tags, the star (it toggles the favorite). GPUI has no style transitions, so the
+hover lift and glow switch at once, and no zoom on the picture. A mouse wheel glides (GPUI
+jumps a step per notch); touchpads scroll as they come.
+
+`fonts/`: fixed weights of the app's Nunito (a variable font, whose default weight is all GPUI
+uses), cut with `fonttools varLib.instancer Nunito.ttf wght=700`.
+
 Its own workspace and `target/`: the app's build doesn't change. The first build takes ~4 min.
 
 `WALLPICKER_AUTOSCROLL=1` scrolls through the whole library and back (for measuring against
