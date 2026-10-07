@@ -197,6 +197,9 @@ QtObject {
                 tagsFor: Dialogs.tagsFor,
                 adjusting: Dialogs.adjusting,
                 adjust: Monitors.adjust,
+                current: Monitors.current,
+                selection: Monitors.selection,
+                applying: Monitors.applying,
                 drawer: Monitors.drawerOpen,
                 focus: String(hooks.root.Window.activeFocusItem).split("(")[0],
                 active: hooks.root.Window.active

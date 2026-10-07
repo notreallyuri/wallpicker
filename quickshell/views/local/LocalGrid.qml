@@ -56,8 +56,11 @@ GridView {
     onHeaderHeightChanged: settle()
     onTopYChanged: settle()
 
+    // positionViewAtBeginning alone puts the first row at the very edge,
+    // under the floating card (it ignores topMargin).
     function toTop() {
         positionViewAtBeginning();
+        contentY = topY;
     }
 
     // In the Folders layout: where we are, above the grid.

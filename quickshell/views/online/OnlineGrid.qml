@@ -47,8 +47,12 @@ GridView {
     onHeaderSpaceChanged: if (atTop)
         Qt.callLater(() => contentY = originY - topMargin)
 
+    // positionViewAtBeginning alone puts the first row at the very edge,
+    // under the floating card (it ignores topMargin): on a page that barely
+    // scrolls, that's near the bottom.
     function toTop() {
         positionViewAtBeginning();
+        contentY = originY - topMargin;
     }
 
     // What's loading, over the placeholders.

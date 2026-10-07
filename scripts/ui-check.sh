@@ -7,7 +7,8 @@
 # then the given test-hook calls, a screenshot, and the log's warnings.
 # Fails if QML reported errors or warnings. CHECK_FOLDERS=a:b uses those
 # wallpaper folders instead of yours; CHECK_PREFS='{...}' sets interface
-# choices (services/Prefs.qml) to start with.
+# choices (services/Prefs.qml) to start with. CHECK_SIZE=WxH sizes the
+# session (the panel is 1560x980 on a 1080p screen).
 #
 #   cargo build
 #   scripts/ui-check.sh [OUT.png] ["click 1845 136" "wheel 900 600 3" ...]
@@ -71,7 +72,8 @@ SH
 chmod +x "$tmp/bin/hyprctl"
 {
     echo '#!/bin/bash'
-    echo 'wlr-randr --output HEADLESS-1 --custom-mode 1920x1080'
+    # CHECK_SIZE=1560x980: the window at the floating panel's size.
+    echo "wlr-randr --output HEADLESS-1 --custom-mode ${CHECK_SIZE:-1920x1080}"
     echo "WALLPICKER_DEBUG_WHEEL=${WALLPICKER_DEBUG_WHEEL:-} WALLPICKER_TEST=1 WALLPICKER_WINDOW=1 WALLPICKER_BIN='$here/target/debug/wallpicker' qs -p '$here/quickshell' > '$tmp/ui.log' 2>&1 &"
     echo 'sleep 6'
     # wtype's first key after startup is lost (its keyboard isn't set up
