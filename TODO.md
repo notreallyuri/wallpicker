@@ -122,6 +122,24 @@ and feels like the app (real transitions and easing, glass, shadows); the scroll
   drawer, All, Previous, the Adjust dialog (mirror, fit, framing by drag, scroll and sliders).
 - [ ] **3. Online and Collections**: providers, search, the filters dialog, details (preview,
   tags, download, apply), downloads, Wallhaven collections, pages and Jump to.
+  The plan (2026-10-07), in this order, each step checked headless and committed:
+  1. **Backend**: `src-tauri/src/commands/online.rs`'s ten commands into `service/online.rs`
+     (as phase 2 did for adjust), then `serve/methods/online.rs`: `online.search`,
+     `details`, `preview`, `downloaded`, `download` (announcing `library-changed`),
+     `filters` / `save_filters`, `tag_suggestions`, `collections`, `collection`. Downloads
+     report progress as pushed events (`download-progress {id, done, total}`), not a call
+     per poll.
+  2. **Services**: `Online` (provider, query, filters, page, results, loading, errors;
+     remembered choices in Prefs) and `Downloads` (in flight, progress, done).
+  3. **Views** (`views/online/`, mirroring `ui/src/views/online/`): OnlineView, its search
+     card (reuse Glass, SearchCard's layout), OnlineGrid + OnlineTile (sizes, downloaded
+     mark, progress), the provider's filters (Wallhaven, Moebooru: a file each), the pager
+     with Jump to (components/Pager, JumpTo exist).
+  4. **Dialogs**: Details (preview, tags with suggestions, download, download and apply).
+  5. **Collections** tab (`views/collections/`): a Wallhaven user's collections and their
+     pages; the top bar's tabs switch views (Picker hosts one at a time).
+  6. Online's tooltips (the app's: "Sorting and filters", "Already in your download
+     folder", the details dialog's two).
 - [ ] **4. Settings**: every section (General, Appearance, Downloads, Slideshow, Workspaces with
   its picker, Performance, Backup with file dialogs, providers), conflicts and Stop it.
 - [ ] **5. Background**: `wallpicker daemon` (workspace listener, tray or not), following the
