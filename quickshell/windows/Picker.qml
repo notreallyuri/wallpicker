@@ -111,6 +111,35 @@ Item {
         }
     }
 
+    // Ctrl+1/2/3: Local, Online, Collections (while no menu or dialog is open).
+    Repeater {
+        model: 3
+        Item {
+            id: tabKey
+            required property int index
+            Shortcut {
+                enabled: Dialogs.calm
+                sequence: "Ctrl+" + (tabKey.index + 1)
+                onActivated: Views.current = tabKey.index
+            }
+        }
+    }
+
+    // Alt+1..N: where a click applies, a monitor in the top bar's order;
+    // Alt+N+1: All (two monitors: Alt+1, Alt+2, Alt+3 for All).
+    Repeater {
+        model: Math.min(9, Monitors.list.length + 1)
+        Item {
+            id: monitorKey
+            required property int index
+            Shortcut {
+                enabled: Dialogs.calm
+                sequence: "Alt+" + (monitorKey.index + 1)
+                onActivated: Monitors.select(monitorKey.index < Monitors.list.length ? Monitors.list[monitorKey.index].name : Monitors.all)
+            }
+        }
+    }
+
     // The dialogs, once for everything (services/Dialogs opens them).
     TagsDialog {}
     TrashDialog {}
