@@ -17,6 +17,10 @@ PanelWindow {
 
     readonly property alias picker: picker
 
+    // Out of the way while a file dialog is open: an overlay sits above
+    // every window, the dialog too.
+    visible: !Files.asking
+
     screen: Quickshell.screens.find(s => Hyprland.focusedMonitor && s.name === Hyprland.focusedMonitor.name) || Quickshell.screens[0]
     anchors {
         top: true

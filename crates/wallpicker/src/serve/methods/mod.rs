@@ -3,6 +3,7 @@
 
 mod app;
 mod backup;
+mod files;
 mod library;
 mod online;
 mod settings;
@@ -26,6 +27,7 @@ pub(super) async fn call(state: &AppState, out: &Out, method: &str, params: Valu
         "slideshow" => slideshow::call(state, out, name).await,
         "workspaces" => workspaces::call(state, name, &params).await,
         "backup" => backup::call(state, out, name, &params).await,
+        "files" => files::call(name, &params).await,
         "wallpapers" => wallpapers::call(state, out, name, &params).await,
         _ => None,
     };

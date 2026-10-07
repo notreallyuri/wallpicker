@@ -5,6 +5,7 @@
 
 pub mod app;
 pub mod backup;
+pub mod files;
 pub mod library;
 pub mod online;
 pub mod settings;
