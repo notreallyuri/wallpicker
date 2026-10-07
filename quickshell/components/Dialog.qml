@@ -16,7 +16,11 @@ Popup {
     property alias footer: footerRow.data
     property real preferredWidth: 520
 
-    parent: Overlay.overlay
+    // Centered on what it's declared in (the picker), which it follows into
+    // whatever window that is. Not Overlay.overlay: the floating panel's
+    // window is replaced when it moves to the focused monitor, the old
+    // overlay goes with it, and a dialog parented there was left with no
+    // window: open() did nothing, silently.
     anchors.centerIn: parent
     width: Math.min(preferredWidth, parent ? parent.width - 48 : preferredWidth)
     modal: true

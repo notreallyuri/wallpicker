@@ -4,7 +4,8 @@
 # from yours (no API key, a stand-in hyprctl with two 1920x1080 monitors),
 # then the given test-hook calls, a screenshot, and the log's warnings.
 # Fails if QML reported errors or warnings. CHECK_FOLDERS=a:b uses those
-# wallpaper folders instead of yours.
+# wallpaper folders instead of yours; CHECK_PREFS='{...}' sets interface
+# choices (services/Prefs.qml) to start with.
 #
 #   cargo build
 #   scripts/ui-check.sh [OUT.png] ["click 1845 136" "wheel 900 600 3" ...]
@@ -36,6 +37,19 @@ json.dump(s, open(f'{tmp}/config/wallpicker/config.json', 'w'))
 PY
 cp -r ~/.local/state/wallpicker "$tmp/state/" 2>/dev/null || true
 cp -r ~/.local/share/wallpicker "$tmp/data/" 2>/dev/null || true
+# CHECK_PREFS='{"localLayout":"folders"}': interface choices to start with.
+if [ -n "$CHECK_PREFS" ]; then
+    python3 - "$tmp/state/wallpicker/ui.json" <<'PY'
+import json, os, sys
+try:
+    prefs = json.load(open(sys.argv[1]))
+except (OSError, ValueError):
+    prefs = {}
+prefs.update(json.loads(os.environ['CHECK_PREFS']))
+os.makedirs(os.path.dirname(sys.argv[1]), exist_ok=True)
+json.dump(prefs, open(sys.argv[1], 'w'))
+PY
+fi
 cat > "$tmp/bin/hyprctl" <<'SH'
 #!/bin/sh
 case "$*" in *monitors*) echo '[{"name":"DP-1","width":1920,"height":1080,"x":0,"y":0,"focused":true},{"name":"DP-2","width":1920,"height":1080,"x":1920,"y":0,"focused":false}]';; *workspaces*) echo '[]';; *) echo ok;; esac
@@ -44,7 +58,7 @@ chmod +x "$tmp/bin/hyprctl"
 {
     echo '#!/bin/bash'
     echo 'wlr-randr --output HEADLESS-1 --custom-mode 1920x1080'
-    echo "WALLPICKER_TEST=1 WALLPICKER_WINDOW=1 WALLPICKER_BIN='$here/target/debug/wallpicker' qs -p '$here/quickshell' > '$tmp/ui.log' 2>&1 &"
+    echo "WALLPICKER_DEBUG_WHEEL=${WALLPICKER_DEBUG_WHEEL:-} WALLPICKER_TEST=1 WALLPICKER_WINDOW=1 WALLPICKER_BIN='$here/target/debug/wallpicker' qs -p '$here/quickshell' > '$tmp/ui.log' 2>&1 &"
     echo 'sleep 6'
     # wtype's first key after startup is lost (its keyboard isn't set up
     # yet): a harmless one first.

@@ -4,6 +4,7 @@
 //   qs -p quickshell ipc call wallpicker-test probe 600 400
 import QtQuick
 import QtQuick.Window
+import QtTest
 import Quickshell.Io
 import qs.services
 
@@ -76,6 +77,10 @@ QtObject {
         return found;
     }
 
+    // Real input events (QtTest posts them to the window, so they're
+    // delivered as a mouse's would be: handlers, overlays, popups).
+    property TestEvent events: TestEvent {}
+
     // Only what's here crosses IPC (plain types).
     property IpcHandler ipc: IpcHandler {
         target: "wallpicker-test"
@@ -87,6 +92,25 @@ QtObject {
                 return "nothing to click at " + x + "," + y + " (" + h.item + ")";
             h.area.clicked(null);
             return "clicked " + h.area.parent;
+        }
+
+        /// A real click at (x, y) (left, or right with button 2).
+        function press(x: real, y: real, button: int): string {
+            const b = button === 2 ? Qt.RightButton : Qt.LeftButton;
+            hooks.events.mouseMove(hooks.root, x, y, -1, Qt.NoButton, Qt.NoModifier);
+            return hooks.events.mouseClick(hooks.root, x, y, b, Qt.NoModifier, -1) ? "pressed" : "no window";
+        }
+
+        /// A real pointer move to (x, y).
+        function move(x: real, y: real): string {
+            return hooks.events.mouseMove(hooks.root, x, y, -1, Qt.NoButton, Qt.NoModifier) ? "moved" : "no window";
+        }
+
+        /// A real wheel at (x, y): `notches` of 120 (positive: down).
+        function roll(x: real, y: real, notches: real): string {
+            hooks.events.mouseMove(hooks.root, x, y, -1, Qt.NoButton, Qt.NoModifier);
+            const ok = hooks.events.mouseWheel(hooks.root, x, y, Qt.NoButton, Qt.NoModifier, 0, -120 * notches, -1);
+            return ok ? "rolled" : "no window";
         }
 
         /// Right-click at (x, y): the nearest item there with a
@@ -116,6 +140,20 @@ QtObject {
                 return "no SmoothScroll in " + item;
             smooth.notches(notches);
             return "from " + Math.round(item.contentY) + " to " + Math.round(smooth.goal);
+        }
+
+        /// A fast spin at (x, y): `notches` real notches, `gap` ms apart.
+        function spin(x: real, y: real, notches: int, gap: int): string {
+            hooks.events.mouseMove(hooks.root, x, y, -1, Qt.NoButton, Qt.NoModifier);
+            for (let i = 0; i < notches; i++)
+                hooks.events.mouseWheel(hooks.root, x, y, Qt.NoButton, Qt.NoModifier, 0, -120, gap);
+            return "spun";
+        }
+
+        /// The scroll position of the view at (x, y), and its range.
+        function range(x: real, y: real): string {
+            const item = hooks.flickableAt(x, y);
+            return item ? Math.round(item.contentY) + " of " + Math.round(item.originY - item.topMargin) + ".." + Math.round(item.originY + item.contentHeight + item.bottomMargin - item.height) : "no scrolling view";
         }
 
         /// The scroll position of the view at (x, y).

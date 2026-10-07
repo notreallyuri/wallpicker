@@ -32,19 +32,29 @@ GridView {
         flickable: grid
     }
 
-    // The space at the top changed: keep the content where it was relative
-    // to it (so it visibly moves), like a scroll area's padding.
-    // The same when the header (the breadcrumb) comes or goes: the view
-    // keeps its position, which would leave it behind the card.
+    // The space at the top changed (tags expanded) or the header (the
+    // breadcrumb) came or went. At the top, the view stays at the top once
+    // it's laid out again (shifting by the difference added up with the
+    // view's own repositioning: the content landed too low or too high).
+    // Scrolled down, the content moves with the card, like a scroll area's
+    // padding.
     readonly property real headerHeight: headerItem ? headerItem.height : 0
-    property real lastTop: 0
-    function keepPlace() {
-        const top = headerSpace + headerHeight;
-        contentY -= top - lastTop;
-        lastTop = top;
+    readonly property real topY: originY - topMargin
+    property bool atTop: true
+    property real lastSpace: 0
+    onContentYChanged: atTop = contentY <= topY + 1
+    function settle() {
+        if (atTop)
+            Qt.callLater(() => contentY = topY);
     }
-    onHeaderSpaceChanged: keepPlace()
-    onHeaderHeightChanged: keepPlace()
+    onHeaderSpaceChanged: {
+        if (!atTop)
+            contentY -= headerSpace - lastSpace;
+        lastSpace = headerSpace;
+        settle();
+    }
+    onHeaderHeightChanged: settle()
+    onTopYChanged: settle()
 
     function toTop() {
         positionViewAtBeginning();

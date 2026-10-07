@@ -10,7 +10,8 @@ Popover {
     id: menu
 
     default property alias items: column.data
-    property real minWidth: 200
+    // As the app's (min-w-32): otherwise as wide as its entries.
+    property real minWidth: 128
 
     padding: 6
     margins: 8
@@ -24,10 +25,16 @@ Popover {
         open();
     }
 
+    /// The pointer is over its entries (a submenu stays open while it is).
+    readonly property bool hovered: hover.hovered
+
     contentItem: ColumnLayout {
         id: column
         /// What MenuItems close when chosen.
         property var owner: menu
         spacing: 1
+        HoverHandler {
+            id: hover
+        }
     }
 }

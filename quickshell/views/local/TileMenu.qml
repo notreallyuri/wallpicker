@@ -20,8 +20,6 @@ Menu {
     // The ticked ones still connected, in the bar's order.
     readonly property var pickedNow: Monitors.list.map(m => m.name).filter(n => picked.includes(n))
 
-    minWidth: 220
-
     /// Open for `image` at (x, y) of `at`.
     function openFor(image, at, x, y) {
         img = image;

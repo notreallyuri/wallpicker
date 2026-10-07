@@ -1,5 +1,6 @@
 // The Local tab: the grid, with the search card floating over its top.
 import QtQuick
+import qs.components
 import qs.services
 
 Item {
@@ -9,14 +10,19 @@ Item {
         id: localModel
     }
 
-    LocalGrid {
-        id: grid
+    // The grid, its bottom edge fading out (things scroll in gradually).
+    FadeBottom {
         anchors.fill: parent
         anchors.leftMargin: 20
         anchors.rightMargin: 4
-        local: localModel
-        headerSpace: card.height + 12 + 28
-        onTileMenu: (img, at, x, y) => tileMenu.openFor(img, at, x, y)
+        flickable: grid
+        LocalGrid {
+            id: grid
+            anchors.fill: parent
+            local: localModel
+            headerSpace: card.height + 12 + 28
+            onTileMenu: (img, at, x, y) => tileMenu.openFor(img, at, x, y)
+        }
     }
 
     // One menu for every tile, as in the app.
