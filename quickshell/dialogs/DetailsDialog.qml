@@ -21,7 +21,7 @@ Dialog {
     description: {
         if (!w)
             return "";
-        const stats = [w.provider === "wallhaven" ? "♥ " + w.likes : "Score " + w.likes];
+        const stats = [w.provider === "konachan" || w.provider === "yandere" ? "Score " + w.likes : "♥ " + w.likes];
         if (w.views !== null && w.views !== undefined)
             stats.push(w.views + " views");
         if (w.file_size > 0)
@@ -97,6 +97,7 @@ Dialog {
     DetailsAbout {
         Layout.fillWidth: true
         info: dialog.info && dialog.info.key === dialog.key ? dialog.info : null
+        photo: !!dialog.w && dialog.w.provider === "unsplash"
         onSearch: q => dialog.searchFor(q)
         onOpenUrl: url => dialog.openUrl(url)
     }

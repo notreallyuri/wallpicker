@@ -12,7 +12,7 @@ in `quickshell/views/settings/`.
 - [x] **Konachan** (Moebooru): konachan.net (SFW) or konachan.com (all ratings), a setting.
 - [x] **yande.re** (Moebooru): same module as Konachan.
   Artists come from the API's tag kinds (`api_version=2&include_tags=1`).
-- [ ] **Unsplash**: photography. Free key, 50 requests/hour in demo mode, 5,000/hour once the
+- [x] **Unsplash** (done 2026-10-07): photography. Free key, 50 requests/hour in demo mode, 5,000/hour once the
   app is approved. Orientation filter, no exact resolution filter. Attribution required by its
   guidelines. The plan (2026-10-07):
   1. **Core**: `unsplash.rs` (search, or the Wallpapers topic when there's no search text;

@@ -230,14 +230,18 @@ Item {
             width: parent.width - 24
             Text {
                 Layout.fillWidth: true
-                text: tile.w.width + "×" + tile.w.height
+                // Unsplash: its photographer, credited as its guidelines ask.
+                readonly property var by: tile.w.provider === "unsplash" && tile.w.details ? tile.w.details.uploader : null
+                text: tile.w.width + "×" + tile.w.height + (by ? " · " + by.name : "")
+                elide: Text.ElideRight
                 color: Theme.foreground
                 font.family: Theme.font
                 font.pixelSize: 12
             }
             Text {
-                // "♥ 12" for Wallhaven favorites, "Score 19" on the Moebooru sites.
-                text: tile.w.provider === "wallhaven" ? "♥ " + tile.w.likes : "Score " + tile.w.likes
+                // "♥ 12" for Wallhaven favorites and Unsplash likes, "Score 19"
+                // on the Moebooru sites.
+                text: tile.w.provider === "konachan" || tile.w.provider === "yandere" ? "Score " + tile.w.likes : "♥ " + tile.w.likes
                 color: Theme.mutedForeground
                 font.family: Theme.font
                 font.pixelSize: 12

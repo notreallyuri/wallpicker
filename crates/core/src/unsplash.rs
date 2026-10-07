@@ -191,11 +191,7 @@ struct Search {
 
 impl From<Photo> for OnlineWallpaper {
     fn from(p: Photo) -> OnlineWallpaper {
-        // The photographer is the artist; "More by" lists their photos.
-        let artist = OnlineTag { name: p.user.name.clone(), query: format!("user:{}", p.user.username), category: "Photographer".into(), is_artist: true };
-        let tags = std::iter::once(artist)
-            .chain(p.tags.into_iter().map(|t| OnlineTag { query: t.title.clone(), name: t.title, category: String::new(), is_artist: false }))
-            .collect();
+        let tags = p.tags.into_iter().map(|t| OnlineTag { query: t.title.clone(), name: t.title, category: String::new(), is_artist: false }).collect();
         OnlineWallpaper {
             provider: Provider::Unsplash,
             page_url: with_utm(&p.links.html),
@@ -211,6 +207,7 @@ impl From<Photo> for OnlineWallpaper {
             likes: p.likes,
             views: None,
             details: Some(Details {
+                // The photographer ("Photo by"; "More from" lists their photos).
                 uploader: Some(Person { name: p.user.name, query: Some(format!("user:{}", p.user.username)) }),
                 // The photographer's page, credited with Unsplash.
                 source: with_utm(&p.user.links.html),
@@ -266,8 +263,8 @@ mod tests {
         let d = w.details.as_ref().unwrap();
         assert_eq!(d.uploader.as_ref().unwrap().query.as_deref(), Some("user:ann_smith"));
         assert_eq!(d.source, "https://unsplash.com/@ann_smith?utm_source=wallpicker&utm_medium=referral");
-        assert!(d.tags[0].is_artist && d.tags[0].name == "Ann Smith");
-        assert_eq!(d.tags[1].name, "mountain");
+        assert_eq!(d.uploader.as_ref().unwrap().name, "Ann Smith");
+        assert_eq!(d.tags.iter().map(|t| t.name.as_str()).collect::<Vec<_>>(), ["mountain", "sky"]);
         assert_eq!(w.file_name().unwrap(), "unsplash-Dwu85P9SOIk.jpg");
     }
 

@@ -219,6 +219,7 @@ QtObject {
         function settings(): string {
             const s = Object.assign({}, Settings.data);
             s.wallhaven_api_key = s.wallhaven_api_key ? "(set)" : null;
+            s.unsplash_access_key = s.unsplash_access_key ? "(set)" : null;
             return JSON.stringify(s);
         }
 
@@ -276,6 +277,14 @@ QtObject {
                 break;
             case "reset":
                 Online.resetFilters();
+                break;
+            case "filters":
+                Dialogs.onlineFilters = true;
+                break;
+            case "settings":
+                // Not the Online search, but a dialog all the same: Settings at
+                // section `arg`.
+                Dialogs.openSettings(arg);
                 break;
             case "suggest":
                 Online.pickSuggestion(Online.suggestions[n]);

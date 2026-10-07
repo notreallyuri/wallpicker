@@ -64,7 +64,7 @@ Singleton {
             return 0;
         const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
         const set = v => !!v && v.length > 0;
-        const on = provider === "wallhaven" ? [f.sorting !== d.sorting, f.sorting === "toplist" && f.top_range !== d.top_range, set(f.atleast), set(f.resolutions), set(f.ratios), !same(f.categories, d.categories), !same(f.purity, d.purity)] : [f.sorting !== d.sorting, set(f.atleast), ratingsApply && !same(f.ratings, d.ratings)];
+        const on = provider === "wallhaven" ? [f.sorting !== d.sorting, f.sorting === "toplist" && f.top_range !== d.top_range, set(f.atleast), set(f.resolutions), set(f.ratios), !same(f.categories, d.categories), !same(f.purity, d.purity)] : provider === "unsplash" ? [f.order !== d.order, f.orientation !== d.orientation, set(f.color), f.content_filter !== d.content_filter] : [f.sorting !== d.sorting, set(f.atleast), ratingsApply && !same(f.ratings, d.ratings)];
         return on.filter(x => x).length;
     }
 
@@ -118,6 +118,8 @@ Singleton {
             q.purity = Object.assign({}, q.purity, {
                 nsfw: q.purity.nsfw && hasApiKey
             });
+        } else if (provider === "unsplash") {
+            q.query = text;
         } else {
             q.tags = text;
         }
@@ -148,7 +150,10 @@ Singleton {
         if (on)
             provider = on;
         text = q;
-        setFilter("sorting", provider === "wallhaven" ? "date_added" : "latest");
+        if (provider === "unsplash")
+            setFilter("order", "latest");
+        else
+            setFilter("sorting", provider === "wallhaven" ? "date_added" : "latest");
         search();
     }
 
@@ -216,7 +221,7 @@ Singleton {
         property int seq: 0
         onTriggered: {
             const n = ++seq;
-            if (online.provider === "wallhaven" || !online.text.trim()) {
+            if ((online.provider !== "konachan" && online.provider !== "yandere") || !online.text.trim()) {
                 online.suggestions = [];
                 return;
             }
@@ -247,7 +252,8 @@ Singleton {
             online.filters = {
                 wallhaven: f.wallhaven,
                 konachan: f.konachan,
-                yandere: f.yandere
+                yandere: f.yandere,
+                unsplash: f.unsplash
             };
             online.provider = f.provider;
             online.restored = true;

@@ -11,6 +11,7 @@ use std::time::{Duration, Instant};
 use serde_json::{Value, json as value};
 use wallpicker_core::moebooru::{self, MoebooruSort};
 use wallpicker_core::online::{self as core_online, OnlineFilters, OnlineWallpaper, Provider};
+use wallpicker_core::unsplash;
 use wallpicker_core::wallhaven::{self, Sorting};
 
 use super::super::Out;
@@ -97,6 +98,13 @@ fn options() -> Value {
         },
         "moebooru": {
             "sorts": MoebooruSort::ALL.map(|s| value!({ "value": s.as_str(), "label": s.label() })),
+        },
+        "unsplash": {
+            "orders": pairs(&unsplash::ORDERS),
+            "orientations": pairs(&unsplash::ORIENTATIONS),
+            "colors": pairs(&unsplash::COLORS),
+            "content_filters": pairs(&unsplash::CONTENT_FILTERS),
+            "home": unsplash::home_url(),
         },
     })
 }

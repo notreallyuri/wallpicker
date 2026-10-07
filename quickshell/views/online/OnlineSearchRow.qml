@@ -15,7 +15,8 @@ RowLayout {
     readonly property var placeholders: ({
             wallhaven: "Search Wallhaven: tags, +include -exclude, @uploader, id:<tag id>",
             konachan: "Search Konachan: tags, comma-separated (long hair, night) or long_hair night; -tag to exclude",
-            yandere: "Search yande.re: tags, comma-separated (long hair, night) or long_hair night; -tag to exclude"
+            yandere: "Search yande.re: tags, comma-separated (long hair, night) or long_hair night; -tag to exclude",
+            unsplash: "Search Unsplash: photos (empty: its Wallpapers topic); user:<name> for a photographer's"
         })
 
     spacing: 8
