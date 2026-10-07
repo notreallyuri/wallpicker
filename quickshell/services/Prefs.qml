@@ -15,6 +15,10 @@ Singleton {
     property alias tagsExpanded: data.tagsExpanded
     property alias tagsMatchAll: data.tagsMatchAll
     property alias monitorsOpen: data.monitorsOpen
+    /// "system", "light" or "dark".
+    property alias darkMode: data.darkMode
+    /// A color theme (services/Themes.js).
+    property alias colorTheme: data.colorTheme
 
     FileView {
         id: file
@@ -44,6 +48,8 @@ Singleton {
             property bool tagsExpanded: false
             property bool tagsMatchAll: true
             property bool monitorsOpen: false
+            property string darkMode: "system"
+            property string colorTheme: "blossom"
         }
     }
 }
