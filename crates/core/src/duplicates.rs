@@ -152,10 +152,8 @@ pub fn group(exact: &[Option<u64>], prints: &[Option<Print>], aspects: &[f64]) -
         .collect()
 }
 
-#[cfg(feature = "native")]
 pub use native::find;
 
-#[cfg(feature = "native")]
 mod native {
     use std::collections::{BTreeMap, HashMap};
     use std::hash::{Hash, Hasher};
@@ -323,7 +321,6 @@ mod tests {
         assert_eq!(g, vec![(Likeness::Similar, vec![0, 1, 2]), (Likeness::Exact, vec![4, 5])]);
     }
 
-    #[cfg(feature = "native")]
     #[test]
     fn finds_copies_and_resized_versions_best_first() {
         use crate::catalog::Catalog;

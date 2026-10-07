@@ -212,8 +212,8 @@ and feels like the app (real transitions and easing, glass, shadows); the scroll
 
 ### Left over from the phases
 
-- [ ] **core's `native` feature**: only the wasm UI needed the split (data types without the
-  OS parts); the `#[cfg(feature = "native")]` gates can go.
+- [x] **core's `native` feature** (done 2026-10-07): only the wasm UI needed the split (data
+  types without the OS parts); the gates are gone.
 
 - [ ] **Settings changes** (with phase 4): reload Downloads (the download folder may move) and
   Collections (the key or username may change) after Settings saves, as the app does.

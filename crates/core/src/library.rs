@@ -38,14 +38,12 @@ impl LocalImage {
     }
 }
 
-#[cfg(feature = "native")]
 const MAX_DEPTH: usize = 8;
 
 /// Scan `folders` for images, newest first.
 ///
 /// Hidden entries are skipped and symlinks are not followed, so a link back to
 /// a parent folder can't cause a loop. Missing folders are ignored.
-#[cfg(feature = "native")]
 pub fn scan(folders: &[PathBuf], recursive: bool) -> Vec<LocalImage> {
     let mut out = Vec::new();
     for folder in folders {
@@ -63,7 +61,6 @@ pub fn scan(folders: &[PathBuf], recursive: bool) -> Vec<LocalImage> {
 /// Each image's cached thumbnail at `width`, where one exists (a stat each:
 /// the name comes from the file's path, date and size, as the scan read
 /// them). Saves the grid a request per tile when it opens.
-#[cfg(feature = "native")]
 pub fn with_cached_thumbs(mut images: Vec<LocalImage>, cache_dir: &Path, width: u32) -> Vec<LocalImage> {
     for img in &mut images {
         let thumb = crate::thumbs::thumb_path(cache_dir, &img.path, img.modified, img.size, width);
@@ -72,7 +69,6 @@ pub fn with_cached_thumbs(mut images: Vec<LocalImage>, cache_dir: &Path, width: 
     images
 }
 
-#[cfg(feature = "native")]
 fn walk(dir: &Path, recursive: bool, depth: usize, out: &mut Vec<LocalImage>) {
     let Ok(entries) = std::fs::read_dir(dir) else {
         return;
@@ -118,7 +114,6 @@ fn walk(dir: &Path, recursive: bool, depth: usize, out: &mut Vec<LocalImage>) {
 /// folders and the download folder). Paths are resolved first, so `..` or a
 /// symlinked folder can't point outside them. Anything else is refused, so a
 /// confused or tampered UI can't remove other files.
-#[cfg(feature = "native")]
 pub fn trash_target(path: &Path, roots: &[PathBuf]) -> crate::Result<PathBuf> {
     use crate::Error;
     let refuse = |why: &str| Err(Error::Invalid(format!("{}: {why}", path.display())));
@@ -149,7 +144,6 @@ pub fn trash_target(path: &Path, roots: &[PathBuf]) -> crate::Result<PathBuf> {
 /// existing supported image inside one of `roots`. For actions that only
 /// point at it (show in folder); removing it has its own, stricter check
 /// ([`trash_target`]).
-#[cfg(feature = "native")]
 pub fn library_file(path: &Path, roots: &[PathBuf]) -> crate::Result<PathBuf> {
     use crate::Error;
     let refuse = |why: &str| Err(Error::Invalid(format!("{}: {why}", path.display())));
@@ -396,7 +390,7 @@ mod folder_tests {
     }
 }
 
-#[cfg(all(test, feature = "native"))]
+#[cfg(test)]
 mod tests {
     use super::*;
 

@@ -16,21 +16,13 @@ pub mod online;
 pub mod settings;
 pub mod wallhaven;
 
-#[cfg(feature = "native")]
 pub mod awww;
-#[cfg(feature = "native")]
 pub mod cmd;
-#[cfg(feature = "native")]
 pub mod hyprpaper;
-#[cfg(feature = "native")]
 pub mod noctalia;
-#[cfg(feature = "native")]
 pub mod store;
-#[cfg(feature = "native")]
 pub mod thumbs;
-#[cfg(feature = "native")]
 pub mod transform;
-#[cfg(feature = "native")]
 pub mod workspaces;
 
 pub use error::{Error, Result};

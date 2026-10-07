@@ -190,7 +190,6 @@ pub fn matches(p: &ColorProfile, key: &str) -> bool {
     }
 }
 
-#[cfg(feature = "native")]
 mod native {
     use std::collections::BTreeMap;
     use std::path::{Path, PathBuf};
@@ -256,7 +255,6 @@ mod native {
     }
 }
 
-#[cfg(feature = "native")]
 pub use native::profiles;
 
 #[cfg(test)]
