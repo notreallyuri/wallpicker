@@ -175,7 +175,8 @@ and feels like the app (real transitions and easing, glass, shadows); the scroll
   Not ported: "Keep running in the tray" (the tray is phase 5's call).
 - [ ] **5. Background**: `wallpicker daemon` (workspace listener, tray or not), following the
   wallpaper's colors live, Noctalia colors, toasts for what happens in the background.
-  The plan (2026-10-07), in this order, each step checked and committed:
+  The plan (2026-10-07), in this order, each step checked and committed (1-3 done
+  2026-10-07; 4 waits for the user at the desk):
   1. **Live from anywhere**: `serve` watches state.json, config.json and library.json and
      announces changes made by other programs (the slideshow, the plugin, the command line,
      the workspace listener): the picker's monitors, drawer, colors and library follow while
