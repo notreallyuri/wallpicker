@@ -12,6 +12,10 @@ Singleton {
     property bool duplicates: false
     /// The monitor being adjusted ("" none).
     property string adjusting: ""
+    /// The Online provider's filters.
+    property bool onlineFilters: false
+    /// The online wallpaper whose details are shown (null none).
+    property var details: null
     /// Popovers, menus and dialogs open now, the last on top: Esc closes
     /// the top one (not the picker), and the shortcuts wait while any is.
     property var open: []
@@ -43,5 +47,8 @@ Singleton {
     }
     function adjust(monitor) {
         adjusting = monitor;
+    }
+    function showDetails(w) {
+        details = w;
     }
 }

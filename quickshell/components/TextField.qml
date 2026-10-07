@@ -11,6 +11,8 @@ Rectangle {
     property string icon
     property alias validator: input.validator
     property int align: TextInput.AlignLeft
+    /// What's typed can't be used (a red ring).
+    property bool invalid: false
     signal accepted
 
     function forceFocus() {
@@ -21,8 +23,8 @@ Rectangle {
     implicitHeight: 36
     radius: height / 2
     color: Theme.a(Theme.input, 0.3)
-    border.width: input.activeFocus ? 2 : 1
-    border.color: input.activeFocus ? Theme.a(Theme.primary, 0.7) : Theme.input
+    border.width: input.activeFocus || invalid ? 2 : 1
+    border.color: invalid ? "#fd4663" : input.activeFocus ? Theme.a(Theme.primary, 0.7) : Theme.input
     Behavior on border.color {
         ColorAnimation {
             duration: 150

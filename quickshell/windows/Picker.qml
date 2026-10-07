@@ -10,6 +10,7 @@ import qs.components
 import qs.dialogs
 import qs.services
 import qs.views.local
+import qs.views.online
 
 Item {
     id: picker
@@ -17,6 +18,11 @@ Item {
     property int tab: 0
     /// The content (for the test hooks' coordinates).
     readonly property alias content: content
+
+    // What Local shows outlives its view (another tab is open meanwhile).
+    LocalModel {
+        id: localModel
+    }
 
     RectangularShadow {
         anchors.fill: panel
@@ -72,12 +78,27 @@ Item {
             MonitorDrawer {
                 Layout.fillWidth: true
             }
-            LocalView {
-                // The glass over its grid blurs the wallpaper too.
-                backdrop: scenery
+            // One tab at a time: the others aren't kept (nor their pictures).
+            Loader {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
+                sourceComponent: [localTab, onlineTab, null][picker.tab]
             }
+        }
+    }
+
+    Component {
+        id: localTab
+        LocalView {
+            local: localModel
+            // The glass over its grid blurs the wallpaper too.
+            backdrop: scenery
+        }
+    }
+    Component {
+        id: onlineTab
+        OnlineView {
+            backdrop: scenery
         }
     }
 
@@ -86,6 +107,7 @@ Item {
     TrashDialog {}
     DuplicatesDialog {}
     AdjustDialog {}
+    FiltersDialog {}
 
     ToastStack {
         anchors.right: panel.right

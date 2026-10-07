@@ -1,4 +1,6 @@
 // The Local tab: the grid, with the search card floating over its top.
+// What it shows (`local`) outlives it: the picker keeps it while another
+// tab is open.
 import QtQuick
 import qs.components
 import qs.services
@@ -6,12 +8,9 @@ import qs.services
 Item {
     id: view
 
+    required property LocalModel local
     /// The panel's wallpaper, for the search card's glass.
     property Item backdrop
-
-    LocalModel {
-        id: localModel
-    }
 
     // The grid, its bottom edge fading out (things scroll in gradually).
     FadeBottom {
@@ -22,7 +21,7 @@ Item {
         LocalGrid {
             id: grid
             anchors.fill: parent
-            local: localModel
+            local: view.local
             headerSpace: card.height + 12 + 28
             onTileMenu: (img, at, x, y) => tileMenu.openFor(img, at, x, y)
         }
@@ -38,7 +37,7 @@ Item {
         x: 12
         y: 12
         width: parent.width - 24
-        local: localModel
+        local: view.local
         behind: grid
         backdrop: view.backdrop
         // The drawer opening moves the view, and the card with it.
@@ -72,7 +71,7 @@ Item {
     }
     // Some, but none pass the filters.
     Text {
-        visible: !Library.loading && Library.images.length > 0 && localModel.pageItems.length === 0
+        visible: !Library.loading && Library.images.length > 0 && view.local.pageItems.length === 0
         anchors.centerIn: parent
         text: "No wallpapers match."
         color: Theme.mutedForeground
@@ -89,33 +88,33 @@ Item {
     Shortcut {
         enabled: Dialogs.calm
         sequence: "Ctrl+R"
-        onActivated: localModel.applyRandom()
+        onActivated: view.local.applyRandom()
     }
     Shortcut {
-        enabled: Dialogs.calm && localModel.folders && localModel.canGoUp
+        enabled: Dialogs.calm && view.local.folders && view.local.canGoUp
         sequence: "Alt+Up"
-        onActivated: localModel.up()
+        onActivated: view.local.up()
     }
     Shortcut {
-        enabled: Dialogs.calm && localModel.currentPage > 1
+        enabled: Dialogs.calm && view.local.currentPage > 1
         sequence: "Alt+Left"
         onActivated: {
-            localModel.page = localModel.currentPage - 1;
+            view.local.page = view.local.currentPage - 1;
             grid.toTop();
         }
     }
     Shortcut {
-        enabled: Dialogs.calm && localModel.currentPage < localModel.lastPage
+        enabled: Dialogs.calm && view.local.currentPage < view.local.lastPage
         sequence: "Alt+Right"
         onActivated: {
-            localModel.page = localModel.currentPage + 1;
+            view.local.page = view.local.currentPage + 1;
             grid.toTop();
         }
     }
     // Delete: the tile under the pointer, to the trash (asking first).
     Shortcut {
-        enabled: Dialogs.calm && localModel.hovered !== ""
+        enabled: Dialogs.calm && view.local.hovered !== ""
         sequence: "Delete"
-        onActivated: Dialogs.confirmTrash(localModel.hovered)
+        onActivated: Dialogs.confirmTrash(view.local.hovered)
     }
 }

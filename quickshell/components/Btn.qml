@@ -13,6 +13,8 @@ Item {
     property string variant: "outline"
     property real minWidth: 0
     property bool active: false
+    /// The app's size="sm": lower, tighter, a smaller label (on a tile).
+    property bool small: false
     /// A tooltip (an icon-only button's explanation).
     property string tip
     /// Text at the left and the extras (an icon) at the right, instead of
@@ -31,8 +33,8 @@ Item {
     readonly property color ink: destructive ? "white" : primary ? Theme.primaryForeground : Theme.foreground
     readonly property real press: mouse.pressed ? 2 : hovered ? -1 : 0
 
-    implicitWidth: Math.max(minWidth, row.implicitWidth + (text ? 28 : 18))
-    implicitHeight: 36
+    implicitWidth: Math.max(minWidth, row.implicitWidth + (text ? (small ? 20 : 28) : (small ? 14 : 18)))
+    implicitHeight: small ? 30 : 36
 
     // The chunky edge: a darker copy under the face.
     Rectangle {
@@ -87,7 +89,7 @@ Item {
                 text: btn.text
                 color: btn.ink
                 font.family: Theme.font
-                font.pixelSize: 14
+                font.pixelSize: btn.small ? 13 : 14
                 font.weight: Font.Bold
             }
         }
