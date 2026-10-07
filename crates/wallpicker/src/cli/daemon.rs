@@ -1,5 +1,8 @@
 //! `wallpicker daemon`: what keeps running without the window, for an
-//! autostart: the wallpaper per workspace (Hyprland's events), the
+//! autostart. At start it puts the saved wallpapers back through the chosen
+//! backend (`--restore`: awww's daemon is started if needed; hyprpaper is
+//! waited for; Noctalia restores its own). Then the wallpaper per workspace
+//! (Hyprland's events), the
 //! slideshow's timer, and Noctalia's colors following the wallpaper (when
 //! they're wallpicker's palette: noctalia_colors.rs). One at a time; a second says so and leaves. The
 //! workspace listener also waits while another program has it, and the
@@ -28,6 +31,8 @@ pub fn daemon(args: &[String]) -> i32 {
     if let Err(e) = store.write_hyprpaper_conf() {
         eprintln!("wallpicker: could not write the hyprpaper config: {e}");
     }
+    // Retries for a while: at login the backend may still be starting.
+    std::thread::spawn(|| crate::restore_cli());
     let listener = store.clone();
     std::thread::spawn(move || workspaces::listen(&SystemRunner, &listener, &|| true, &|| {}));
     let colors = store.clone();

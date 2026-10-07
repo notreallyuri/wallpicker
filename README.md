@@ -150,8 +150,10 @@ checkout (a binary built inside it finds its `quickshell/`; `WALLPICKER_UI` poin
   `hl.bind("SUPER + SHIFT + W", hl.dsp.exec_cmd("/home/you/.local/bin/wallpicker --toggle"))`),
   the launcher, or the Noctalia plugin. `wallpicker --open local|online|collections|settings|
   duplicates` and `--open tags <image>` open it there (the plugin hands bigger jobs over that way).
-- **The daemon**, in Hyprland's autostart: `wallpicker daemon` (the wallpaper per workspace, the
-  slideshow's timer, Noctalia's colors following the wallpaper). One per session; a second one
+- **The daemon**, in Hyprland's autostart: `wallpicker daemon`. It puts the saved wallpapers back
+  through the chosen backend (starting awww's daemon if needed; with hyprpaper, start hyprpaper
+  in the autostart too), then follows workspaces, keeps the slideshow's time and Noctalia's colors
+  following the wallpaper. One per session; a second one
   says so and leaves. `wallpicker --tray`, from the old app's autostarts, runs it too.
 
 ### How it fits together
