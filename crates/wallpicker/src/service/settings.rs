@@ -3,7 +3,10 @@
 
 use wallpicker_core::cmd::SystemRunner;
 use wallpicker_core::hyprpaper;
-use wallpicker_core::settings::{Settings, WallpaperBackend};
+use std::path::Path;
+
+use wallpicker_core::settings::{self, Settings, WallpaperBackend};
+use wallpicker_core::wallhaven;
 
 use crate::{AppState, CmdResult, blocking};
 
@@ -11,6 +14,7 @@ use crate::{AppState, CmdResult, blocking};
 /// (normalized). A new backend shows what each monitor had; a fit that
 /// changed shows at once where it applies.
 pub async fn save(state: &AppState, mut settings: Settings) -> CmdResult<Settings> {
+    check(&settings)?;
     let store = state.store.clone();
     blocking(move || {
         let before = hyprpaper::Fits::load(&store);
@@ -33,6 +37,30 @@ pub async fn save(state: &AppState, mut settings: Settings) -> CmdResult<Setting
         Ok(saved)
     })
     .await
+}
+
+/// What can't be saved as typed: a folder that isn't an absolute path (or
+/// under ~), a Wallhaven username with characters it can't have, a night
+/// time that isn't HH:MM.
+fn check(s: &Settings) -> CmdResult<()> {
+    let placeable = |p: &Path| p.is_absolute() || p.starts_with("~");
+    if let Some(bad) = s.folders.iter().find(|p| !placeable(p)) {
+        return Err(format!("Folders must be absolute paths (or start with ~): {}", bad.display()));
+    }
+    if !placeable(&s.download_dir) {
+        return Err("The download folder must be an absolute path (or start with ~).".into());
+    }
+    let set_folders = [&s.slideshow.folder, &s.slideshow.night.folder];
+    if set_folders.iter().any(|f| f.as_deref().is_some_and(|p| !placeable(p))) {
+        return Err("A slideshow folder must be an absolute path (or start with ~).".into());
+    }
+    if s.wallhaven_username.as_deref().is_some_and(|n| !n.trim().is_empty() && !wallhaven::is_valid_username(n.trim())) {
+        return Err("That isn't a Wallhaven username (letters, digits, _ - . only).".into());
+    }
+    if [&s.slideshow.night.from, &s.slideshow.night.to].iter().any(|t| settings::parse_hhmm(t).is_none()) {
+        return Err("The night's times must look like 20:00.".into());
+    }
+    Ok(())
 }
 
 /// Other programs drawing wallpapers besides `backend` (they'd fight over

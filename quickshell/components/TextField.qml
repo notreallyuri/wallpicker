@@ -10,6 +10,7 @@ Rectangle {
     property string placeholder
     property string icon
     property alias validator: input.validator
+    property alias echoMode: input.echoMode
     property int align: TextInput.AlignLeft
     /// What's typed can't be used (a red ring).
     property bool invalid: false

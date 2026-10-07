@@ -119,10 +119,7 @@ Item {
     SettingsDialog {}
 
     ToastStack {
-        anchors.right: panel.right
-        anchors.bottom: panel.bottom
-        anchors.margins: 20
-        z: 10
+        host: panel
     }
 
     // Swallow clicks on the panel (a click outside closes it).

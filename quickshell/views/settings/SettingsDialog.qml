@@ -85,7 +85,7 @@ DialogFrame {
         }
     ]
     /// Sections built so far (the rest show Pending until their step).
-    readonly property var built: []
+    readonly property var built: ["general", "downloads", "wallhaven", "konachan", "yandere"]
     /// The section shown.
     property string current: "general"
     readonly property var section: sections.find(s => s.slug === current) || sections[0]

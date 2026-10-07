@@ -215,6 +215,18 @@ QtObject {
             return "ok";
         }
 
+        /// The saved settings (as the interface has them), without the key.
+        function settings(): string {
+            const s = Object.assign({}, Settings.data);
+            s.wallhaven_api_key = s.wallhaven_api_key ? "(set)" : null;
+            return JSON.stringify(s);
+        }
+
+        /// The last toasts.
+        function toasts(): string {
+            return JSON.stringify(Toasts.list.map(t => t.title + (t.detail ? ": " + t.detail : "")));
+        }
+
         /// The Online search and the downloads.
         function online(): string {
             return JSON.stringify({

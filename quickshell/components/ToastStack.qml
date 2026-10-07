@@ -1,14 +1,43 @@
-// The toasts, bottom right, newest at the bottom; each slides in and can be
-// clicked away.
+// The toasts, bottom right of `host` (the panel), newest at the bottom; each
+// slides in and can be clicked away. They live in the window's overlay, above
+// dialogs too (an error from Settings was dimmed under its shade); looked up
+// each time one comes, like Tip's bubble: the panel's window can be replaced.
 import QtQuick
+import QtQuick.Controls
 import QtQuick.Effects
 import QtQuick.Layouts
+import QtQuick.Window
 import qs.services
 
 ColumnLayout {
     id: stack
 
+    /// What they sit in the corner of.
+    property Item host
+
+    function place() {
+        if (!host)
+            return;
+        const layer = stack.Overlay.overlay || stack.Window.contentItem;
+        if (!layer)
+            return;
+        parent = layer;
+        const corner = host.mapToItem(layer, host.width, host.height);
+        x = corner.x - width - 20;
+        y = corner.y - height - 20;
+    }
+
+    z: 1000
     spacing: 8
+    onHeightChanged: place()
+    onWidthChanged: place()
+
+    Connections {
+        target: Toasts
+        function onListChanged() {
+            stack.place();
+        }
+    }
 
     Repeater {
         model: Toasts.list
