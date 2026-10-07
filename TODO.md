@@ -193,10 +193,10 @@ and feels like the app (real transitions and easing, glass, shadows); the scroll
      wallpaper shown, made again and switched to by the daemon (and an open picker) as it
      changes: Noctalia doesn't watch the file.
   No tray (decided 2026-10-07): the picker opens in ~0.5 s from a keybind or the plugin.
-- [ ] **6. Switch over**: `wallpicker` opens the Quickshell UI; the Noctalia plugin's handoffs
+- [x] **6. Switch over** (done 2026-10-07): `wallpicker` opens the Quickshell UI; the Noctalia plugin's handoffs
   (`--open`) go through it; remove the Tauri app, WebKit and Leptos (`ui/`, `src-tauri/`: the
   window's arguments go to Quickshell instead of `wallpicker-app`); README, install script, scripts/memory and scripts/open-timing redone for QML.
-  The plan (2026-10-07), in this order, each step checked and committed (1-4 done 2026-10-07):
+  The plan (2026-10-07), in this order, each step checked and committed:
   1. **`wallpicker` opens the picker**: no arguments opens it, `--toggle` opens or closes it,
      `--open local|online|collections|settings|duplicates` and `--open tags <image>` open it
      there (or move the open one there, over IPC), `--tray` runs the daemon (old autostarts
@@ -207,8 +207,8 @@ and feels like the app (real transitions and easing, glass, shadows); the scroll
      headless session renders in software and runs ~50 MB high).
   4. **Docs**: README (requirements, build, starting it, how it fits together), the
      plugin's README, TODO.
-  5. **Your desktop** (asking first): the autostart's `wallpicker --tray` becomes
-     `wallpicker daemon`; the running Tauri app is stopped.
+  5. **Your desktop** (asking first): the autostart's `wallpicker --tray` became
+     `wallpicker daemon`, the old window's rule went, `wallpicker-app` was removed.
 
 ### Left over from the phases
 
