@@ -4,6 +4,10 @@
 //! Moved here area by area as the Quickshell UI needs them.
 
 pub mod app;
+pub mod backup;
 pub mod library;
 pub mod online;
+pub mod settings;
+pub mod slideshow;
 pub mod wallpapers;
+pub mod workspaces;

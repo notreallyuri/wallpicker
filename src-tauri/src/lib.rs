@@ -9,7 +9,7 @@ mod tray;
 mod usage;
 
 // The shared crate's pieces, where the window's code expects them.
-pub(crate) use wallpicker::{AppState, CmdResult, backup, blocking, cli, err, service, theme, wallpaper_path};
+pub(crate) use wallpicker::{AppState, CmdResult, backup, blocking, cli, err, service, theme};
 
 use tauri::Manager;
 use wallpicker_core::cmd::SystemRunner;

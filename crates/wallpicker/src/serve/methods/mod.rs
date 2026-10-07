@@ -2,9 +2,13 @@
 //! method's name after the dot ("library.scan" -> library, "scan").
 
 mod app;
+mod backup;
 mod library;
 mod online;
+mod settings;
+mod slideshow;
 mod wallpapers;
+mod workspaces;
 
 use serde::de::DeserializeOwned;
 use serde_json::Value;
@@ -18,6 +22,10 @@ pub(super) async fn call(state: &AppState, out: &Out, method: &str, params: Valu
         "app" => app::call(state, name, &params).await,
         "library" => library::call(state, out, name, &params).await,
         "online" => online::call(state, out, name, &params).await,
+        "settings" => settings::call(state, out, name, &params).await,
+        "slideshow" => slideshow::call(state, out, name).await,
+        "workspaces" => workspaces::call(state, name, &params).await,
+        "backup" => backup::call(state, out, name, &params).await,
         "wallpapers" => wallpapers::call(state, out, name, &params).await,
         _ => None,
     };

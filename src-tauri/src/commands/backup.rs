@@ -6,7 +6,8 @@ use tauri::Manager;
 use wallpicker_core::catalog::Catalog;
 
 use crate::backup;
-use crate::{AppState, CmdResult, blocking, err};
+use crate::service;
+use crate::{AppState, CmdResult, err};
 
 /// A native file dialog over the window: what was picked, or None.
 pub(crate) fn file_dialog(
@@ -78,8 +79,7 @@ pub(crate) async fn backup_import_pick(
 /// Where the daily snapshots go now.
 #[tauri::command]
 pub(crate) async fn snapshot_dir(state: tauri::State<'_, AppState>) -> CmdResult<PathBuf> {
-    let store = state.store.clone();
-    blocking(move || Ok(store.snapshots_dir())).await
+    service::backup::snapshot_dir(&state).await
 }
 
 /// Pick another folder for the snapshots (copying them there); None:
@@ -116,8 +116,7 @@ pub(crate) async fn snapshot_dir_pick(
 pub(crate) async fn backup_snapshots(
     state: tauri::State<'_, AppState>,
 ) -> CmdResult<Vec<wallpicker_core::store::Snapshot>> {
-    let store = state.store.clone();
-    blocking(move || store.snapshots()).await
+    service::backup::snapshots(&state).await
 }
 
 #[tauri::command]
@@ -125,11 +124,5 @@ pub(crate) async fn backup_restore(
     state: tauri::State<'_, AppState>,
     id: String,
 ) -> CmdResult<Catalog> {
-    let store = state.store.clone();
-    let lock = state.catalog_lock.clone();
-    blocking(move || {
-        let _guard = lock.lock().unwrap_or_else(|p| p.into_inner());
-        store.restore_snapshot(&id)
-    })
-    .await
+    service::backup::restore(&state, id).await
 }

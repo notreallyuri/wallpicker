@@ -1,12 +1,10 @@
 //! The app's own settings and looks: settings and saved state, the theme
 //! following the wallpaper, the slideshow, the window and its usage.
 
-use wallpicker_core::cmd::SystemRunner;
-use wallpicker_core::hyprpaper::{self};
-use wallpicker_core::settings::{Settings, State as SavedState, WallpaperBackend};
+use wallpicker_core::settings::{Settings, State as SavedState};
 
 use crate::service;
-use crate::{AppState, CmdResult, blocking, err};
+use crate::{AppState, CmdResult, err};
 use crate::{cli, open, theme, tray, usage};
 
 /// The automation build's open-timing script reports here: printed with
@@ -34,34 +32,9 @@ pub(crate) async fn get_settings(state: tauri::State<'_, AppState>) -> CmdResult
 #[tauri::command]
 pub(crate) async fn save_settings(
     state: tauri::State<'_, AppState>,
-    mut settings: Settings,
+    settings: Settings,
 ) -> CmdResult<Settings> {
-    let store = state.store.clone();
-    blocking(move || {
-        let before = hyprpaper::Fits::load(&store);
-        let on_disk = store.load_settings()?;
-        let backend_before = on_disk.wallpaper_backend;
-        // The snapshot folder is set from Settings → Backup on its own (it
-        // moves the snapshots); a form opened before that mustn't undo it.
-        settings.snapshot_dir = on_disk.snapshot_dir;
-        // Workspace wallpapers change as you apply (and from their own list).
-        settings.workspaces.wallpapers = on_disk.workspaces.wallpapers;
-        store.save_settings(&settings)?;
-        let saved = store.load_settings()?;
-        // A new backend shows what each monitor had; a fit that changed shows
-        // right away where it applies.
-        if saved.wallpaper_backend != WallpaperBackend::Noctalia {
-            let switched = saved.wallpaper_backend != backend_before;
-            let after = hyprpaper::Fits::load(&store);
-            if let Err(e) = hyprpaper::reapply(&SystemRunner, &store, &|m, p| {
-                switched || before.of(m, p) != after.of(m, p)
-            }) {
-                eprintln!("wallpicker: could not re-apply the wallpapers: {e}");
-            }
-        }
-        Ok(saved)
-    })
-    .await
+    service::settings::save(&state, settings).await
 }
 
 #[tauri::command]
@@ -97,9 +70,7 @@ pub(crate) async fn wallpaper_palette(state: tauri::State<'_, AppState>) -> CmdR
 
 #[tauri::command]
 pub(crate) async fn noctalia_colors() -> CmdResult<theme::NoctaliaColors> {
-    tauri::async_runtime::spawn_blocking(theme::noctalia_colors)
-        .await
-        .map_err(err)
+    service::app::noctalia_colors().await
 }
 
 #[tauri::command]
@@ -107,10 +78,7 @@ pub(crate) async fn set_noctalia_colors(
     state: tauri::State<'_, AppState>,
     follow: bool,
 ) -> CmdResult<theme::NoctaliaColors> {
-    let store = state.store.clone();
-    tauri::async_runtime::spawn_blocking(move || theme::set_noctalia_follow(&store, follow))
-        .await
-        .map_err(err)?
+    service::app::set_noctalia_colors(&state, follow).await
 }
 
 /// The slideshow's next change, for Settings.
@@ -118,22 +86,11 @@ pub(crate) async fn set_noctalia_colors(
 pub(crate) async fn slideshow_status(
     state: tauri::State<'_, AppState>,
 ) -> CmdResult<cli::slideshow::Status> {
-    let store = state.store.clone();
-    tauri::async_runtime::spawn_blocking(move || cli::slideshow::status_of(&store))
-        .await
-        .map_err(err)?
+    service::slideshow::status(&state).await
 }
 
 /// "Change now": a slideshow change right away (the timer starts over).
 #[tauri::command]
 pub(crate) async fn slideshow_now(state: tauri::State<'_, AppState>) -> CmdResult<()> {
-    let store = state.store.clone();
-    match tauri::async_runtime::spawn_blocking(move || cli::slideshow::tick_with(&store, true))
-        .await
-        .map_err(err)?
-    {
-        Ok(true) => Ok(()),
-        Ok(false) => Err("Some monitors could not be changed.".into()),
-        Err(e) => Err(e),
-    }
+    service::slideshow::now(&state).await
 }

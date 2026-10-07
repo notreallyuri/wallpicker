@@ -2,14 +2,13 @@
 //! wallpaper files themselves (trash, show in folder).
 
 use std::path::PathBuf;
-use wallpicker_core::cmd::SystemRunner;
-use wallpicker_core::hyprpaper::{self, ApplyReport};
+use wallpicker_core::hyprpaper::ApplyReport;
 use wallpicker_core::monitors::Monitor;
 use wallpicker_core::settings::{State as SavedState, WallpaperBackend};
 
 use crate::service::wallpapers::{show_in_folder_blocking, trash_path};
 use crate::service::{self};
-use crate::{AppState, CmdResult, blocking, err, wallpaper_path};
+use crate::{AppState, CmdResult, err};
 
 #[tauri::command]
 pub(crate) async fn list_monitors() -> CmdResult<Vec<Monitor>> {
@@ -33,8 +32,7 @@ pub(crate) async fn previous_wallpaper(state: tauri::State<'_, AppState>, monito
 pub(crate) async fn workspace_rows(
     state: tauri::State<'_, AppState>,
 ) -> CmdResult<Vec<wallpicker_core::workspaces::WorkspaceRow>> {
-    let store = state.store.clone();
-    blocking(move || wallpicker_core::workspaces::rows(&SystemRunner, &store)).await
+    service::workspaces::rows(&state).await
 }
 
 /// Set or clear (`path` None) a workspace's wallpaper.
@@ -44,9 +42,7 @@ pub(crate) async fn set_workspace_wallpaper(
     workspace: String,
     path: Option<String>,
 ) -> CmdResult<()> {
-    let store = state.store.clone();
-    let path = path.map(|p| wallpaper_path(&p)).transpose()?;
-    blocking(move || wallpicker_core::workspaces::assign(&store, &workspace, path)).await
+    service::workspaces::set(&state, workspace, path).await
 }
 
 /// Move a wallpaper to the trash (recoverable from the file manager), and
@@ -83,13 +79,13 @@ pub(crate) async fn copy_text(text: String) -> CmdResult<()> {
 /// fight over the screen), for Settings.
 #[tauri::command]
 pub(crate) async fn wallpaper_conflicts(backend: WallpaperBackend) -> CmdResult<Vec<String>> {
-    blocking(move || Ok(hyprpaper::conflicts(&SystemRunner, backend))).await
+    service::settings::conflicts(backend).await
 }
 
 /// Stop a program [`wallpaper_conflicts`] found (hyprpaper, awww-daemon...).
 #[tauri::command]
 pub(crate) async fn stop_wallpaper_program(name: String) -> CmdResult<()> {
-    blocking(move || Ok(hyprpaper::stop_program(&SystemRunner, &name)?)).await
+    service::settings::stop_program(name).await
 }
 
 /// The picture the Adjust dialog frames on (see [`service::wallpapers::framing_image`]).
