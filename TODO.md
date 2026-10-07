@@ -48,7 +48,7 @@ file in `quickshell/views/online/` (its choices in `serve`'s `online.options`), 
 - [ ] **matugen hook** (optional): run matugen on each applied wallpaper, for setups themed with
   it.
 
-## Spanning, refined (2026-10-07)
+## Spanning, refined (done 2026-10-07)
 
 Spanned, the monitors act as one: the drawer shows one **Spanned** card (instead of each
 monitor and All) and the top bar one pill; the picture's tile one "Spanned" badge; a click on a
@@ -66,7 +66,7 @@ Anything else put on a monitor ends the span. Each step checked headless and com
 2. [x] **Drawer, pills, tiles**: the Spanned card (the monitors on a desk, Adjust, Separate,
    Previous), the Spanned pill, the tile's badge; a tile click spans while spanned; Alt+N
    separates.
-3. [ ] **The span's Adjust dialog**: the layout as it is (positions, sizes, the bezel gap),
+3. [x] **The span's Adjust dialog**: the layout as it is (positions, sizes, the bezel gap),
    the picture over it, drag, scroll, sliders, mirroring, Reset.
 
 ## Going public (if ever)

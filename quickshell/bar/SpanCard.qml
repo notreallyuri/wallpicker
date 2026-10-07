@@ -64,7 +64,7 @@ DrawerCard {
             icon: "unlink"
             implicitHeight: 32
             tip: "Separate: each monitor on its own again, keeping its part"
-            onClicked: Monitors.separate()
+            onClicked: Span.separate()
         }
         Btn {
             variant: "ghost"

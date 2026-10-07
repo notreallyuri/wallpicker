@@ -48,7 +48,7 @@ Singleton {
             next[k] = true;
             downloads.saved = next;
             if (monitors === "span")
-                Monitors.span(path);
+                Span.span(path);
             else if (monitors)
                 Monitors.applyTo(path, monitors);
             else

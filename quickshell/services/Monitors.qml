@@ -1,7 +1,8 @@
 // The monitors, what each shows (and how it's adjusted), and where a click
 // applies: one monitor or all of them (the app's rule: single choice;
 // picking the chosen one again keeps it). Spanned, they act as one: a
-// click spans the picture; picking a monitor separates them first. Whether the drawer of monitors
+// click spans the picture; picking a monitor separates them first (the
+// span's actions: services/Span). Whether the drawer of monitors
 // under the top bar is open. A wallpaper changed by something else while the
 // picker is open (the slideshow, a workspace, the plugin) gets a toast.
 pragma Singleton
@@ -57,22 +58,16 @@ Singleton {
 
     function select(name) {
         if (spanned)
-            separate();
+            Span.separate();
         selection = name;
     }
 
     /// On the chosen monitor(s); spanned, across them.
     function apply(path) {
         if (spanned)
-            span(path);
+            Span.span(path);
         else
             applyTo(path, targets);
-    }
-
-    /// The monitors on their own again, each keeping its part.
-    function separate() {
-        spanState = null;
-        Backend.request("wallpapers.separate", {}, s => monitors.takeState(s), e => Toasts.error("Could not separate them", e));
     }
 
     /// On `names` (the tile menu's Apply to...).
@@ -87,22 +82,6 @@ Singleton {
         }, () => setApplying(path, false), e => {
             setApplying(path, false);
             Toasts.error("Could not apply it", e);
-        });
-    }
-
-    /// `path` across every monitor, each showing its part.
-    function span(path) {
-        mine(list.map(m => m.name));
-        setApplying(path, true);
-        Backend.request("wallpapers.span", {
-            path: path
-        }, report => {
-            setApplying(path, false);
-            if (report && report.failed && report.failed.length > 0)
-                Toasts.error("Not spanned on every monitor", report.failed.map(f => f[0] + ": " + f[1]).join("\n"));
-        }, e => {
-            setApplying(path, false);
-            Toasts.error("Could not span it", e);
         });
     }
 

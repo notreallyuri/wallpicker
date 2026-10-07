@@ -223,6 +223,28 @@ QtObject {
             return JSON.stringify(s);
         }
 
+        /// Open a dialog: settings (at section `arg`), span (the span's
+        /// Adjust), adjust (monitor `arg`), filters (Online's).
+        function dialog(name: string, arg: string): string {
+            switch (name) {
+            case "settings":
+                Dialogs.openSettings(arg);
+                break;
+            case "span":
+                Dialogs.adjustSpan();
+                break;
+            case "adjust":
+                Dialogs.adjust(arg);
+                break;
+            case "filters":
+                Dialogs.onlineFilters = true;
+                break;
+            default:
+                return "no " + name;
+            }
+            return "ok";
+        }
+
         /// The last toasts.
         function toasts(): string {
             return JSON.stringify(Toasts.list.map(t => t.title + (t.detail ? ": " + t.detail : "")));

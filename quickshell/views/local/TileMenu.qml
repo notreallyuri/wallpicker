@@ -50,7 +50,7 @@ Menu {
         visible: Monitors.list.length > 1
         icon: "monitor"
         text: "Span across monitors"
-        onTriggered: Monitors.span(menu.path)
+        onTriggered: Span.span(menu.path)
     }
     MenuSub {
         visible: Monitors.list.length > 1

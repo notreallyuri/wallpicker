@@ -59,9 +59,14 @@ or **Noctalia**'s wallpaper manager (Settings → General → Wallpaper backend)
   order) and Alt+N+1 All, Delete a tile's trash, Esc the top menu or dialog, then the picker.
 - **Span across monitors** (a tile's right-click menu, or `wallpicker span <image>`): one picture
   across every monitor, each showing its part, mixed resolutions, scales and rotations included.
-  A bezel gap (Settings → General) leaves out the picture behind the frames, so lines carry on
-  straight. Temporary like an adjustment: another wallpaper on a monitor takes it out; Previous
-  works per monitor. The monitor drawer shows each one's part.
+  A bezel gap (Settings → General, or `wallpicker settings set span_gap=PX`) leaves out the
+  picture behind the frames, so lines carry on straight. Spanned, the monitors act as one: the
+  drawer shows one **Spanned** card and the top bar one pill, and a click on a tile spans that
+  picture. The card's **Adjust** zooms, moves and mirrors the span over the whole layout, like
+  framing one monitor (`--frame ZOOM,X,Y`, `--flip h|v|both` from the command line);
+  **Separate** gives each monitor back to itself, keeping its part (as does picking a monitor,
+  Alt+1..N; `wallpicker span --separate`); **Previous** goes back on every monitor. Another
+  wallpaper on any monitor ends the span.
 - **Duplicates** (Local → **⋯** → **Find duplicates…**): exact copies and the same picture at another size or
   re-saved, a group at a time. The largest copy is picked to keep; the others go to the trash, and
   their favorite and tags move to the kept one (a monitor showing one of them gets it instead).

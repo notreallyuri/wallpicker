@@ -145,6 +145,7 @@ Item {
     TrashDialog {}
     DuplicatesDialog {}
     AdjustDialog {}
+    SpanDialog {}
     FiltersDialog {}
     DetailsDialog {}
     SettingsDialog {}
