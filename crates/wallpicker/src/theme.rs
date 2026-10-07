@@ -1,9 +1,7 @@
 //! Colors from the wallpaper. The app's palette comes from the wallpaper on
 //! the first monitor, through Noctalia's own generator (`noctalia theme
 //! <image> --both --scheme <its wallpaper scheme>`), so it matches Noctalia
-//! when Noctalia's colors follow the wallpaper too. That's a switch here as
-//! well: it sets Noctalia's color source to the wallpaper and remembers the
-//! scheme it had, to go back to.
+//! when Noctalia's colors follow the wallpaper too (noctalia_colors.rs).
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -14,6 +12,8 @@ use wallpicker_core::cmd::SystemRunner;
 use wallpicker_core::hyprpaper;
 use wallpicker_core::noctalia;
 use wallpicker_core::store::Store;
+
+pub use crate::noctalia_colors::{NoctaliaColors, noctalia_colors, set_noctalia_follow};
 
 /// Material 3 colors (name → "#rrggbb") for both modes, and where they came from.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -48,7 +48,7 @@ fn only_colors(v: &serde_json::Value) -> BTreeMap<String, String> {
 
 /// The wallpaper the palette comes from: the chosen monitor's, else the
 /// first connected monitor's, else any monitor's that still exists.
-fn source_image(store: &Store, monitor: Option<&str>) -> Option<PathBuf> {
+pub(crate) fn source_image(store: &Store, monitor: Option<&str>) -> Option<PathBuf> {
     let state = store.load_state().ok()?;
     let monitors = hyprpaper::list_monitors(&SystemRunner).unwrap_or_default();
     monitor
@@ -98,67 +98,4 @@ pub fn palette(store: &Store) -> Result<Option<Palette>, String> {
         let _ = std::fs::write(cache_file, text);
     }
     Ok(Some(palette))
-}
-
-/// Noctalia's color source and selection ("community Garnet"), if it runs.
-fn noctalia_scheme() -> Option<String> {
-    let out = Command::new("noctalia").args(["msg", "color-scheme-get"]).output().ok()?;
-    let s = String::from_utf8_lossy(&out.stdout).trim().to_string();
-    (out.status.success() && !s.is_empty()).then_some(s)
-}
-
-#[derive(Debug, Serialize)]
-pub struct NoctaliaColors {
-    /// Noctalia is running (its scheme could be read).
-    pub available: bool,
-    /// Its colors follow the wallpaper now.
-    pub following: bool,
-    /// What it is now ("community Garnet", "wallpaper m3-rainbow").
-    pub scheme: Option<String>,
-}
-
-pub fn noctalia_colors() -> NoctaliaColors {
-    let scheme = noctalia_scheme();
-    NoctaliaColors {
-        available: scheme.is_some(),
-        following: scheme.as_deref().is_some_and(|s| s.starts_with("wallpaper")),
-        scheme,
-    }
-}
-
-fn set_scheme(args: &[&str]) -> Result<(), String> {
-    let out = Command::new("noctalia")
-        .args(["msg", "color-scheme-set"])
-        .args(args)
-        .output()
-        .map_err(|e| format!("Could not run noctalia: {e}"))?;
-    if out.status.success() {
-        Ok(())
-    } else {
-        Err(format!("noctalia: {}", String::from_utf8_lossy(&out.stderr).trim()))
-    }
-}
-
-/// Make Noctalia's colors follow the wallpaper (remembering its scheme), or
-/// go back to the scheme it had.
-pub fn set_noctalia_follow(store: &Store, follow: bool) -> Result<NoctaliaColors, String> {
-    let now = noctalia_scheme().ok_or("Noctalia isn't running.")?;
-    let mut settings = store.load_settings().map_err(|e| e.to_string())?;
-    if follow {
-        if !now.starts_with("wallpaper") {
-            settings.noctalia_previous_scheme = Some(now);
-            store.save_settings(&settings).map_err(|e| e.to_string())?;
-        }
-        let scheme = noctalia::wallpaper_scheme_on_disk().unwrap_or_else(|| "m3-tonal-spot".into());
-        set_scheme(&["wallpaper", &scheme])?;
-    } else if now.starts_with("wallpaper") {
-        let previous = settings.noctalia_previous_scheme.clone().ok_or(
-            "There's no earlier Noctalia scheme to go back to; pick one in Noctalia's settings.",
-        )?;
-        let parts: Vec<&str> = previous.split_whitespace().collect();
-        set_scheme(&parts)?;
-        settings.noctalia_previous_scheme = None;
-        store.save_settings(&settings).map_err(|e| e.to_string())?;
-    }
-    Ok(noctalia_colors())
 }

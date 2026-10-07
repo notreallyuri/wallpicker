@@ -1,6 +1,7 @@
 //! `wallpicker daemon`: what keeps running without the window, for an
-//! autostart: the wallpaper per workspace (Hyprland's events) and the
-//! slideshow's timer. One at a time; a second says so and leaves. The
+//! autostart: the wallpaper per workspace (Hyprland's events), the
+//! slideshow's timer, and Noctalia's colors following the wallpaper (when
+//! they're wallpicker's palette: noctalia_colors.rs). One at a time; a second says so and leaves. The
 //! workspace listener also waits while another program has it, and the
 //! slideshow's ticks take turns with the Noctalia plugin's.
 
@@ -29,12 +30,32 @@ pub fn daemon(args: &[String]) -> i32 {
     }
     let listener = store.clone();
     std::thread::spawn(move || workspaces::listen(&SystemRunner, &listener, &|| true, &|| {}));
+    let colors = store.clone();
+    std::thread::spawn(move || follow_colors(&colors));
     loop {
         // Errors are printed by the tick; keep going.
         if let Err(e) = slideshow::tick_with(&store, false) {
             eprintln!("wallpicker: slideshow: {e}");
         }
         std::thread::sleep(Duration::from_secs(30));
+    }
+}
+
+/// Noctalia's palette made again when what's shown (or the settings: the
+/// monitor the colors come from) changes; once at start too.
+fn follow_colors(store: &Store) {
+    let files = [store.dirs().state.join("state.json"), store.dirs().config.join("config.json")];
+    let stamp = |p: &std::path::PathBuf| std::fs::metadata(p).and_then(|m| m.modified()).ok();
+    let mut last: Vec<_> = vec![None; files.len()];
+    loop {
+        let now: Vec<_> = files.iter().map(stamp).collect();
+        if now != last {
+            last = now;
+            if let Err(e) = crate::noctalia_colors::refresh(store) {
+                eprintln!("wallpicker: Noctalia's colors: {e}");
+            }
+        }
+        std::thread::sleep(Duration::from_secs(2));
     }
 }
 

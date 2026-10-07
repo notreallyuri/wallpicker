@@ -3,13 +3,15 @@
 //! settings, what the monitors show, the favorites and tags. Their files are
 //! checked a few times a second and a change is announced like `serve`'s
 //! own: `settings-changed`, `state-changed`, `catalog-changed`. (Its own
-//! changes are announced again then; reloading twice is harmless.)
+//! changes are announced again then; reloading twice is harmless.) A new
+//! wallpaper or settings also make Noctalia's palette again, when Noctalia
+//! uses wallpicker's (noctalia_colors.rs; the daemon does the same).
 
 use std::path::PathBuf;
 use std::time::{Duration, SystemTime};
 
 use serde_json::json;
-use wallpicker_core::store::Dirs;
+use wallpicker_core::store::{Dirs, Store};
 
 use super::Out;
 
@@ -21,6 +23,7 @@ pub(super) fn start(dirs: &Dirs, out: Out) {
         (dirs.state.join("state.json"), "state-changed"),
         (dirs.data.join("library.json"), "catalog-changed"),
     ];
+    let store = Store::new(dirs.clone());
     std::thread::spawn(move || {
         let stamp = |p: &PathBuf| -> Option<(SystemTime, u64)> {
             let m = std::fs::metadata(p).ok()?;
@@ -34,6 +37,14 @@ pub(super) fn start(dirs: &Dirs, out: Out) {
                 if now != last[i] {
                     last[i] = now;
                     out.event(event, json!(null));
+                    if *event != "catalog-changed" {
+                        let store = store.clone();
+                        std::thread::spawn(move || {
+                            if let Err(e) = crate::noctalia_colors::refresh(&store) {
+                                eprintln!("wallpicker: Noctalia's colors: {e}");
+                            }
+                        });
+                    }
                 }
             }
         }

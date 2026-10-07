@@ -10,6 +10,7 @@ pub mod cli;
 pub mod rt;
 mod serve;
 pub mod service;
+pub mod noctalia_colors;
 pub mod theme;
 
 use std::path::PathBuf;

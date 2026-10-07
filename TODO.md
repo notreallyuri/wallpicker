@@ -173,10 +173,9 @@ and feels like the app (real transitions and easing, glass, shadows); the scroll
      animations (Prefs), full-size previews; export / import through the portal, the snapshots,
      their folder, restore (asking first).
   Not ported: "Keep running in the tray" (the tray is phase 5's call).
-- [ ] **5. Background**: `wallpicker daemon` (workspace listener, tray or not), following the
+- [x] **5. Background** (done 2026-10-07): `wallpicker daemon` (workspace listener, tray or not), following the
   wallpaper's colors live, Noctalia colors, toasts for what happens in the background.
-  The plan (2026-10-07), in this order, each step checked and committed (1-3 done
-  2026-10-07; 4 waits for the user at the desk):
+  The plan (2026-10-07), in this order, each step checked and committed:
   1. **Live from anywhere**: `serve` watches state.json, config.json and library.json and
      announces changes made by other programs (the slideshow, the plugin, the command line,
      the workspace listener): the picker's monitors, drawer, colors and library follow while
@@ -187,11 +186,11 @@ and feels like the app (real transitions and easing, glass, shadows); the scroll
      listener (it already guards against a second copy) and the slideshow's timer (decided
      2026-10-07: the daemon does it, guarded so only one timer acts with the plugin's ticks).
      One autostart line, replacing `wallpicker --tray` at the switch (phase 6).
-  4. **Noctalia's colors with awww or hyprpaper** (with the user at the desk: it means trying
-     palettes on the live Noctalia): Noctalia only follows the wallpaper it draws
-     itself. A custom palette (`noctalia msg color-scheme-set custom <name>`, a folder in
-     ~/.config/noctalia/colorschemes) made from the wallpaper shown, updated by the daemon as
-     it changes.
+  4. **Noctalia's colors with awww or hyprpaper**: Noctalia only follows the wallpaper it
+     draws itself. A custom palette (`noctalia msg color-scheme-set custom wallpicker`,
+     `~/.config/noctalia/palettes/wallpicker.json`, Noctalia's palette format) made from the
+     wallpaper shown, made again and switched to by the daemon (and an open picker) as it
+     changes: Noctalia doesn't watch the file.
   No tray (decided 2026-10-07): the picker opens in ~0.5 s from a keybind or the plugin.
 - [ ] **6. Switch over**: `wallpicker` opens the Quickshell UI; the Noctalia plugin's handoffs
   (`--open`) go through it; remove the Tauri app, WebKit and Leptos (`ui/`, `src-tauri/`: the
