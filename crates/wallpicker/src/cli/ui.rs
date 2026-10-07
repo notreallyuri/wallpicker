@@ -1,7 +1,8 @@
 //! The picker: the Quickshell interface (quickshell/), run as `qs -p <its
 //! folder>` with this binary as its backend (WALLPICKER_BIN, for `wallpicker
 //! serve`). `wallpicker` (or `wallpicker ui`) opens it; `--toggle` closes it
-//! when it's open (a keybind); `--open PLACE [IMAGE]` opens it at a tab or a
+//! when it's open (a keybind) or shows it again while it's still loaded;
+//! `--open PLACE [IMAGE]` opens it at a tab or a
 //! dialog (the Noctalia plugin hands bigger jobs over that way), or moves
 //! the open one there.
 
@@ -82,11 +83,22 @@ pub fn ui(args: &[String]) -> i32 {
         return fail(&"the interface isn't installed (scripts/install-local.sh puts it in ~/.local/share/wallpicker/ui)");
     };
     if running(&dir) {
-        let call = |args: &[&str]| Command::new("qs").arg("-p").arg(&dir).args(["ipc", "call", "wallpicker"]).args(args).status();
+        let call = |args: &[&str]| {
+            Command::new("qs")
+                .arg("-p")
+                .arg(&dir)
+                .args(["ipc", "call", "wallpicker"])
+                .args(args)
+                .stdout(Stdio::null())
+                .status()
+        };
+        // Running: open, or closed but still loaded (Settings → Performance).
         if let Some(p) = &place {
             let _ = call(&["open", &p.view, p.path.as_deref().unwrap_or("")]);
         } else if toggle {
             let _ = call(&["toggle"]);
+        } else {
+            let _ = call(&["reopen"]);
         }
         return 0;
     }

@@ -92,8 +92,16 @@ ColumnLayout {
             }
         }
     }
-    Note {
-        text: "Closing the picker frees all of it: nothing stays in memory between opens."
+    Field {
+        Layout.fillWidth: true
+        label: "Keep the picker ready after closing"
+        description: Prefs.keepOpen > 0 ? "Closed, it stays loaded (about this much memory) for that long: opening it again then is instant, where you left it. Unused that long, it frees all of it. Applies from the next close." : "Off: closing frees all of it at once; each open starts fresh (about half a second)."
+        Select {
+            minWidth: 200
+            options: [["0", "Off"], ["30", "30 seconds"], ["60", "1 minute"], ["300", "5 minutes"], ["600", "10 minutes"], ["1800", "30 minutes"]]
+            value: String(Prefs.keepOpen)
+            onPicked: v => Prefs.keepOpen = parseInt(v)
+        }
     }
 
     ToggleField {

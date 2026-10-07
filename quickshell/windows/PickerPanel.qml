@@ -17,9 +17,17 @@ PanelWindow {
 
     readonly property alias picker: picker
 
-    // Out of the way while a file dialog is open: an overlay sits above
-    // every window, the dialog too.
-    visible: !Files.asking
+    // Hidden while closed but still loaded (services/Lifetime), and out of
+    // the way while a file dialog is open: an overlay sits above every
+    // window, the dialog too.
+    visible: Lifetime.shown && !Files.asking
+    // Shown again: the way in plays again.
+    onVisibleChanged: if (visible && !Files.asking) {
+        dim.opacity = 0;
+        picker.opacity = 0;
+        picker.scale = 0.97;
+        comeIn.restart();
+    }
 
     screen: Quickshell.screens.find(s => Hyprland.focusedMonitor && s.name === Hyprland.focusedMonitor.name) || Quickshell.screens[0]
     anchors {
@@ -73,6 +81,7 @@ PanelWindow {
 
     // In: the dim and the panel fade, the panel settles from 97%.
     ParallelAnimation {
+        id: comeIn
         running: true
         NumberAnimation {
             target: dim

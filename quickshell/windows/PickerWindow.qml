@@ -16,6 +16,8 @@ FloatingWindow {
     implicitWidth: 1560
     implicitHeight: 980
     color: "transparent"
+    // Hidden while closed but still loaded (services/Lifetime).
+    visible: Lifetime.shown
     onVisibleChanged: if (!visible)
         window.dismissed()
 

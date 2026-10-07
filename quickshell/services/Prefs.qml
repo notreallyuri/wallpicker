@@ -27,6 +27,8 @@ Singleton {
     /// The floating panel's size (Settings → Appearance): "large",
     /// "comfortable" or "compact" (an even margin round it).
     property alias panelSize: data.panelSize
+    /// Seconds the picker stays loaded after it's closed (0: none).
+    property alias keepOpen: data.keepOpen
 
     FileView {
         id: file
@@ -62,6 +64,7 @@ Singleton {
             property bool backdrop: true
             property bool motion: true
             property string panelSize: "comfortable"
+            property int keepOpen: 60
         }
     }
 }

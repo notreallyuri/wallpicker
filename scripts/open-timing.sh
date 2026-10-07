@@ -5,7 +5,7 @@
 # a while is the coldest (files not in the page cache).
 #
 #   cargo build --release -p wallpicker
-#   scripts/open-timing.sh [OPENS]
+#   scripts/open-timing.sh [OPENS]      (WARM=1: opening it again while loaded)
 set -e
 here=$(cd "$(dirname "$0")/.." && pwd)
 opens=${1:-3}
@@ -13,6 +13,15 @@ bin=$here/target/release/wallpicker
 ui=$here/quickshell
 state=$(mktemp -d)
 cp -r "${XDG_STATE_HOME:-$HOME/.local/state}/wallpicker" "$state/"
+# Cold opens: the picker exits when closed (WARM=1 keeps it loaded for a
+# minute instead, to time opening it again).
+python3 - "$state/wallpicker/ui.json" "${WARM:-0}" <<'PY'
+import json, os, sys
+p, warm = sys.argv[1], sys.argv[2] == "1"
+d = json.load(open(p)) if os.path.exists(p) else {}
+d["keepOpen"] = 60 if warm else 0
+json.dump(d, open(p, "w"))
+PY
 if pgrep -x qs > /dev/null; then
     echo "open-timing: close the picker (and any other Quickshell) first" >&2
     exit 1
