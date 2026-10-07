@@ -32,7 +32,9 @@ Item {
         }
         Flow {
             id: cards
-            readonly property real rowWidth: Monitors.spanned ? spanCard.implicitWidth : Math.min(drawer.width - 40, (Monitors.list.length + (Monitors.list.length > 1 ? 1 : 0)) * (288 + spacing) - spacing)
+            // Cards: the span's, each monitor outside it, All.
+            readonly property var alone: Monitors.list.filter(m => !Monitors.inSpan(m.name))
+            readonly property real rowWidth: Math.min(drawer.width - 40, (Monitors.spanned ? spanCard.implicitWidth + spacing : 0) + (alone.length + (Monitors.list.length > 1 ? 1 : 0)) * (288 + spacing) - spacing)
             x: (drawer.width - width) / 2
             y: 16
             width: Math.max(288, rowWidth)
@@ -42,14 +44,14 @@ Item {
                 visible: Monitors.spanned
             }
             Repeater {
-                model: Monitors.spanned ? [] : Monitors.list
+                model: cards.alone
                 MonitorCard {
                     required property var modelData
                     monitor: modelData
                 }
             }
             AllCard {
-                visible: Monitors.list.length > 1 && !Monitors.spanned
+                visible: Monitors.list.length > 1
             }
         }
     }

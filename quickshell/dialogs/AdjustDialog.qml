@@ -7,7 +7,7 @@ import QtQuick
 import QtQuick.Layouts
 import qs.components
 import qs.services
-import "Frame.js" as Frame
+import "../components/Frame.js" as Frame
 
 Dialog {
     id: dialog

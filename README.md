@@ -57,16 +57,21 @@ or **Noctalia**'s wallpaper manager (Settings → General → Wallpaper backend)
 - **Keys**: Ctrl+F search field, Ctrl+R random, Alt+Up parent folder, Alt+Left/Right pages,
   Ctrl+1/2/3 Local/Online/Collections, Alt+1…N where a click applies (a monitor, in the top bar's
   order) and Alt+N+1 All, Delete a tile's trash, Esc the top menu or dialog, then the picker.
-- **Span across monitors** (a tile's right-click menu, or `wallpicker span <image>`): one picture
-  across every monitor, each showing its part, mixed resolutions, scales and rotations included.
-  A bezel gap (Settings → General, or `wallpicker settings set span_gap=PX`) leaves out the
-  picture behind the frames, so lines carry on straight. Spanned, the monitors act as one: the
-  drawer shows one **Spanned** card and the top bar one pill, and a click on a tile spans that
-  picture. The card's **Adjust** zooms, moves and mirrors the span over the whole layout, like
-  framing one monitor (`--frame ZOOM,X,Y`, `--flip h|v|both` from the command line);
-  **Separate** gives each monitor back to itself, keeping its part (as does picking a monitor,
-  Alt+1..N; `wallpicker span --separate`); **Previous** goes back on every monitor. Another
-  wallpaper on any monitor ends the span.
+- **Span across monitors** (a tile's right-click menu → **Span across…**, or `wallpicker span
+  <image>`): one picture across the monitors you choose, each showing its part. The Span dialog
+  has a canvas of your monitors at their real sizes (from what they report, so a 27" QHD next
+  to a 24" 1080p gets the share it really covers): click a monitor in or out, drag it to where
+  it stands on your desk (it snaps to the others, the bezel width apart, or lined up with
+  them; anywhere along an edge), then **Span**. Your Hyprland layout isn't touched: the
+  arrangement is wallpicker's own, kept for next time (**From Hyprland** starts it over). The
+  span's monitors then act as one: one **Spanned** card in the drawer (them as arranged, one
+  picture) and one pill; picked, a click on a tile spans that picture across them; the other
+  monitors carry on on their own. The card's **Adjust** reopens the dialog on the span shown
+  (changes go on the monitors as you make them), with **Frame the picture**: zoom, move and
+  mirror it over them all. **Separate** gives each monitor back to itself, keeping its part;
+  **Previous** goes back on the span's monitors. Another wallpaper on one of them ends the
+  span. From the command line: `--monitors A,B`, `--frame ZOOM,X,Y`, `--flip h|v|both`,
+  `wallpicker span --separate`, `wallpicker settings set span_bezel=MM`.
 - **Duplicates** (Local → **⋯** → **Find duplicates…**): exact copies and the same picture at another size or
   re-saved, a group at a time. The largest copy is picked to keep; the others go to the trash, and
   their favorite and tags move to the kept one (a monitor showing one of them gets it instead).

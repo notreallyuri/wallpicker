@@ -20,11 +20,12 @@ RowLayout {
     MonitorPill {
         visible: Monitors.spanned
         label: "Spanned"
-        tip: "One picture across " + Monitors.list.map(m => m.name).join(" + ") + "\nA click on a wallpaper spans it; right-click to adjust the span"
-        on: true
+        tip: "One picture across " + Monitors.spanNames.join(" + ") + "\nPicked, a click on a wallpaper spans it; right-click to adjust the span"
+        on: Monitors.selection === Monitors.spanTarget
+        onPicked: Monitors.select(Monitors.spanTarget)
         onRightClicked: Dialogs.adjustSpan()
         Repeater {
-            model: Monitors.spanned ? Monitors.list : []
+            model: Monitors.spanned ? Monitors.list.filter(m => Monitors.inSpan(m.name)) : []
             MonitorScreen {
                 required property var modelData
                 screenWidth: 18
@@ -35,7 +36,7 @@ RowLayout {
         }
     }
     Repeater {
-        model: Monitors.spanned ? [] : Monitors.list
+        model: Monitors.list.filter(m => !Monitors.inSpan(m.name))
         MonitorPill {
             required property var modelData
             label: modelData.name
@@ -54,7 +55,7 @@ RowLayout {
         }
     }
     MonitorPill {
-        visible: Monitors.list.length > 1 && !Monitors.spanned
+        visible: Monitors.list.length > 1
         label: "All"
         tip: "Every monitor"
         on: Monitors.selection === Monitors.all

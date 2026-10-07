@@ -34,7 +34,7 @@ Menu {
     MenuItem {
         visible: Monitors.list.length > 1
         icon: "monitor"
-        text: "Span across monitors"
+        text: "Span across…"
         onTriggered: Downloads.fetch(menu.w, "span")
     }
     MenuSeparator {}

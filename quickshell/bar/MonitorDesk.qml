@@ -10,13 +10,15 @@ import qs.services
 Item {
     Layout.fillWidth: true
     implicitHeight: 128
-    implicitWidth: screens.implicitWidth
 
     Row {
         id: screens
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: desk.top
         spacing: 8
+        // Three monitors or more: smaller, to stay on the card.
+        scale: Math.min(1, (parent.width - 8) / Math.max(1, implicitWidth))
+        transformOrigin: Item.Bottom
         Repeater {
             model: Monitors.list
             MonitorFigure {

@@ -29,8 +29,8 @@ Singleton {
         return p && p.total > 0 ? p.done / p.total : -1;
     }
 
-    /// Download `w`, then apply it on `monitors` (names; "span": across all
-    /// of them), or just say where it was saved when that's null. Once at a
+    /// Download `w`, then apply it on `monitors` (names; "span": open the
+    /// Span dialog for it), or just say where it was saved when that's null. Once at a
     /// time per wallpaper.
     function fetch(w, monitors) {
         const k = key(w);
@@ -48,7 +48,7 @@ Singleton {
             next[k] = true;
             downloads.saved = next;
             if (monitors === "span")
-                Span.span(path);
+                Dialogs.spanAcross(path);
             else if (monitors)
                 Monitors.applyTo(path, monitors);
             else

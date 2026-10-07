@@ -5,7 +5,7 @@
 import QtQuick
 import qs.components
 import qs.services
-import "Frame.js" as Frame
+import "../components/Frame.js" as Frame
 
 MonitorFigure {
     id: framer

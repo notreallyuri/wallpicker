@@ -1,8 +1,9 @@
 // The monitors, what each shows (and how it's adjusted), and where a click
-// applies: one monitor or all of them (the app's rule: single choice;
-// picking the chosen one again keeps it). Spanned, they act as one: a
-// click spans the picture; picking a monitor separates them first (the
-// span's actions: services/Span). Whether the drawer of monitors
+// applies: one monitor, all of them, or the span (the app's rule: single
+// choice; picking the chosen one again keeps it). Spanned, the span's
+// monitors act as one: picked, a click spans the picture across them; the
+// others stay on their own (the span's actions: services/Span). Whether
+// the drawer of monitors
 // under the top bar is open. A wallpaper changed by something else while the
 // picker is open (the slideshow, a workspace, the plugin) gets a toast.
 pragma Singleton
@@ -13,6 +14,7 @@ Singleton {
     id: monitors
 
     readonly property string all: "__all__"
+    readonly property string spanTarget: "__span__"
 
     property var list: []
     /// monitor -> the wallpaper it shows
@@ -22,16 +24,31 @@ Singleton {
     property var adjust: ({})
     /// The drawer of monitors under the top bar (remembered).
     readonly property bool drawerOpen: Prefs.monitorsOpen
-    /// A monitor's name, or `all`.
+    /// A monitor's name, `all` or `spanTarget`.
     property string selection: ""
     /// Paths being applied (a spinner on their tile).
     property var applying: ({})
-    /// The span ({path, look: {zoom, x, y, flip}}) while there's one.
+    /// The span ({path, look: {zoom, x, y, flip}, monitors, places: {name:
+    /// {x, y, w, h} mm}}) while there's one.
     property var spanState: null
-    /// Every monitor shows its part of one picture: they act as one.
-    readonly property bool spanned: spanState !== null && list.length > 1 && list.every(m => current[m.name] === spanState.path)
+    /// The connected monitors it's across (none listed: all, from before
+    /// spans chose).
+    readonly property var spanNames: spanState ? list.map(m => m.name).filter(n => !spanState.monitors || spanState.monitors.length === 0 || spanState.monitors.indexOf(n) >= 0) : []
+    /// They all show their part of one picture: they act as one.
+    readonly property bool spanned: spanState !== null && spanNames.length > 1 && spanNames.every(n => current[n] === spanState.path)
+    /// `name` is one of the span's.
+    function inSpan(name) {
+        return spanned && spanNames.indexOf(name) >= 0;
+    }
+    /// The span's monitors on the canvas: [{name, x, y, w, h}] (mm).
+    readonly property var spanPlaces: spanState && spanState.places ? Object.keys(spanState.places).map(n => Object.assign({
+                name: n
+            }, spanState.places[n])) : []
+    // The span ended while picked: back to a monitor.
+    onSpannedChanged: if (!spanned && selection === spanTarget)
+        selection = spanNames[0] || (list[0] || {}).name || ""
 
-    readonly property var targets: spanned || selection === all ? list.map(m => m.name) : (selection ? [selection] : [])
+    readonly property var targets: selection === spanTarget ? spanNames : selection === all ? list.map(m => m.name) : (selection ? [selection] : [])
 
     /// monitor -> when the picker last changed it itself (ms): changes then
     /// aren't announced.
@@ -56,16 +73,15 @@ Singleton {
         Prefs.monitorsOpen = !Prefs.monitorsOpen;
     }
 
+    /// A monitor of the span picks the span.
     function select(name) {
-        if (spanned)
-            Span.separate();
-        selection = name;
+        selection = inSpan(name) ? spanTarget : name;
     }
 
-    /// On the chosen monitor(s); spanned, across them.
+    /// On the chosen monitor(s); the span picked, across its monitors.
     function apply(path) {
-        if (spanned)
-            Span.span(path);
+        if (selection === spanTarget && spanned)
+            Span.span(path, spanNames);
         else
             applyTo(path, targets);
     }

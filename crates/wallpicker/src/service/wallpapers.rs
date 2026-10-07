@@ -50,11 +50,12 @@ pub async fn span(state: &AppState, path: String, look: SpanLook, ask: hyprpaper
     .await
 }
 
-/// The Span dialog's canvas: every monitor's place and size (mm), the
-/// monitors spanned by default, the bezel.
-pub async fn span_layout(state: &AppState) -> CmdResult<hyprpaper::SpanLayout> {
+/// The Span dialog's canvas: every monitor's place and size (mm; `fresh`:
+/// from Hyprland's layout, `bezel` mm apart), the monitors spanned by
+/// default, the bezel.
+pub async fn span_layout(state: &AppState, fresh: bool, bezel: Option<u32>) -> CmdResult<hyprpaper::SpanLayout> {
     let store = state.store.clone();
-    blocking(move || hyprpaper::span_layout(&SystemRunner, &store)).await
+    blocking(move || hyprpaper::span_layout(&SystemRunner, &store, fresh, bezel)).await
 }
 
 /// The monitors act on their own again, each keeping its part.

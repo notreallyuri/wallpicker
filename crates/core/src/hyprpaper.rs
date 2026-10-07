@@ -442,8 +442,9 @@ fn ask_was_default(wanted: &[String], settings: &Settings) -> bool {
     wanted == settings.span_monitors.as_slice()
 }
 
-/// What the Span dialog shows: every connected monitor on the canvas,
-/// which ones are spanned by default, and the bezel.
+/// What the Span dialog shows: every connected monitor on the canvas (as
+/// arranged, or `fresh` from Hyprland's layout), which ones are spanned by
+/// default, and the bezel.
 #[derive(Debug, Clone, Serialize)]
 pub struct SpanLayout {
     pub monitors: Vec<SpanMonitor>,
@@ -460,10 +461,12 @@ pub struct SpanMonitor {
     pub out_height: u32,
 }
 
-pub fn span_layout(runner: &dyn Runner, store: &Store) -> Result<SpanLayout> {
+pub fn span_layout(runner: &dyn Runner, store: &Store, fresh: bool, bezel: Option<u32>) -> Result<SpanLayout> {
     let connected = list_monitors(runner)?;
     let settings = store.load_settings()?;
-    let monitors: Vec<SpanMonitor> = crate::span::arrangement(&connected, &settings.span_layout, settings.span_bezel)
+    let bezel = bezel.unwrap_or(settings.span_bezel).min(100);
+    let saved = if fresh { BTreeMap::new() } else { settings.span_layout.clone() };
+    let monitors: Vec<SpanMonitor> = crate::span::arrangement(&connected, &saved, bezel)
         .into_iter()
         .map(|p| SpanMonitor { name: p.name, rect: p.rect, out_width: p.out_width, out_height: p.out_height })
         .collect();
@@ -471,7 +474,7 @@ pub fn span_layout(runner: &dyn Runner, store: &Store) -> Result<SpanLayout> {
     if chosen.len() < 2 {
         chosen = monitors.iter().map(|m| m.name.clone()).collect();
     }
-    Ok(SpanLayout { monitors, chosen, bezel: settings.span_bezel })
+    Ok(SpanLayout { monitors, chosen, bezel })
 }
 
 /// Put back what each of `monitors` showed before ([`Store::previous`]),

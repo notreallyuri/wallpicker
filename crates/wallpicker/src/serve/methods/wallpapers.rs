@@ -31,7 +31,11 @@ pub(super) async fn call(state: &AppState, out: &Out, name: &str, params: &Value
             Err(e) => Err(e),
         },
         "separate" => json(wallpapers::separate(state).await),
-        "span_layout" => return Some(json(wallpapers::span_layout(state).await)),
+        "span_layout" => {
+            let fresh = params.get("fresh").and_then(Value::as_bool).unwrap_or(false);
+            let bezel = params.get("bezel").and_then(Value::as_u64).map(|b| b.min(100) as u32);
+            return Some(json(wallpapers::span_layout(state, fresh, bezel).await));
+        }
         "previous" => match param(params, "monitors") {
             Ok(monitors) => json(wallpapers::previous(state, monitors).await),
             Err(e) => Err(e),

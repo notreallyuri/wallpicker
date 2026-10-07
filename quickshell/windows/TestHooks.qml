@@ -224,7 +224,8 @@ QtObject {
         }
 
         /// Open a dialog: settings (at section `arg`), span (the span's
-        /// Adjust), adjust (monitor `arg`), filters (Online's).
+        /// Adjust), across (the Span dialog for picture `arg`), adjust
+        /// (monitor `arg`), filters (Online's).
         function dialog(name: string, arg: string): string {
             switch (name) {
             case "settings":
@@ -232,6 +233,9 @@ QtObject {
                 break;
             case "span":
                 Dialogs.adjustSpan();
+                break;
+            case "across":
+                Dialogs.spanAcross(arg);
                 break;
             case "adjust":
                 Dialogs.adjust(arg);

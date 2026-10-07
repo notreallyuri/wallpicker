@@ -56,7 +56,7 @@ Item {
                 visible: Prefs.backdrop
                 anchors.fill: parent
                 source: {
-                    const name = Monitors.selection === Monitors.all ? (Monitors.list[0] || {}).name : Monitors.selection;
+                    const name = Monitors.selection === Monitors.all ? (Monitors.list[0] || {}).name : Monitors.selection === Monitors.spanTarget ? Monitors.spanNames[0] : Monitors.selection;
                     const img = Library.images.find(i => i.path === Monitors.current[name]);
                     return img && img.thumb ? "file://" + img.thumb : "";
                 }
@@ -125,8 +125,9 @@ Item {
         }
     }
 
-    // Alt+1..N: where a click applies, a monitor in the top bar's order;
-    // Alt+N+1: All (two monitors: Alt+1, Alt+2, Alt+3 for All).
+    // Alt+1..N: where a click applies, a monitor in the top bar's order (one
+    // of the span's picks the span); Alt+N+1: All (two monitors: Alt+1,
+    // Alt+2, Alt+3 for All).
     Repeater {
         model: Math.min(9, Monitors.list.length + 1)
         Item {

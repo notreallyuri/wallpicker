@@ -12,8 +12,11 @@ Singleton {
     property bool duplicates: false
     /// The monitor being adjusted ("" none).
     property string adjusting: ""
-    /// The span is being adjusted (zoom, position, mirroring).
-    property bool spanAdjusting: false
+    /// The Span dialog: the picture ("" closed), and whether it's the span
+    /// already shown (changes go on the monitors as they're made) or a new
+    /// one (spanned with the dialog's Span button).
+    property string spanPath: ""
+    property bool spanShown: false
     /// The Online provider's filters.
     property bool onlineFilters: false
     /// The Settings section shown ("" closed).
@@ -52,8 +55,17 @@ Singleton {
     function adjust(monitor) {
         adjusting = monitor;
     }
+    /// Choose the monitors for `path` and arrange them, then span it.
+    function spanAcross(path) {
+        spanShown = false;
+        spanPath = path;
+    }
+    /// Adjust the span shown: its look, its monitors and their places.
     function adjustSpan() {
-        spanAdjusting = true;
+        if (!Monitors.spanState)
+            return;
+        spanShown = true;
+        spanPath = Monitors.spanState.path;
     }
     function openSettings(section) {
         settings = section || "general";

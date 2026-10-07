@@ -65,9 +65,12 @@ os.makedirs(os.path.dirname(sys.argv[1]), exist_ok=True)
 json.dump(prefs, open(sys.argv[1], 'w'))
 PY
 fi
-cat > "$tmp/bin/hyprctl" <<'SH'
+# CHECK_MONITORS='[...]': other monitors (hyprctl monitors -j's JSON).
+monitors=${CHECK_MONITORS:-'[{"name":"DP-1","width":1920,"height":1080,"x":0,"y":0,"focused":true,"activeWorkspace":{"name":"1"}},{"name":"DP-2","width":1920,"height":1080,"x":1920,"y":0,"focused":false,"activeWorkspace":{"name":"2"}}]'}
+printf '%s' "$monitors" > "$tmp/monitors.json"
+cat > "$tmp/bin/hyprctl" <<SH
 #!/bin/sh
-case "$*" in *monitors*) echo '[{"name":"DP-1","width":1920,"height":1080,"x":0,"y":0,"focused":true,"activeWorkspace":{"name":"1"}},{"name":"DP-2","width":1920,"height":1080,"x":1920,"y":0,"focused":false,"activeWorkspace":{"name":"2"}}]';; *workspaces*) echo '[{"name":"1","monitor":"DP-1"},{"name":"2","monitor":"DP-2"},{"name":"3","monitor":"DP-1"}]';; *) echo ok;; esac
+case "\$*" in *monitors*) cat '$tmp/monitors.json';; *workspaces*) echo '[{"name":"1","monitor":"DP-1"},{"name":"2","monitor":"DP-2"},{"name":"3","monitor":"DP-1"}]';; *) echo ok;; esac
 SH
 chmod +x "$tmp/bin/hyprctl"
 {
