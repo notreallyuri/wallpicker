@@ -48,8 +48,10 @@ PanelWindow {
     Picker {
         id: picker
         anchors.centerIn: parent
-        width: Math.min(1560, overlay.width - 96)
-        height: Math.min(980, overlay.height - 96)
+        // The chosen size (Settings → Appearance), kept inside the screen.
+        readonly property var size: (Prefs.panelSize || "1366x768").split("x").map(Number)
+        width: Math.min(size[0] || 1366, overlay.width - 48)
+        height: Math.min(size[1] || 768, overlay.height - 48)
         opacity: 0
         scale: 0.97
     }

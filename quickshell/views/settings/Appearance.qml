@@ -18,6 +18,16 @@ ColumnLayout {
     spacing: 20
 
     Field {
+        label: "Picker size"
+        description: "The floating panel's size. Applies right away."
+        Select {
+            minWidth: 200
+            options: [["1280x720", "1280×720 (720p)"], ["1366x768", "1366×768"], ["1560x980", "1560×980 (larger)"]]
+            value: Prefs.panelSize
+            onPicked: v => Prefs.panelSize = v
+        }
+    }
+    Field {
         label: "Dark mode"
         description: "Applies right away."
         Select {
