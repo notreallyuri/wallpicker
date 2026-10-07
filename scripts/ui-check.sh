@@ -67,7 +67,7 @@ PY
 fi
 cat > "$tmp/bin/hyprctl" <<'SH'
 #!/bin/sh
-case "$*" in *monitors*) echo '[{"name":"DP-1","width":1920,"height":1080,"x":0,"y":0,"focused":true},{"name":"DP-2","width":1920,"height":1080,"x":1920,"y":0,"focused":false}]';; *workspaces*) echo '[]';; *) echo ok;; esac
+case "$*" in *monitors*) echo '[{"name":"DP-1","width":1920,"height":1080,"x":0,"y":0,"focused":true,"activeWorkspace":{"name":"1"}},{"name":"DP-2","width":1920,"height":1080,"x":1920,"y":0,"focused":false,"activeWorkspace":{"name":"2"}}]';; *workspaces*) echo '[{"name":"1","monitor":"DP-1"},{"name":"2","monitor":"DP-2"},{"name":"3","monitor":"DP-1"}]';; *) echo ok;; esac
 SH
 chmod +x "$tmp/bin/hyprctl"
 {
