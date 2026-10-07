@@ -262,7 +262,9 @@ return function(app)
     local sg = S.online.suggest
     local typed = noctalia.string.trim(S.online.query)
     local cmd = app.command()
-    if S.online.provider == "wallhaven" or typed == "" or cmd == nil then
+    -- Only Konachan and yande.re match exact tag names (`wallpicker tags`).
+    local moebooru = S.online.provider == "konachan" or S.online.provider == "yandere"
+    if not moebooru or typed == "" or cmd == nil then
       if #sg.items > 0 then
         sg.items = {}
         app.render()
@@ -288,7 +290,7 @@ return function(app)
 
   function app.tagSuggestionsRow()
     local items = S.online.suggest.items
-    if S.mode ~= "online" or S.online.provider == "wallhaven" or #items == 0 then
+    if S.mode ~= "online" or not (S.online.provider == "konachan" or S.online.provider == "yandere") or #items == 0 then
       return nil
     end
     local chips, texts = { ui.label({ text = app.tr("tags_suggest"), fontSize = 12, color = "on_surface_variant" }) }, { app.tr("tags_suggest") }

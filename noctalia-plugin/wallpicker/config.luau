@@ -440,7 +440,10 @@ function M.new(deps)
     if d == nil then
       table.insert(body, hint(if state.loading then tr("loading") else ""))
     else
-      local rest = if state.provider == "wallhaven" then wallhavenFilters(d) else moebooruFilters(d)
+      local rest = if state.provider == "wallhaven"
+        then wallhavenFilters(d)
+        elseif state.provider == "unsplash" then { hint(tr("f_unsplash")) }
+        else moebooruFilters(d)
       for _, node in ipairs(rest) do
         table.insert(body, node)
       end

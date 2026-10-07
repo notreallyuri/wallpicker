@@ -19,6 +19,7 @@
   "f_exact": "Exact resolutions (any number; none means any)",
   "f_explicit": "Explicit",
   "f_general": "General",
+  "f_unsplash": "Unsplash's order, orientation and color are in wallpicker's Filters dialog (Open wallpicker). It needs a free Access Key: Settings → Unsplash there.",
   "f_konachan_net": "konachan.net only has safe images. For the other ratings, pick konachan.com in Settings.",
   "f_min_other": "Or any minimum",
   "f_min_size": "Minimum size",
