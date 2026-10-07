@@ -146,6 +146,33 @@ and feels like the app (real transitions and easing, glass, shadows); the scroll
   arguments, `--tray`, `--toggle` or `--open` hands over to `wallpicker-app` until phase 6.
 - [ ] **4. Settings**: every section (General, Appearance, Downloads, Slideshow, Workspaces with
   its picker, Performance, Backup with file dialogs, providers), conflicts and Stop it.
+  The plan (2026-10-07), in this order, each step checked headless and committed:
+  1. **Backend**: Tauri's save_settings logic (keeping the snapshot folder and workspace
+     wallpapers, re-applying when the backend or a fit changed) into `service/settings.rs`;
+     `serve` methods `settings.options` (backends, transitions, fits per backend, Konachan sites,
+     slideshow intervals, colors: from core), `settings.save` (announcing `settings-changed`),
+     `settings.conflicts`, `settings.stop_program`, `slideshow.status` / `now`,
+     `noctalia.colors` / `set_colors`, `workspaces.rows` / `set`, `backup.*` (export, import,
+     snapshots, snapshot_dir, restore), `app.usage` (the interface's and serve's memory).
+  2. **File dialogs**: the XDG desktop portal's FileChooser from Rust (`dialogs.save_file`,
+     `open_file`, `folder`): the system's own dialog, no GTK in `wallpicker`.
+  3. **The Settings dialog**: the cog opens it; a sidebar of sections (App, Providers), the
+     pane, Save (most fields) at the bottom; Settings, Library, Downloads, Collections and Theme
+     reload on `settings-changed`. Sections in their own files (`views/settings/`).
+  4. **General, Downloads, providers**: folders, subfolders, backend (conflicts and Stop it,
+     awww's transition, Noctalia's note), fit and per-monitor fits, thumbnail width; the
+     download folder; Wallhaven key and username, Konachan's site, yande.re's note.
+  5. **Appearance**: dark mode (system, light, dark) and the color themes (Blossom, Matcha,
+     Peach, Lagoon, Lavender, Honey) in Theme, remembered in Prefs; colors from the wallpaper
+     and from which monitor; Noctalia's colors following it.
+  6. **Slideshow**: on, interval, the day set (favorites, color, tags all/any, folder), monitors
+     and one each, the night set and its hours, status and Change now.
+  7. **Workspaces**: the switches, each workspace with its wallpaper, Choose (a picker over the
+     library in place), Clear.
+  8. **Performance and Backup**: memory and CPU of the interface and serve; glass, backdrop,
+     animations (Prefs), full-size previews; export / import through the portal, the snapshots,
+     their folder, restore (asking first).
+  Not ported: "Keep running in the tray" (the tray is phase 5's call).
 - [ ] **5. Background**: `wallpicker daemon` (workspace listener, tray or not), following the
   wallpaper's colors live, Noctalia colors, toasts for what happens in the background.
 - [ ] **6. Switch over**: `wallpicker` opens the Quickshell UI; the Noctalia plugin's handoffs
