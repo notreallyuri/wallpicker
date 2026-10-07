@@ -14,7 +14,15 @@ in `quickshell/views/settings/`.
   Artists come from the API's tag kinds (`api_version=2&include_tags=1`).
 - [ ] **Unsplash**: photography. Free key, 50 requests/hour in demo mode, 5,000/hour once the
   app is approved. Orientation filter, no exact resolution filter. Attribution required by its
-  guidelines.
+  guidelines. The plan (2026-10-07):
+  1. **Core**: `unsplash.rs` (search, or the Wallpapers topic when there's no search text;
+     orientation, color, order, content filter; results to `OnlineWallpaper`/`Page`, the
+     photographer as the artist), ids with `-` and `_` allowed, `images.unsplash.com` as its
+     download host; the Access Key in Settings (sent as `Authorization: Client-ID`).
+  2. **Service**: search and details, the download trigger the API guidelines ask for
+     (`download_location`), the rate limit's error; the command line's `search unsplash`.
+  3. **Picker**: the provider, its filters file, the photographer on tiles and in details
+     ("Photo by … on Unsplash", linked), Settings → Unsplash (the key, the limits).
 - [ ] **Wallpaper Abyss** (Alpha Coders): blocked (checked 2026-10). The old APIs
   (`wall.alphacoders.com/api1.0`, `api2.0`) return 404; `api.alphacoders.com/3.0` exists but
   answers `invalid_auth`, and the only offer on https://api.alphacoders.com/api/instructions is
@@ -260,8 +268,20 @@ and feels like the app (real transitions and easing, glass, shadows); the scroll
   zoom up to 4×), cut to the monitor's exact resolution by `transform.rs`, per monitor and
   temporary like mirroring and fit. `wallpicker adjust <monitor> --frame ZOOM,X,Y`.
 - [ ] **Span one wallpaper across monitors**: cut it to each monitor's place and size in the
-  layout (`hyprctl monitors` has x, y, scale), mixed resolutions too. Shares the crop-and-cache
-  step with framing above, so it's cheaper after that. Bezels: optional gap per monitor.
+  layout (`hyprctl monitors` has x, y, scale), mixed resolutions too. Bezels: optional gap.
+  The plan (2026-10-07):
+  1. **Core**: monitors carry their scale and rotation; `span.rs` works out each monitor's cut
+     (the picture covers the whole layout, centered; positions in logical pixels, each cut
+     scaled to the monitor's own resolution; a bezel gap between neighbours); an exact `Cut` in
+     `Adjust` beside the frame, made into a cached copy by `transform.rs` (framing's zoom
+     percent would leave seams). Unit tests: side by side, mixed sizes, scale, rotation, gaps.
+  2. **Applying**: record the wallpaper on every monitor (each keeps its history, so Previous
+     works per monitor) with its cut, then apply; temporary like any adjustment (another
+     wallpaper on a monitor takes it out). `wallpicker span <image> [--gap PX]`;
+     `serve`'s `wallpapers.span`.
+  3. **Picker**: "Span across monitors" in the tile menus (Local and Online, downloading
+     first), the bezel gap in Settings → General, the drawer showing each monitor's part.
+
 - [ ] **Animated wallpapers**. awww plays GIFs itself; hyprpaper and Noctalia don't.
   - Library: accept .gif (and maybe .webp animations); thumbnails from the first frame, with a
     "▶" badge; preview animates in the details view.
