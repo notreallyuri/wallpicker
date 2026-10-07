@@ -62,14 +62,28 @@ Item {
         follow: view.y
     }
 
-    Text {
+    Plate {
         visible: Online.page !== null && !Online.loading && Online.results.length === 0
         anchors.centerIn: parent
-        horizontalAlignment: Text.AlignHCenter
-        text: "Nothing found\nNo wallpapers match these filters."
-        color: Theme.mutedForeground
-        font.family: Theme.font
-        font.pixelSize: 14
+        padX: 24
+        padY: 14
+        Column {
+            spacing: 4
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: "Nothing found"
+                color: Theme.foreground
+                font.family: Theme.font
+                font.pixelSize: 16
+                font.weight: Font.ExtraBold
+            }
+            Text {
+                text: "No wallpapers match these filters."
+                color: Theme.mutedForeground
+                font.family: Theme.font
+                font.pixelSize: 14
+            }
+        }
     }
 
     Shortcut {

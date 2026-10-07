@@ -112,15 +112,17 @@ GridView {
 
     footer: Item {
         width: grid.width - 16
-        height: grid.local.lastPage > 1 ? 80 : 0
-        Pager {
+        height: grid.local.lastPage > 1 ? 92 : 0
+        Plate {
             visible: grid.local.lastPage > 1
             anchors.centerIn: parent
-            current: grid.local.currentPage
-            last: grid.local.lastPage
-            onGoTo: page => {
-                grid.local.page = page;
-                grid.toTop();
+            Pager {
+                current: grid.local.currentPage
+                last: grid.local.lastPage
+                onGoTo: page => {
+                    grid.local.page = page;
+                    grid.toTop();
+                }
             }
         }
     }

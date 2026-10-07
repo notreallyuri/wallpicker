@@ -45,38 +45,44 @@ Item {
     }
 
     // Nothing in the folders at all.
-    Column {
+    Plate {
         visible: !Library.loading && Library.images.length === 0
         anchors.centerIn: parent
-        width: Math.min(520, parent.width - 48)
-        spacing: 8
-        Text {
-            width: parent.width
-            horizontalAlignment: Text.AlignHCenter
-            text: "No images found"
-            color: Theme.foreground
-            font.family: Theme.font
-            font.pixelSize: 18
-            font.weight: Font.ExtraBold
-        }
-        Text {
-            width: parent.width
-            horizontalAlignment: Text.AlignHCenter
-            wrapMode: Text.Wrap
-            text: "Looking in: " + Library.roots.map(r => r.path).join(", ") + ". Add folders in Settings, or download something from the Wallhaven tab."
-            color: Theme.mutedForeground
-            font.family: Theme.font
-            font.pixelSize: 14
+        padX: 24
+        padY: 16
+        Column {
+            width: Math.min(520, view.width - 96)
+            spacing: 8
+            Text {
+                width: parent.width
+                horizontalAlignment: Text.AlignHCenter
+                text: "No images found"
+                color: Theme.foreground
+                font.family: Theme.font
+                font.pixelSize: 18
+                font.weight: Font.ExtraBold
+            }
+            Text {
+                width: parent.width
+                horizontalAlignment: Text.AlignHCenter
+                wrapMode: Text.Wrap
+                text: "Looking in: " + Library.roots.map(r => r.path).join(", ") + ". Add folders in Settings, or download something from the Wallhaven tab."
+                color: Theme.mutedForeground
+                font.family: Theme.font
+                font.pixelSize: 14
+            }
         }
     }
     // Some, but none pass the filters.
-    Text {
+    Plate {
         visible: !Library.loading && Library.images.length > 0 && view.local.pageItems.length === 0
         anchors.centerIn: parent
-        text: "No wallpapers match."
-        color: Theme.mutedForeground
-        font.family: Theme.font
-        font.pixelSize: 14
+        Text {
+            text: "No wallpapers match."
+            color: Theme.foreground
+            font.family: Theme.font
+            font.pixelSize: 14
+        }
     }
 
     // Keyboard (as shortcuts.rs), while no menu or dialog is open.

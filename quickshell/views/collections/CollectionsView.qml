@@ -58,17 +58,19 @@ Item {
     }
 
     // The chosen one couldn't be opened (no username...).
-    Text {
+    Plate {
         id: error
         visible: Collections.error !== ""
         x: 32
         y: card.y + card.height + 20
-        width: parent.width - 64
-        wrapMode: Text.Wrap
-        text: Collections.error
-        color: "#fd4663"
-        font.family: Theme.font
-        font.pixelSize: 14
+        Text {
+            width: Math.min(implicitWidth, view.width - 92)
+            wrapMode: Text.Wrap
+            text: Collections.error
+            color: "#fd4663"
+            font.family: Theme.font
+            font.pixelSize: 14
+        }
     }
 
     Shortcut {

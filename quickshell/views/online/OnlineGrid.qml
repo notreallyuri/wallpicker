@@ -30,8 +30,8 @@ GridView {
     topMargin: headerSpace
     bottomMargin: 20
     cellWidth: Math.floor(width / columns)
-    // The picture (16:10), the caption and the gap.
-    cellHeight: (cellWidth - 16) * 10 / 16 + 6 + 22 + 16
+    // The card: the picture (16:10) and the caption; and the gap.
+    cellHeight: (cellWidth - 16 - 12) * 10 / 16 + 12 + 30 + 16
     model: placeholders ? 12 : results
     clip: true
     boundsBehavior: Flickable.StopAtBounds
@@ -54,19 +54,21 @@ GridView {
     // What's loading, over the placeholders.
     header: Item {
         width: grid.width - 16
-        height: grid.placeholders ? 36 : 0
+        height: grid.placeholders ? 52 : 0
         visible: grid.placeholders
-        RowLayout {
-            spacing: 8
-            Spinner {
-                size: 16
-            }
-            Text {
-                text: grid.loadingLabel
-                color: Theme.mutedForeground
-                font.family: Theme.font
-                font.pixelSize: 14
-                font.weight: Font.Bold
+        Plate {
+            RowLayout {
+                spacing: 8
+                Spinner {
+                    size: 16
+                }
+                Text {
+                    text: grid.loadingLabel
+                    color: Theme.foreground
+                    font.family: Theme.font
+                    font.pixelSize: 14
+                    font.weight: Font.Bold
+                }
             }
         }
     }
@@ -109,33 +111,36 @@ GridView {
 
     footer: Item {
         width: grid.width - 16
-        height: grid.results.length > 0 ? (grid.last > 1 ? 104 : 48) : 0
+        height: grid.results.length > 0 ? (grid.last > 1 ? 124 : 56) : 0
         visible: grid.results.length > 0
-        ColumnLayout {
+        // The pager and the status line on one plate.
+        Plate {
             anchors.centerIn: parent
-            spacing: 12
-            Pager {
-                visible: grid.last > 1
-                Layout.alignment: Qt.AlignHCenter
-                current: grid.current
-                last: grid.last
-                onGoTo: page => {
-                    if (!grid.loading)
-                        grid.goTo(page);
-                }
-            }
-            RowLayout {
-                Layout.alignment: Qt.AlignHCenter
+            ColumnLayout {
                 spacing: 8
-                Spinner {
-                    visible: grid.loading
-                    size: 14
+                Pager {
+                    visible: grid.last > 1
+                    Layout.alignment: Qt.AlignHCenter
+                    current: grid.current
+                    last: grid.last
+                    onGoTo: page => {
+                        if (!grid.loading)
+                            grid.goTo(page);
+                    }
                 }
-                Text {
-                    text: grid.status
-                    color: Theme.mutedForeground
-                    font.family: Theme.font
-                    font.pixelSize: 12
+                RowLayout {
+                    Layout.alignment: Qt.AlignHCenter
+                    spacing: 8
+                    Spinner {
+                        visible: grid.loading
+                        size: 14
+                    }
+                    Text {
+                        text: grid.status
+                        color: Theme.mutedForeground
+                        font.family: Theme.font
+                        font.pixelSize: 12
+                    }
                 }
             }
         }

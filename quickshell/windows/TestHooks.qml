@@ -203,6 +203,15 @@ QtObject {
             });
         }
 
+        /// Pretend `monitor` shows `path` (in memory only): the panel's
+        /// backdrop follows, e.g. a bright wallpaper to check contrast on.
+        function showing(monitor: string, path: string): string {
+            const next = Object.assign({}, Monitors.current);
+            next[monitor] = path;
+            Monitors.current = next;
+            return "ok";
+        }
+
         /// The Online search and the downloads.
         function online(): string {
             return JSON.stringify({
