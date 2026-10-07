@@ -9,7 +9,16 @@ bin="$HOME/.local/bin/wallpicker"
 apps="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
 icons="${XDG_DATA_HOME:-$HOME/.local/share}/icons/hicolor/512x512/apps"
 
-install -Dm755 target/release/wallpicker "$bin"
+# A release build older than the Rust sources would pair the new interface
+# with an old backend (methods it doesn't have yet).
+release=target/release/wallpicker
+stale=$(find crates src-tauri/src src-tauri/Cargo.toml Cargo.lock -newer "$release" -type f 2>/dev/null | head -n 1 || true)
+if [ ! -e "$release" ] || [ -n "$stale" ]; then
+    echo "install-local: $release is missing or older than ${stale:-the sources}; run \`cargo tauri build --no-bundle\` first" >&2
+    exit 1
+fi
+
+install -Dm755 "$release" "$bin"
 # The Quickshell interface (`wallpicker ui`), copied over the last one.
 ui="${XDG_DATA_HOME:-$HOME/.local/share}/wallpicker/ui"
 mkdir -p "$ui"
