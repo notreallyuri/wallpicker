@@ -114,7 +114,7 @@ and feels like the app (real transitions and easing, glass, shadows); the scroll
   components; smooth wheel scrolling (ScrollArea: a notch glides, touchpads 1:1, kinetic
   flicks); `wallpicker` starting / toggling the UI; headless checks (cage + grim, the QML log;
   qmltestrunner for components).
-- [ ] **1. Local tab**: the prototype, rebuilt on the foundation, then everything it lacks:
+- [x] **1. Local tab** (done 2026-10-07): the prototype, rebuilt on the foundation, then everything it lacks:
   Folders layout and breadcrumbs, Color filter, the ⋯ menu, the tile's right-click menu (apply
   to, favorite, tags, show in folder, trash, duplicates), the Tags dialog, keyboard shortcuts,
   empty and loading states, Random.

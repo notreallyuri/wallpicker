@@ -9,13 +9,13 @@ import qs.services
 Rectangle {
     id: group
 
-    required property var data
+    required property var info
     /// Done with it (resolved or skipped): `first` names it.
     signal done(string first)
 
     property int keep: 0
     property bool working: false
-    readonly property int others: data.items.length - 1
+    readonly property int others: info.items.length - 1
 
     implicitHeight: column.implicitHeight + 24
     radius: 16
@@ -33,31 +33,31 @@ Rectangle {
             Layout.fillWidth: true
             Text {
                 Layout.fillWidth: true
-                text: group.data.likeness === "exact" ? "Exact copies" : "Same picture"
+                text: group.info.likeness === "exact" ? "Exact copies" : "Same picture"
                 color: Theme.foreground
                 font.family: Theme.font
                 font.pixelSize: 14
                 font.weight: Font.Medium
             }
             Text {
-                text: group.data.items.length + " files"
+                text: group.info.items.length + " files"
                 color: Theme.mutedForeground
                 font.family: Theme.font
                 font.pixelSize: 14
             }
         }
-        GridLayout {
+        // A quarter of the width each, however many (the app's 4 columns),
+        // from the group's own width (a grid sizing them from its own would
+        // go in circles).
+        Flow {
             Layout.fillWidth: true
-            columns: 4
-            columnSpacing: 12
-            rowSpacing: 12
+            spacing: 12
             Repeater {
-                model: group.data.items
+                model: group.info.items
                 CopyTile {
                     required property var modelData
                     required property int index
-                    Layout.fillWidth: true
-                    Layout.preferredWidth: 1
+                    width: (column.width - 3 * 12) / 4
                     item: modelData
                     kept: group.keep === index
                     onPicked: group.keep = index
@@ -70,7 +70,7 @@ Rectangle {
             Btn {
                 variant: "ghost"
                 text: "Skip"
-                onClicked: group.done(group.data.items[0].path)
+                onClicked: group.done(group.info.items[0].path)
             }
             Btn {
                 variant: "destructive"
@@ -80,7 +80,7 @@ Rectangle {
                     if (group.working)
                         return;
                     group.working = true;
-                    const items = group.data.items;
+                    const items = group.info.items;
                     const keep = items[group.keep].path;
                     Library.resolveDuplicates(keep, items.filter((_, i) => i !== group.keep).map(i => i.path), () => group.done(items[0].path));
                 }

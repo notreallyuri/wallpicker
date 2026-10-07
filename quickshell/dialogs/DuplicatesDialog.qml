@@ -74,7 +74,7 @@ Dialog {
                 DuplicateGroup {
                     required property var modelData
                     Layout.fillWidth: true
-                    data: modelData
+                    info: modelData
                     onDone: first => dialog.groups = dialog.groups.filter(g => g.items[0].path !== first)
                 }
             }

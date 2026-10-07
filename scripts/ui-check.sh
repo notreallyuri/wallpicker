@@ -3,7 +3,8 @@
 # layer-shell for the floating panel) with a throwaway profile made
 # from yours (no API key, a stand-in hyprctl with two 1920x1080 monitors),
 # then the given test-hook calls, a screenshot, and the log's warnings.
-# Fails if QML reported errors or warnings.
+# Fails if QML reported errors or warnings. CHECK_FOLDERS=a:b uses those
+# wallpaper folders instead of yours.
 #
 #   cargo build
 #   scripts/ui-check.sh [OUT.png] ["click 1845 136" "wheel 900 600 3" ...]
@@ -27,6 +28,10 @@ s = json.load(open(os.path.expanduser('~/.config/wallpicker/config.json')))
 s['wallhaven_api_key'] = None
 s['wallpaper_backend'] = 'hyprpaper'
 s['workspaces'] = {'enabled': False, 'remember': False, 'wallpapers': {}}
+# CHECK_FOLDERS (colon-separated): other wallpaper folders, e.g. a throwaway
+# one with test pictures.
+if os.environ.get('CHECK_FOLDERS'):
+    s['folders'] = os.environ['CHECK_FOLDERS'].split(':')
 json.dump(s, open(f'{tmp}/config/wallpicker/config.json', 'w'))
 PY
 cp -r ~/.local/state/wallpicker "$tmp/state/" 2>/dev/null || true
