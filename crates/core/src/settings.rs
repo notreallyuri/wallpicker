@@ -345,12 +345,27 @@ pub struct Adjust {
     pub fit: Option<FitMode>,
     /// The part of the picture shown, cut to the monitor's size.
     pub frame: Option<Frame>,
+    /// Its part of a picture spanned across the monitors (`span.rs`): wins
+    /// over the frame and the fit.
+    pub span: Option<Cut>,
 }
 
 impl Adjust {
     pub fn is_none(&self) -> bool {
-        self.flip.is_none() && self.fit.is_none() && self.frame.is_none()
+        self.flip.is_none() && self.fit.is_none() && self.frame.is_none() && self.span.is_none()
     }
+}
+
+/// An exact part of a picture (`x`, `y`, `width`×`height` in its pixels),
+/// scaled to `out_width`×`out_height` (the monitor's resolution).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Cut {
+    pub x: u32,
+    pub y: u32,
+    pub width: u32,
+    pub height: u32,
+    pub out_width: u32,
+    pub out_height: u32,
 }
 
 /// A frame on a picture: the largest area in the monitor's proportions that

@@ -274,7 +274,8 @@ impl Backend {
         let adjust = self.state.adjust_for(monitor, path);
         let file = crate::transform::shown_file(&self.cache, path, &adjust)?;
         // A framed picture is the monitor's exact size: nothing to fit.
-        let fit = if adjust.frame.is_some() { None } else { fit };
+        // Framed or spanned: the copy is the monitor's exact size.
+        let fit = if adjust.frame.is_some() || adjust.span.is_some() { None } else { fit };
         let path = file.as_path();
         match self.kind {
             WallpaperBackend::Hyprpaper => apply(runner, monitor, path, fit),

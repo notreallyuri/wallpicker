@@ -14,6 +14,7 @@ pub mod moebooru;
 pub mod monitors;
 pub mod online;
 pub mod settings;
+pub mod span;
 pub mod wallhaven;
 
 pub mod awww;

@@ -26,7 +26,7 @@ fn stem(src: &Path) -> String {
 
 /// Whether `adjust` needs a changed copy (the fit is the backend's).
 fn changes_pixels(adjust: &Adjust) -> bool {
-    !adjust.flip.is_none() || adjust.frame.is_some()
+    !adjust.flip.is_none() || adjust.frame.is_some() || adjust.span.is_some()
 }
 
 /// Where the copy of `src` with `adjust` is (or would be): its name says
@@ -35,10 +35,11 @@ fn copy_path(cache: &Path, src: &Path, adjust: &Adjust) -> Result<PathBuf> {
     let meta = fs::metadata(src)?;
     let mtime = meta.modified().ok().and_then(|t| t.duration_since(UNIX_EPOCH).ok()).map_or(0, |d| d.as_secs());
     let png = src.extension().is_some_and(|e| e.eq_ignore_ascii_case("png"));
-    let frame = adjust
-        .frame
-        .map(|f| format!("-z{}x{}y{}-{}x{}", f.zoom, f.x, f.y, f.width, f.height))
-        .unwrap_or_default();
+    let frame = match (adjust.span, adjust.frame) {
+        (Some(c), _) => format!("-s{}-{}-{}x{}-{}x{}", c.x, c.y, c.width, c.height, c.out_width, c.out_height),
+        (None, Some(f)) => format!("-z{}x{}y{}-{}x{}", f.zoom, f.x, f.y, f.width, f.height),
+        (None, None) => String::new(),
+    };
     Ok(dir(cache).join(format!(
         "{}-{mtime}-{}-{}{frame}.{}",
         stem(src),
@@ -62,7 +63,12 @@ pub fn shown_file(cache: &Path, src: &Path, adjust: &Adjust) -> Result<PathBuf> 
         return Ok(out);
     }
     let mut img = image::open(src).map_err(|e| Error::Image(format!("{}: {e}", src.display())))?;
-    if let Some(frame) = adjust.frame {
+    if let Some(cut) = adjust.span {
+        let (iw, ih) = (img.width(), img.height());
+        let (x, y) = (cut.x.min(iw.saturating_sub(1)), cut.y.min(ih.saturating_sub(1)));
+        let (w, h) = (cut.width.clamp(1, iw - x), cut.height.clamp(1, ih - y));
+        img = img.crop_imm(x, y, w, h).resize_exact(cut.out_width.max(1), cut.out_height.max(1), image::imageops::FilterType::Lanczos3);
+    } else if let Some(frame) = adjust.frame {
         let (x, y, w, h) = frame.rect(img.width(), img.height());
         img = img.crop_imm(x, y, w, h).resize_exact(frame.width, frame.height, image::imageops::FilterType::Lanczos3);
     }

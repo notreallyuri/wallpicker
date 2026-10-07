@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::error::Result;
 
 /// One output as reported by `hyprctl monitors -j`.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Monitor {
     pub name: String,
     #[serde(default)]
@@ -20,6 +20,14 @@ pub struct Monitor {
     pub focused: bool,
     #[serde(default)]
     pub disabled: bool,
+    /// Its scale: `width`×`height` are pixels, `x`/`y` and the layout are in
+    /// logical pixels (pixels / scale).
+    #[serde(default = "one")]
+    pub scale: f64,
+    /// Hyprland's transform: 1, 3, 5 and 7 turn it a quarter (width and
+    /// height swap on screen).
+    #[serde(default)]
+    pub transform: i32,
     /// The workspace it shows ("2"), when Hyprland says.
     #[serde(default, rename = "activeWorkspace", skip_serializing_if = "Option::is_none")]
     pub active_workspace: Option<WorkspaceRef>,
@@ -32,6 +40,10 @@ pub struct WorkspaceRef {
     pub id: i64,
     #[serde(default)]
     pub name: String,
+}
+
+fn one() -> f64 {
+    1.0
 }
 
 /// Parse the JSON printed by `hyprctl monitors -j`.
