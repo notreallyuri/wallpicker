@@ -267,7 +267,7 @@ and feels like the app (real transitions and easing, glass, shadows); the scroll
 - [x] **Frame a wallpaper per monitor (zoom and pan)**: in the Adjust dialog (drag, scroll, sliders;
   zoom up to 4×), cut to the monitor's exact resolution by `transform.rs`, per monitor and
   temporary like mirroring and fit. `wallpicker adjust <monitor> --frame ZOOM,X,Y`.
-- [ ] **Span one wallpaper across monitors**: cut it to each monitor's place and size in the
+- [x] **Span one wallpaper across monitors** (done 2026-10-07): cut it to each monitor's place and size in the
   layout (`hyprctl monitors` has x, y, scale), mixed resolutions too. Bezels: optional gap.
   The plan (2026-10-07):
   1. **Core**: monitors carry their scale and rotation; `span.rs` works out each monitor's cut

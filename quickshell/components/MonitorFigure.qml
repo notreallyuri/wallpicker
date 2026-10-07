@@ -36,6 +36,14 @@ Item {
     readonly property real screenHeight: dims[0]
     readonly property real screenWidth: Math.round(screenHeight * (monitorWidth > 0 && monitorHeight > 0 ? monitorWidth / monitorHeight : 16 / 9))
     readonly property var flip: Monitors.adjustOf(monitor).flip
+    /// Its part of a picture spanned across the monitors, and the
+    /// picture's size: the screen shows that part (else the whole picture,
+    /// cropped like Cover).
+    readonly property var cut: Monitors.adjustOf(monitor).span
+    readonly property var natural: {
+        const img = Library.images.find(i => i.path === path);
+        return img && img.width > 0 ? [img.width, img.height] : null;
+    }
 
     // The library's thumbnail, else one made on demand.
     property string thumb: ""
@@ -92,8 +100,21 @@ Item {
             radius: figure.dims[4]
             color: "#27272a"
 
+            // Spanned: the whole picture, scaled so the cut fills the screen
+            // and moved so it's there.
             Image {
-                visible: custom.children.length === 0
+                readonly property real k: figure.cut ? figure.screenWidth / Math.max(1, figure.cut.width) : 1
+                visible: custom.children.length === 0 && figure.cut !== null && figure.natural !== null
+                x: figure.cut ? -figure.cut.x * k : 0
+                y: figure.cut ? -figure.cut.y * k : 0
+                width: figure.natural ? figure.natural[0] * k : 0
+                height: figure.natural ? figure.natural[1] * k : 0
+                source: visible && figure.thumb ? "file://" + figure.thumb : ""
+                fillMode: Image.Stretch
+                asynchronous: true
+            }
+            Image {
+                visible: custom.children.length === 0 && !(figure.cut !== null && figure.natural !== null)
                 anchors.fill: parent
                 source: figure.thumb ? "file://" + figure.thumb : ""
                 fillMode: Image.PreserveAspectCrop

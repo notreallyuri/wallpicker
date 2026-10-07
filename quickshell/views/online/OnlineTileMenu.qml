@@ -31,6 +31,12 @@ Menu {
         text: "Apply to all"
         onTriggered: Downloads.fetch(menu.w, Monitors.list.map(m => m.name))
     }
+    MenuItem {
+        visible: Monitors.list.length > 1
+        icon: "monitor"
+        text: "Span across monitors"
+        onTriggered: Downloads.fetch(menu.w, "span")
+    }
     MenuSeparator {}
     MenuItem {
         icon: "info"

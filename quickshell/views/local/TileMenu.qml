@@ -46,6 +46,12 @@ Menu {
         text: "Apply to all"
         onTriggered: Monitors.applyTo(menu.path, Monitors.list.map(m => m.name))
     }
+    MenuItem {
+        visible: Monitors.list.length > 1
+        icon: "monitor"
+        text: "Span across monitors"
+        onTriggered: Monitors.span(menu.path)
+    }
     MenuSub {
         visible: Monitors.list.length > 1
         text: "Apply to…"

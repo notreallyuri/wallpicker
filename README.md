@@ -57,6 +57,11 @@ or **Noctalia**'s wallpaper manager (Settings → General → Wallpaper backend)
 - **Keys**: Ctrl+F search field, Ctrl+R random, Alt+Up parent folder, Alt+Left/Right pages,
   Ctrl+1/2/3 Local/Online/Collections, Alt+1…N where a click applies (a monitor, in the top bar's
   order) and Alt+N+1 All, Delete a tile's trash, Esc the top menu or dialog, then the picker.
+- **Span across monitors** (a tile's right-click menu, or `wallpicker span <image>`): one picture
+  across every monitor, each showing its part, mixed resolutions, scales and rotations included.
+  A bezel gap (Settings → General) leaves out the picture behind the frames, so lines carry on
+  straight. Temporary like an adjustment: another wallpaper on a monitor takes it out; Previous
+  works per monitor. The monitor drawer shows each one's part.
 - **Duplicates** (Local → **⋯** → **Find duplicates…**): exact copies and the same picture at another size or
   re-saved, a group at a time. The largest copy is picked to keep; the others go to the trash, and
   their favorite and tags move to the kept one (a monitor showing one of them gets it instead).

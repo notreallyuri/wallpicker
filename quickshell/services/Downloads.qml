@@ -29,8 +29,9 @@ Singleton {
         return p && p.total > 0 ? p.done / p.total : -1;
     }
 
-    /// Download `w`, then apply it on `monitors` (names), or just say where
-    /// it was saved when that's null. Once at a time per wallpaper.
+    /// Download `w`, then apply it on `monitors` (names; "span": across all
+    /// of them), or just say where it was saved when that's null. Once at a
+    /// time per wallpaper.
     function fetch(w, monitors) {
         const k = key(w);
         if (working[k])
@@ -46,7 +47,9 @@ Singleton {
             const next = Object.assign({}, downloads.saved);
             next[k] = true;
             downloads.saved = next;
-            if (monitors)
+            if (monitors === "span")
+                Monitors.span(path);
+            else if (monitors)
                 Monitors.applyTo(path, monitors);
             else
                 Toasts.info("Saved " + path.split("/").pop(), path);

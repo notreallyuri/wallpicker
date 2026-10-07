@@ -74,6 +74,22 @@ Singleton {
         });
     }
 
+    /// `path` across every monitor, each showing its part.
+    function span(path) {
+        mine(list.map(m => m.name));
+        setApplying(path, true);
+        Backend.request("wallpapers.span", {
+            path: path
+        }, report => {
+            setApplying(path, false);
+            if (report && report.failed && report.failed.length > 0)
+                Toasts.error("Not spanned on every monitor", report.failed.map(f => f[0] + ": " + f[1]).join("\n"));
+        }, e => {
+            setApplying(path, false);
+            Toasts.error("Could not span it", e);
+        });
+    }
+
     /// A monitor's adjustments (none: all off).
     function adjustOf(name) {
         const a = adjust[name] || {};
@@ -83,7 +99,8 @@ Singleton {
                 v: !!(a.flip && a.flip.v)
             },
             fit: a.fit || null,
-            frame: a.frame || null
+            frame: a.frame || null,
+            span: a.span || null
         };
     }
 
@@ -105,7 +122,12 @@ Singleton {
     /// monitor is on its way at a time (each takes a while: a copy is
     /// made); changes asked meanwhile wait, and only the latest is sent.
     function setAdjust(name, next, done) {
-        const none = !next.flip.h && !next.flip.v && !next.fit && !next.frame;
+        // Framed: out of the span (its own part of the picture, chosen).
+        if (next.frame && next.span)
+            next = Object.assign({}, next, {
+                span: null
+            });
+        const none = !next.flip.h && !next.flip.v && !next.fit && !next.frame && !next.span;
         const map = Object.assign({}, adjust);
         if (none)
             delete map[name];
