@@ -12,6 +12,8 @@ Rectangle {
     property bool on: false
     default property alias screens: screens.data
     signal picked
+    /// A right-click (a monitor's pill: Adjust).
+    signal rightClicked
 
     implicitWidth: row.implicitWidth + 20
     implicitHeight: 36
@@ -59,6 +61,12 @@ Rectangle {
         anchors.fill: parent
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
-        onClicked: pill.picked()
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
+        onClicked: mouseEvent => {
+            if (mouseEvent && mouseEvent.button === Qt.RightButton)
+                pill.rightClicked();
+            else
+                pill.picked();
+        }
     }
 }

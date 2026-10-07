@@ -101,6 +101,17 @@ QtObject {
             return hooks.events.mouseClick(hooks.root, x, y, b, Qt.NoModifier, -1) ? "pressed" : "no window";
         }
 
+        /// A real drag from (x1, y1) to (x2, y2), in a few steps.
+        function drag(x1: real, y1: real, x2: real, y2: real): string {
+            const e = hooks.events;
+            e.mouseMove(hooks.root, x1, y1, -1, Qt.NoButton, Qt.NoModifier);
+            e.mousePress(hooks.root, x1, y1, Qt.LeftButton, Qt.NoModifier, -1);
+            for (let i = 1; i <= 8; i++)
+                e.mouseMove(hooks.root, x1 + (x2 - x1) * i / 8, y1 + (y2 - y1) * i / 8, 16, Qt.LeftButton, Qt.NoModifier);
+            e.mouseRelease(hooks.root, x2, y2, Qt.LeftButton, Qt.NoModifier, 16);
+            return "dragged";
+        }
+
         /// A real pointer move to (x, y).
         function move(x: real, y: real): string {
             return hooks.events.mouseMove(hooks.root, x, y, -1, Qt.NoButton, Qt.NoModifier) ? "moved" : "no window";
@@ -184,6 +195,9 @@ QtObject {
                 popups: Dialogs.popups,
                 trashFor: Dialogs.trashFor,
                 tagsFor: Dialogs.tagsFor,
+                adjusting: Dialogs.adjusting,
+                adjust: Monitors.adjust,
+                drawer: Monitors.drawerOpen,
                 focus: String(hooks.root.Window.activeFocusItem).split("(")[0],
                 active: hooks.root.Window.active
             });

@@ -38,6 +38,9 @@ struct AppState {
     /// `library.json` is loaded, changed and saved per command; this keeps two
     /// commands from interleaving and losing one's change.
     catalog_lock: Arc<Mutex<()>>,
+    /// Adjusting saves the state, makes the copy and deletes the copies the
+    /// state no longer uses: two at once would each delete the other's.
+    adjust_lock: Arc<Mutex<()>>,
 }
 
 impl AppState {
@@ -53,6 +56,7 @@ impl AppState {
             http,
             thumb_gate: Arc::new(Semaphore::new(3)),
             catalog_lock: Arc::new(Mutex::new(())),
+            adjust_lock: Arc::new(Mutex::new(())),
         }
     }
 }

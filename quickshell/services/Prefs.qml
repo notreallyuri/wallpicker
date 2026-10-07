@@ -1,6 +1,7 @@
 // The interface's remembered choices (the Local sort and layout, the tag
-// row's expansion...), in a small JSON file next to wallpicker's state:
-// $XDG_STATE_HOME/wallpicker/ui.json. Set a property and it's saved.
+// row's expansion, the monitor drawer...), in a small JSON file next to
+// wallpicker's state: $XDG_STATE_HOME/wallpicker/ui.json. Set a property
+// and it's saved.
 pragma Singleton
 import QtQuick
 import Quickshell
@@ -13,6 +14,7 @@ Singleton {
     property alias localLayout: data.localLayout
     property alias tagsExpanded: data.tagsExpanded
     property alias tagsMatchAll: data.tagsMatchAll
+    property alias monitorsOpen: data.monitorsOpen
 
     FileView {
         id: file
@@ -41,6 +43,7 @@ Singleton {
             property string localLayout: "flat"
             property bool tagsExpanded: false
             property bool tagsMatchAll: true
+            property bool monitorsOpen: false
         }
     }
 }

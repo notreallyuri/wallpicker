@@ -1,5 +1,5 @@
-// The bar across the top: the name, the tabs, where a click applies,
-// Previous and Settings. bg-background/55 over the backdrop, a hairline
+// The bar across the top: the name, the tabs, where a click applies, the
+// drawer's chevron, Previous and Settings. bg-background/55 over the backdrop, a hairline
 // under it.
 import QtQuick
 import QtQuick.Layouts
@@ -38,11 +38,28 @@ Rectangle {
         Item {
             Layout.fillWidth: true
         }
-        MonitorPills {}
+        // With the drawer open, the monitors are there: one place at a time.
+        MonitorPills {
+            visible: !Monitors.drawerOpen
+        }
+        // Opens the drawer of monitors (the chevron turns over).
         Btn {
             variant: "ghost"
-            icon: "chevron-down"
+            implicitHeight: 32
+            onClicked: Monitors.toggleDrawer()
+            Icon {
+                name: "chevron-down"
+                rotation: Monitors.drawerOpen ? 180 : 0
+                Behavior on rotation {
+                    NumberAnimation {
+                        duration: Theme.duration
+                        easing.type: Easing.BezierSpline
+                        easing.bezierCurve: Theme.bounce
+                    }
+                }
+            }
         }
+        // Back to the wallpaper before, on the chosen monitors.
         Btn {
             variant: "ghost"
             icon: "history"

@@ -68,6 +68,9 @@ Item {
                 tab: picker.tab
                 onTabPicked: index => picker.tab = index
             }
+            MonitorDrawer {
+                Layout.fillWidth: true
+            }
             LocalView {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
@@ -79,6 +82,7 @@ Item {
     TagsDialog {}
     TrashDialog {}
     DuplicatesDialog {}
+    AdjustDialog {}
 
     ToastStack {
         anchors.right: panel.right

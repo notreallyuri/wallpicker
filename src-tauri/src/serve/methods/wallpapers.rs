@@ -1,5 +1,6 @@
-//! wallpapers.*: monitors, apply, previous (announcing `state-changed`:
-//! what the monitors show), and the files: trash (announcing
+//! wallpapers.*: monitors, apply, previous, adjust (announcing
+//! `state-changed`: what the monitors show), the Adjust dialog's
+//! framing_image and fit_modes, and the files: trash (announcing
 //! `library-changed` too), show_in_folder.
 
 use serde_json::{Value, json as value};
@@ -20,6 +21,17 @@ pub(super) async fn call(state: &AppState, out: &Out, name: &str, params: &Value
             Ok(monitors) => json(wallpapers::previous(state, monitors).await),
             Err(e) => Err(e),
         },
+        "adjust" => match (param(params, "monitor"), param(params, "adjust")) {
+            (Ok(monitor), Ok(adjust)) => json(wallpapers::set_adjust(state, monitor, adjust).await),
+            (Err(e), _) | (_, Err(e)) => Err(e),
+        },
+        "framing_image" => {
+            return Some(match param::<String>(params, "path") {
+                Ok(path) => json(wallpapers::framing_image(state, path).await),
+                Err(e) => Err(e),
+            });
+        }
+        "fit_modes" => return Some(json(wallpapers::fit_modes(state).await)),
         "show_in_folder" => {
             return Some(match param::<String>(params, "path") {
                 Ok(path) => json(wallpapers::show_in_folder(state, path).await),

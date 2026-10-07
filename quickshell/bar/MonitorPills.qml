@@ -1,5 +1,6 @@
 // "APPLY TO", a pill per monitor, and All (a desk of every monitor's
-// screen). One of them is chosen at a time.
+// screen). One of them is chosen at a time; right-click a monitor's to
+// adjust what it shows.
 import QtQuick
 import QtQuick.Layouts
 import qs.services
@@ -22,6 +23,8 @@ RowLayout {
             label: modelData.name
             on: Monitors.selection === modelData.name
             onPicked: Monitors.select(modelData.name)
+            // Right-click: adjust what it shows.
+            onRightClicked: Dialogs.adjust(modelData.name)
             MonitorScreen {
                 path: Monitors.current[modelData.name] || ""
             }

@@ -1,5 +1,5 @@
-//! What the monitors show (listing them, applying, Previous), and the
-//! wallpaper files themselves (trash, show in folder).
+//! What the monitors show (listing them, applying, Previous, adjusting),
+//! and the wallpaper files themselves (trash, show in folder).
 
 use std::path::PathBuf;
 
@@ -7,6 +7,7 @@ use wallpicker_core::cmd::SystemRunner;
 use wallpicker_core::hyprpaper::{self, ApplyReport};
 use wallpicker_core::library;
 use wallpicker_core::monitors::Monitor;
+use wallpicker_core::settings::{self, Adjust, State};
 
 use wallpicker_core::store::Store;
 
@@ -40,6 +41,48 @@ pub(crate) async fn previous(state: &AppState, monitors: Vec<String>) -> CmdResu
         Ok(report)
     })
     .await
+}
+
+/// Adjust what `monitor` shows (mirrored...), and show it there now. Every
+/// backend: the changed copy is a file of its own. Temporary: another
+/// wallpaper on that monitor clears it.
+pub(crate) async fn set_adjust(
+    state: &AppState,
+    monitor: String,
+    adjust: Adjust,
+) -> CmdResult<State> {
+    let store = state.store.clone();
+    let lock = state.adjust_lock.clone();
+    blocking(move || {
+        // One at a time: each ends by deleting the copies its state doesn't
+        // use, which would be the other's.
+        let _guard = lock.lock().unwrap_or_else(|p| p.into_inner());
+        let saved = store.set_adjust(&monitor, adjust)?;
+        let report = hyprpaper::reapply(&SystemRunner, &store, &|m, _| m == monitor)?;
+        if let Some((_, why)) = report.failed.first() {
+            return Err(wallpicker_core::error::Error::Invalid(format!(
+                "Could not show it on {monitor}: {why}"
+            )));
+        }
+        let _ = store.write_hyprpaper_conf();
+        wallpicker_core::transform::prune(&store.dirs().cache, &saved);
+        Ok(saved)
+    })
+    .await
+}
+
+/// The picture the Adjust dialog frames on: sharp enough to zoom into
+/// (fitted inside 1600 px, cached), not the whole original.
+pub(crate) async fn framing_image(state: &AppState, path: String) -> CmdResult<PathBuf> {
+    let path = wallpaper_path(&path)?;
+    let cache = state.store.dirs().cache.join("framing");
+    blocking(move || wallpicker_core::thumbs::fit_within(&cache, &path, 1600)).await
+}
+
+/// The fit modes the chosen backend does, with labels ("" is its default).
+pub(crate) async fn fit_modes(state: &AppState) -> CmdResult<Vec<(&'static str, &'static str)>> {
+    let store = state.store.clone();
+    blocking(move || Ok(settings::fit_modes(store.load_settings()?.wallpaper_backend).to_vec())).await
 }
 
 pub(crate) async fn show_in_folder(state: &AppState, path: String) -> CmdResult<()> {

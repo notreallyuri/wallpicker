@@ -11,9 +11,13 @@
 #   scripts/ui-check.sh [OUT.png] ["click 1845 136" "wheel 900 600 3" ...]
 #
 # Test hooks (windows/TestHooks.qml): click X Y, rightclick X Y, wheel X Y
-# NOTCHES, scrollY X Y, probe X Y, contents X Y. Coordinates are in the
-# window's content. A call starting with ! is a command run in the session,
-# e.g. "!wtype -M ctrl -k f -m ctrl" for keys.
+# NOTCHES, scrollY X Y, probe X Y, contents X Y, state; real input through
+# QtTest: press X Y BUTTON (1 left, 2 right), move X Y, drag X1 Y1 X2 Y2,
+# roll X Y NOTCHES, spin X Y NOTCHES GAP_MS; range X Y. Coordinates are in
+# the window's content. A call starting with ! is a command run in the
+# session, e.g. "!wtype -M ctrl -k f -m ctrl" for keys, "!sleep 5" to wait
+# (then CHECK_EXTRA_TIME=SECONDS keeps the session up that much longer).
+# The session has its own cache for adjusted copies (yours are left alone).
 set -e
 here=$(cd "$(dirname "$0")/.." && pwd)
 out=${1:-ui-check.png}
@@ -21,7 +25,12 @@ shift || true
 tmp=$(mktemp -d)
 run=/tmp/wallpicker-ui-check-$UID
 mkdir -p "$run" && chmod 700 "$run"
-mkdir -p "$tmp/config/wallpicker" "$tmp/state" "$tmp/data" "$tmp/bin"
+mkdir -p "$tmp/config/wallpicker" "$tmp/state" "$tmp/data" "$tmp/bin" "$tmp/cache/wallpicker"
+# Your caches (thumbnails...), but not the adjusted copies: adjusting prunes
+# the ones its own state doesn't use, which would be yours.
+for entry in ~/.cache/wallpicker/*; do
+    [ "$(basename "$entry")" = transformed ] || ln -s "$entry" "$tmp/cache/wallpicker/"
+done
 python3 - "$tmp" <<'PY'
 import json, os, sys
 tmp = sys.argv[1]
@@ -76,9 +85,9 @@ chmod +x "$tmp/bin/hyprctl"
 } > "$tmp/inside.sh"
 chmod +x "$tmp/inside.sh"
 env -u HYPRLAND_INSTANCE_SIGNATURE -u WAYLAND_DISPLAY -u DISPLAY PATH="$tmp/bin:$PATH" \
-    XDG_CONFIG_HOME="$tmp/config" XDG_STATE_HOME="$tmp/state" XDG_DATA_HOME="$tmp/data" XDG_RUNTIME_DIR="$run" \
+    XDG_CONFIG_HOME="$tmp/config" XDG_STATE_HOME="$tmp/state" XDG_DATA_HOME="$tmp/data" XDG_CACHE_HOME="$tmp/cache" XDG_RUNTIME_DIR="$run" \
     WLR_BACKENDS=headless WLR_LIBINPUT_NO_DEVICES=1 WLR_HEADLESS_OUTPUTS=1 \
-    timeout $((20 + $#)) dbus-run-session -- cage -- "$tmp/inside.sh" >/dev/null 2>&1 || true
+    timeout $((20 + ${CHECK_EXTRA_TIME:-0} + $#)) dbus-run-session -- cage -- "$tmp/inside.sh" >/dev/null 2>&1 || true
 cat "$tmp/calls.txt" 2>/dev/null || true
 cp "$tmp/shot.png" "$out" 2>/dev/null && echo "screenshot: $out"
 problems=$(grep -E "ERROR|WARN|caused by" "$tmp/ui.log" | grep -vE "radv|lsfg|portal|not a conformant" || true)

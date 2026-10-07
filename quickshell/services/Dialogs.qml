@@ -10,6 +10,8 @@ Singleton {
     /// The wallpaper asked to be moved to the trash ("" none).
     property string trashFor: ""
     property bool duplicates: false
+    /// The monitor being adjusted ("" none).
+    property string adjusting: ""
     /// Popovers, menus and dialogs open now, the last on top: Esc closes
     /// the top one (not the picker), and the shortcuts wait while any is.
     property var open: []
@@ -38,5 +40,8 @@ Singleton {
     }
     function findDuplicates() {
         duplicates = true;
+    }
+    function adjust(monitor) {
+        adjusting = monitor;
     }
 }

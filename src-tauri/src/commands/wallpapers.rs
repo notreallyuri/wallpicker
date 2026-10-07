@@ -118,40 +118,13 @@ pub(crate) async fn stop_wallpaper_program(name: String) -> CmdResult<()> {
     blocking(move || Ok(hyprpaper::stop_program(&SystemRunner, &name)?)).await
 }
 
-/// Adjust what `monitor` shows (mirrored...), and show it there now. Every
-/// backend: the changed copy is a file of its own. Temporary: another
-/// wallpaper on that monitor clears it.
-pub(crate) async fn set_adjust(
-    state: &AppState,
-    monitor: String,
-    adjust: wallpicker_core::settings::Adjust,
-) -> CmdResult<SavedState> {
-    let store = state.store.clone();
-    blocking(move || {
-        let saved = store.set_adjust(&monitor, adjust)?;
-        let report = hyprpaper::reapply(&SystemRunner, &store, &|m, _| m == monitor)?;
-        if let Some((_, why)) = report.failed.first() {
-            return Err(wallpicker_core::error::Error::Invalid(format!(
-                "Could not show it on {monitor}: {why}"
-            )));
-        }
-        let _ = store.write_hyprpaper_conf();
-        wallpicker_core::transform::prune(&store.dirs().cache, &saved);
-        Ok(saved)
-    })
-    .await
-}
-
-/// The picture the Adjust dialog frames on: sharp enough to zoom into
-/// (fitted inside 1600 px, cached), not the whole original.
+/// The picture the Adjust dialog frames on (see [`service::wallpapers::framing_image`]).
 #[tauri::command]
 pub(crate) async fn framing_image(
     state: tauri::State<'_, AppState>,
     path: String,
 ) -> CmdResult<PathBuf> {
-    let path = wallpaper_path(&path)?;
-    let cache = state.store.dirs().cache.join("framing");
-    blocking(move || wallpicker_core::thumbs::fit_within(&cache, &path, 1600)).await
+    service::wallpapers::framing_image(&state, path).await
 }
 
 #[tauri::command]
@@ -160,5 +133,5 @@ pub(crate) async fn set_monitor_adjust(
     monitor: String,
     adjust: wallpicker_core::settings::Adjust,
 ) -> CmdResult<SavedState> {
-    set_adjust(&state, monitor, adjust).await
+    service::wallpapers::set_adjust(&state, monitor, adjust).await
 }

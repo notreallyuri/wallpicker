@@ -194,7 +194,7 @@ pub fn adjust(args: &[String]) -> i32 {
     let state = AppState::new(store);
     let m = monitor.clone();
     run_edit(
-        async move { crate::commands::wallpapers::set_adjust(&state, m, adjust).await.map(|_| ()) },
+        async move { crate::service::wallpapers::set_adjust(&state, m, adjust).await.map(|_| ()) },
         describe(adjust),
     )
 }

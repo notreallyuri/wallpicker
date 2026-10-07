@@ -1,6 +1,7 @@
-// A modal dialog, centered in the window over a dim (the Tags, Trash and
-// Duplicates dialogs): a title, a description, the content, the footer's
-// buttons at the right. Esc or a click on the dim closes it.
+// A modal dialog, centered in the window over a dim (the Tags, Trash,
+// Duplicates and Adjust dialogs): a title, a description, the content, the
+// footer's buttons at the right (and anything at its left). Esc or a click
+// on the dim closes it.
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Effects
@@ -14,6 +15,8 @@ Popup {
     property string description
     default property alias content: body.data
     property alias footer: footerRow.data
+    /// Footer content at the left (a status line).
+    property alias footerLeft: footerLeftRow.data
     property real preferredWidth: 520
 
     // Centered on what it's declared in (the picker), which it follows into
@@ -111,9 +114,19 @@ Popup {
             spacing: 12
         }
         RowLayout {
-            id: footerRow
-            Layout.alignment: Qt.AlignRight
+            Layout.fillWidth: true
             spacing: 8
+            RowLayout {
+                id: footerLeftRow
+                spacing: 8
+            }
+            Item {
+                Layout.fillWidth: true
+            }
+            RowLayout {
+                id: footerRow
+                spacing: 8
+            }
         }
     }
 }
