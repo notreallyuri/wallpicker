@@ -25,7 +25,7 @@ Singleton {
     property alias backdrop: data.backdrop
     property alias motion: data.motion
     /// The floating panel's size (Settings → Appearance): "large",
-    /// "comfortable", "compact" (an even margin round it) or "720p".
+    /// "comfortable" or "compact" (an even margin round it).
     property alias panelSize: data.panelSize
 
     FileView {

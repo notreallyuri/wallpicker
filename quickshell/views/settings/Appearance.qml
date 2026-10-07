@@ -19,11 +19,11 @@ ColumnLayout {
 
     Field {
         label: "Picker size"
-        description: "The floating panel's size, with an even margin round it on any screen (Large leaves 5% of the screen's height, Comfortable 10%, Compact 15%), or a fixed 1280×720. Applies right away."
+        description: "The floating panel's size, with an even margin round it on any screen, 720p to QHD and up: Large leaves 5% of the screen's height, Comfortable 10%, Compact 15%. Applies right away."
         Select {
             minWidth: 200
-            options: [["large", "Large"], ["comfortable", "Comfortable"], ["compact", "Compact"], ["720p", "1280×720"]]
-            value: ["large", "comfortable", "compact", "720p"].includes(Prefs.panelSize) ? Prefs.panelSize : "comfortable"
+            options: [["large", "Large"], ["comfortable", "Comfortable"], ["compact", "Compact"]]
+            value: ["large", "comfortable", "compact"].includes(Prefs.panelSize) ? Prefs.panelSize : "comfortable"
             onPicked: v => Prefs.panelSize = v
         }
     }
