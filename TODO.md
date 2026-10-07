@@ -215,7 +215,7 @@ and feels like the app (real transitions and easing, glass, shadows); the scroll
 - [x] **core's `native` feature** (done 2026-10-07): only the wasm UI needed the split (data
   types without the OS parts); the gates are gone.
 
-- [ ] **Settings changes** (with phase 4): reload Downloads (the download folder may move) and
+- [x] **Settings changes** (done in phase 4: `settings-changed` reloads them): reload Downloads (the download folder may move) and
   Collections (the key or username may change) after Settings saves, as the app does.
 
 - [x] **Tooltips** (done 2026-10-07): `Tip` (components/Tip.qml; Btn's `tip`), the app's tips
@@ -242,12 +242,12 @@ and feels like the app (real transitions and easing, glass, shadows); the scroll
 - [x] **Day and night sets**: the slideshow's night set (its own favorites, tags, folder,
   color) in a local time window that may cross midnight; it switches right away at the edges.
   Each set can filter by color (light by day, dark by night).
-- [ ] **A faster cold open**: closing destroys the window (that's what gives the memory back), so
+- [x] ~~**A faster cold open**~~ (superseded: the Quickshell picker is up in ~0.3 s cold, ~65 ms reopened while loaded): closing destroys the window (that's what gives the memory back), so
   every open rebuilds the page: WebKit's page process, the 2.5 MB WebAssembly UI, monitors,
   settings, the library, thumbnails. Measure each step (timestamps from the open request to a
   filled grid, headless, a few cycles), then cut the slow ones (e.g. draw the frame before the
   data, fewer requests at once, a smaller bundle). First of the two.
-- [ ] ~~**Keep the window warm after closing**~~ (superseded by the Quickshell port, which
+- [x] ~~**Keep the window warm after closing**~~ (done in the picker: Keep the picker ready after closing) (superseded by the Quickshell port, which
   decides this its own way; see "Closing" above): closing only hides it, so reopening is instant (page
   and scroll kept); it's destroyed after it has stayed closed for a while, and the memory goes
   back. The while is a setting (Settings → Performance, "Free the memory after"): 5 min by
