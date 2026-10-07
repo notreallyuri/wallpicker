@@ -125,6 +125,9 @@ pub struct Settings {
     pub noctalia_previous_scheme: Option<String>,
     /// Width in pixels of generated thumbnails.
     pub thumb_width: u32,
+    /// Spanning a picture across the monitors: the logical pixels behind the
+    /// frames between neighbours, left out so lines carry on straight.
+    pub span_gap: u32,
 }
 
 impl Default for Settings {
@@ -153,6 +156,7 @@ impl Default for Settings {
             full_previews: false,
             noctalia_previous_scheme: None,
             thumb_width: 360,
+            span_gap: 0,
         }
     }
 }
@@ -198,6 +202,7 @@ impl Settings {
             .map(|p| expand_tilde(&p, home))
             .filter(|p| !p.as_os_str().is_empty());
         self.thumb_width = self.thumb_width.clamp(120, 1024);
+        self.span_gap = self.span_gap.min(400);
         self.wallhaven_api_key = self
             .wallhaven_api_key
             .map(|k| k.trim().to_string())

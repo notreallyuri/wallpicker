@@ -243,6 +243,34 @@ pub fn apply(args: &[String]) -> i32 {
     }
 }
 
+/// `wallpicker span <image>`: one picture across every monitor, each
+/// showing its part of it (Settings → General's bezel gap between them).
+pub fn span(args: &[String]) -> i32 {
+    let [path] = args else {
+        return usage("usage: wallpicker span <image>");
+    };
+    let path = PathBuf::from(path);
+    let path = std::path::absolute(&path).unwrap_or(path);
+    let store = Store::new(Dirs::from_env());
+    let backend = match store.load_settings() {
+        Ok(s) => s.wallpaper_backend,
+        Err(e) => return fail(&e),
+    };
+    match hyprpaper::span_and_remember(&SystemRunner, &store, backend, &path) {
+        Ok(report) => {
+            wallpicker_core::workspaces::remember_shown(&SystemRunner, &store, &report.applied);
+            let _ = store.write_hyprpaper_conf();
+            for m in &report.applied {
+                println!("{m}: its part");
+            }
+            for (m, why) in &report.failed {
+                eprintln!("{m}: {why}");
+            }
+            i32::from(!report.failed.is_empty())
+        }
+        Err(e) => fail(&e),
+    }
+}
 
 /// `wallpicker previous [--monitor NAME]...`: back to what each monitor
 /// showed before (default: every connected monitor).

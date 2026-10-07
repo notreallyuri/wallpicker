@@ -1,4 +1,5 @@
-//! wallpapers.*: monitors, apply, previous, adjust (announcing
+//! wallpapers.*: monitors, apply, span (one picture across the monitors),
+//! previous, adjust (announcing
 //! `state-changed`: what the monitors show), the Adjust dialog's
 //! framing_image and fit_modes, and the files: trash (announcing
 //! `library-changed` too), show_in_folder.
@@ -16,6 +17,10 @@ pub(super) async fn call(state: &AppState, out: &Out, name: &str, params: &Value
         "apply" => match (param(params, "monitors"), param(params, "path")) {
             (Ok(monitors), Ok(path)) => json(wallpapers::apply(state, monitors, path).await),
             (Err(e), _) | (_, Err(e)) => Err(e),
+        },
+        "span" => match param::<String>(params, "path") {
+            Ok(path) => json(wallpapers::span(state, path).await),
+            Err(e) => Err(e),
         },
         "previous" => match param(params, "monitors") {
             Ok(monitors) => json(wallpapers::previous(state, monitors).await),

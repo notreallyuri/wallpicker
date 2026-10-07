@@ -374,6 +374,38 @@ pub fn apply_and_remember_with(
     Ok(report)
 }
 
+/// Span `path` across every connected monitor (`span.rs`): each records it
+/// (its history keeps what it showed) with its part as a cut, then shows
+/// that part. Temporary like any adjustment: another wallpaper on a monitor
+/// takes it out of the span.
+pub fn span_and_remember(runner: &dyn Runner, store: &Store, backend: WallpaperBackend, path: &Path) -> Result<ApplyReport> {
+    if !crate::library::is_supported_image(path) {
+        return Err(Error::Invalid(format!("unsupported image type: {}", path.display())));
+    }
+    let monitors = list_monitors(runner)?;
+    if monitors.len() < 2 {
+        return Err(Error::Invalid("spanning needs two monitors or more".into()));
+    }
+    let (width, height) = image::image_dimensions(path).map_err(|e| Error::Image(format!("{}: {e}", path.display())))?;
+    let gap = store.load_settings()?.span_gap;
+    let cuts = crate::span::cuts(&monitors, width, height, gap);
+    for (m, cut) in &cuts {
+        store.set_current(m, path)?;
+        store.set_adjust(m, crate::settings::Adjust { span: Some(*cut), ..Default::default() })?;
+    }
+    // Read after the cuts are saved: each monitor is shown its part.
+    let backend = Backend::new(backend, store);
+    let fits = Fits::load(store);
+    let mut report = ApplyReport::default();
+    for (m, _) in &cuts {
+        match backend.apply(runner, m, path, fits.of(m, path)) {
+            Ok(()) => report.applied.push(m.clone()),
+            Err(e) => report.failed.push((m.clone(), e.to_string())),
+        }
+    }
+    Ok(report)
+}
+
 /// Put back what each of `monitors` showed before ([`Store::previous`]),
 /// with its fit; monitors with nothing earlier are reported as failed.
 pub fn apply_previous(runner: &dyn Runner, store: &Store, backend: WallpaperBackend, monitors: &[String]) -> Result<ApplyReport> {

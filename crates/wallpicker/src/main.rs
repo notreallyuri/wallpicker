@@ -6,6 +6,7 @@ fn main() {
     match args.first().map(String::as_str) {
         Some("list") => std::process::exit(wallpicker::cli::list(&args[1..])),
         Some("apply") => std::process::exit(wallpicker::cli::apply(&args[1..])),
+        Some("span") => std::process::exit(wallpicker::cli::span(&args[1..])),
         Some("search") => std::process::exit(wallpicker::cli::search(&args[1..])),
         Some("filters") => std::process::exit(wallpicker::cli::filters(&args[1..])),
         Some("settings") => std::process::exit(wallpicker::cli::settings(&args[1..])),
@@ -46,6 +47,7 @@ fn main() {
              wallpicker apply <image> [--monitor NAME]...\n                                     \
              apply through the configured backend (default:\n                                     \
              every connected monitor)\n  \
+             wallpicker span <image>            one picture across every monitor, each showing its part\n  \
              wallpicker search <provider> [query...] [--page N] [--sort S] [--json] [--thumbs]\n                                     \
              search wallhaven, konachan or yandere with the saved filters\n  \
              wallpicker details <handle> [--preview]  tags, artist, uploader and source, as JSON\n  \

@@ -31,6 +31,23 @@ pub async fn apply(state: &AppState, monitors: Vec<String>, path: String) -> Cmd
     .await
 }
 
+/// `path` across every monitor, each showing its part (`span.rs`).
+pub async fn span(state: &AppState, path: String) -> CmdResult<ApplyReport> {
+    let path = wallpaper_path(&path)?;
+    let store = state.store.clone();
+    let lock = state.adjust_lock.clone();
+    blocking(move || {
+        // Like an adjust: it makes copies and prunes the unused ones.
+        let _guard = lock.lock().unwrap_or_else(|p| p.into_inner());
+        let backend = store.load_settings()?.wallpaper_backend;
+        let report = hyprpaper::span_and_remember(&SystemRunner, &store, backend, &path)?;
+        wallpicker_core::workspaces::remember_shown(&SystemRunner, &store, &report.applied);
+        let _ = store.write_hyprpaper_conf();
+        Ok(report)
+    })
+    .await
+}
+
 /// Back to what each of `monitors` showed before.
 pub async fn previous(state: &AppState, monitors: Vec<String>) -> CmdResult<ApplyReport> {
     let store = state.store.clone();
