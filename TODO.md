@@ -229,8 +229,8 @@ and feels like the app (real transitions and easing, glass, shadows); the scroll
 - File dialogs (backup export/import, snapshot folder): the XDG desktop portal's FileChooser,
   from Rust (`rfd` over the portal) or from QML.
 - Window kind: a normal window (FloatingWindow, as now) or a layer-shell overlay like a launcher.
-- Closing: exit (0 MB, ~0.45 s to open) or stay hidden (~200 MB, instant); maybe a setting, like
-  the WebKit app's planned "Free the memory after".
+- ~~Closing~~: decided 2026-10-07: a setting (Performance → Keep the picker ready after closing,
+  Off to 30 min, 1 min by default): hidden and instant to reopen meanwhile, then exits (0 MB).
 
 ## Next up (2026-10-06)
 

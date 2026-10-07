@@ -77,7 +77,9 @@ or **Noctalia**'s wallpaper manager (Settings → General → Wallpaper backend)
   `wallpicker daemon` follows the workspaces (or `wallpicker workspaces run`). Also
   `wallpicker workspaces list | on | off | set 3 image.png | clear 3`.
 - **The picker** is a floating panel over the focused monitor (Quickshell): it opens in about
-  half a second and frees all its memory when closed (~220 MB while open). Its size is a margin
+  half a second (~220 MB while open). Closed, it stays loaded for a while (Settings →
+  Performance → Keep the picker ready after closing: Off to 30 minutes, 1 minute by default),
+  so opening it again then is instant and where you left it; then it frees all its memory. Its size is a margin
   round it, in the old window's shape (Settings → Appearance → Picker size: Large, Comfortable,
   Compact). `wallpicker --toggle` opens or closes it (for a keybind). What must keep running
   (workspaces, the slideshow, Noctalia's colors) is `wallpicker daemon`, a small process for the
