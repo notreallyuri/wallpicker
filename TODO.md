@@ -175,6 +175,22 @@ and feels like the app (real transitions and easing, glass, shadows); the scroll
   Not ported: "Keep running in the tray" (the tray is phase 5's call).
 - [ ] **5. Background**: `wallpicker daemon` (workspace listener, tray or not), following the
   wallpaper's colors live, Noctalia colors, toasts for what happens in the background.
+  The plan (2026-10-07), in this order, each step checked and committed:
+  1. **Live from anywhere**: `serve` watches state.json, config.json and library.json and
+     announces changes made by other programs (the slideshow, the plugin, the command line,
+     the workspace listener): the picker's monitors, drawer, colors and library follow while
+     it's open.
+  2. **Toasts for the background**: a monitor's wallpaper changed while the picker is open and
+     it didn't do it: say so (which monitor, which file).
+  3. **`wallpicker daemon`**: what must keep running without the window: the workspace
+     listener (it already guards against a second copy), and the tray if it stays. One
+     autostart line, replacing `wallpicker --tray` at the switch (phase 6).
+  4. **Noctalia's colors with awww or hyprpaper**: Noctalia only follows the wallpaper it draws
+     itself. A custom palette (`noctalia msg color-scheme-set custom <name>`, a folder in
+     ~/.config/noctalia/colorschemes) made from the wallpaper shown, updated by the daemon as
+     it changes.
+  5. **Tray** (if kept): a D-Bus tray item (ksni, no GTK) in the daemon: open the picker,
+     Random, Previous, quit.
 - [ ] **6. Switch over**: `wallpicker` opens the Quickshell UI; the Noctalia plugin's handoffs
   (`--open`) go through it; remove the Tauri app, WebKit and Leptos (`ui/`, `src-tauri/`: the
   window's arguments go to Quickshell instead of `wallpicker-app`); README, install script, scripts/memory and scripts/open-timing redone for QML.
