@@ -1,5 +1,5 @@
-//! wallpapers.*: monitors, apply, span (one picture across the monitors),
-//! previous, adjust (announcing
+//! wallpapers.*: monitors, apply, span (one picture across the monitors,
+//! with its look) and separate, previous, adjust (announcing
 //! `state-changed`: what the monitors show), the Adjust dialog's
 //! framing_image and fit_modes, and the files: trash (announcing
 //! `library-changed` too), show_in_folder.
@@ -19,9 +19,17 @@ pub(super) async fn call(state: &AppState, out: &Out, name: &str, params: &Value
             (Err(e), _) | (_, Err(e)) => Err(e),
         },
         "span" => match param::<String>(params, "path") {
-            Ok(path) => json(wallpapers::span(state, path).await),
+            // No look: as it comes (Cover over the layout, not mirrored).
+            Ok(path) => match params.get("look").filter(|v| !v.is_null()) {
+                None => json(wallpapers::span(state, path, Default::default()).await),
+                Some(_) => match param(params, "look") {
+                    Ok(look) => json(wallpapers::span(state, path, look).await),
+                    Err(e) => Err(e),
+                },
+            },
             Err(e) => Err(e),
         },
+        "separate" => json(wallpapers::separate(state).await),
         "previous" => match param(params, "monitors") {
             Ok(monitors) => json(wallpapers::previous(state, monitors).await),
             Err(e) => Err(e),

@@ -179,9 +179,10 @@ impl Store {
                 h.remove(0);
             }
         }
-        // Adjustments were for what it showed.
+        // Adjustments were for what it showed; a span ends.
         if state.current.get(monitor).is_some_and(|p| p != path) {
             state.adjust.remove(monitor);
+            state.span = None;
         }
         state
             .current
@@ -198,6 +199,7 @@ impl Store {
         let mut state = self.load_state()?;
         if state.current.get(monitor).is_some_and(|p| p != path) {
             state.adjust.remove(monitor);
+            state.span = None;
         }
         state.current.insert(monitor.to_string(), path.to_path_buf());
         self.save_state(&state)?;
@@ -213,11 +215,38 @@ impl Store {
         if !state.current.contains_key(monitor) {
             return Err(crate::error::Error::Invalid(format!("{monitor} shows nothing wallpicker set")));
         }
+        // Out of the span: adjusted on its own.
+        if adjust.span.is_none() {
+            state.span = None;
+        }
         if adjust.is_none() {
             state.adjust.remove(monitor);
         } else {
             state.adjust.insert(monitor.to_string(), adjust);
         }
+        self.save_state(&state)?;
+        Ok(state)
+    }
+
+    /// `path` spanned with `look`: each monitor in `cuts` its part, mirrored
+    /// like the span. They must show `path` already ([`Store::set_current`]).
+    pub fn set_span(&self, path: &Path, look: crate::settings::SpanLook, cuts: &[(String, crate::settings::Cut)]) -> Result<State> {
+        let mut state = self.load_state()?;
+        for (m, cut) in cuts {
+            if state.current.get(m).is_some_and(|p| p == path) {
+                state.adjust.insert(m.clone(), crate::settings::Adjust { span: Some(*cut), flip: look.flip, ..Default::default() });
+            }
+        }
+        state.span = Some(crate::settings::Spanned { path: path.to_path_buf(), look });
+        self.save_state(&state)?;
+        crate::transform::prune(&self.dirs.cache, &state);
+        Ok(state)
+    }
+
+    /// The monitors act on their own again, each keeping its part.
+    pub fn separate(&self) -> Result<State> {
+        let mut state = self.load_state()?;
+        state.span = None;
         self.save_state(&state)?;
         Ok(state)
     }
@@ -243,6 +272,7 @@ impl Store {
         }
         if state.current.get(monitor).is_some_and(|p| p != path) {
             state.adjust.remove(monitor);
+            state.span = None;
         }
         state.current.insert(monitor.to_string(), path.to_path_buf());
         self.save_state(&state)?;
@@ -505,6 +535,38 @@ mod tests {
         let d = Dirs::from_lookup(|k| env.get(k).map(PathBuf::from));
         assert_eq!(d.config, PathBuf::from("/cfg/wallpicker"));
         assert_eq!(d.cache, PathBuf::from("/home/u/.cache/wallpicker"));
+    }
+
+    #[test]
+    fn a_span_lasts_until_a_monitor_shows_something_else() {
+        use crate::settings::{Cut, SpanLook};
+        let tmp = tempfile::tempdir().unwrap();
+        let store = Store::new(Dirs::under(tmp.path()));
+        let (wide, other) = (Path::new("/w/wide.png"), Path::new("/w/other.png"));
+        let cut = |x| Cut { x, y: 0, width: 1920, height: 1080, out_width: 1920, out_height: 1080 };
+        let cuts = [("DP-1".to_string(), cut(0)), ("DP-2".to_string(), cut(1920))];
+        for (m, _) in &cuts {
+            store.set_current(m, wide).unwrap();
+        }
+        let look = SpanLook { zoom: 150, ..SpanLook::default() };
+        let state = store.set_span(wide, look, &cuts).unwrap();
+        assert_eq!(state.span.as_ref().unwrap().look, look);
+        assert_eq!(state.adjust["DP-2"].span, Some(cut(1920)));
+
+        // The same picture again keeps it; another one ends it.
+        store.set_current("DP-1", wide).unwrap();
+        assert!(store.load_state().unwrap().span.is_some());
+        store.set_current("DP-1", other).unwrap();
+        let state = store.load_state().unwrap();
+        assert!(state.span.is_none());
+        // DP-2 keeps its part.
+        assert_eq!(state.adjust["DP-2"].span, Some(cut(1920)));
+
+        // Separating keeps every part.
+        store.set_current("DP-1", wide).unwrap();
+        store.set_span(wide, look, &cuts).unwrap();
+        let state = store.separate().unwrap();
+        assert!(state.span.is_none() && state.adjust.len() == 2);
     }
 
     #[test]

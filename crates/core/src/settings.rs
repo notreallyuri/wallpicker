@@ -303,6 +303,43 @@ pub struct State {
     /// Temporary: another wallpaper on that monitor clears it.
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
     pub adjust: BTreeMap<String, Adjust>,
+    /// One picture spanned across the monitors, and how: the monitors act
+    /// as one until any of them shows something else (or it's separated).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub span: Option<Spanned>,
+}
+
+/// A picture spanned across the monitors, with its look.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Spanned {
+    pub path: PathBuf,
+    #[serde(default)]
+    pub look: SpanLook,
+}
+
+/// How a span shows its picture: zoomed and centered like a monitor's
+/// [`Frame`] (zoom 100 to 400; center in thousandths of the picture),
+/// over the whole layout, and mirrored as a whole.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct SpanLook {
+    pub zoom: u16,
+    pub x: u16,
+    pub y: u16,
+    pub flip: Flip,
+}
+
+impl Default for SpanLook {
+    fn default() -> Self {
+        SpanLook { zoom: 100, x: 500, y: 500, flip: Flip::default() }
+    }
+}
+
+impl SpanLook {
+    /// Values in range.
+    pub fn sanitized(self) -> SpanLook {
+        SpanLook { zoom: self.zoom.clamp(100, 400), x: self.x.min(1000), y: self.y.min(1000), flip: self.flip }
+    }
 }
 
 impl State {

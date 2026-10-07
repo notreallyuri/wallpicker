@@ -27,7 +27,7 @@ use serde::Serialize;
 use crate::cmd::Runner;
 use crate::error::{Error, Result};
 use crate::monitors::{Monitor, parse_monitors};
-use crate::settings::{FitMode, Settings, WallpaperBackend};
+use crate::settings::{FitMode, Settings, SpanLook, WallpaperBackend};
 use crate::store::Store;
 
 /// hyprpaper answers "ok" on success; some versions print nothing.
@@ -376,9 +376,10 @@ pub fn apply_and_remember_with(
 
 /// Span `path` across every connected monitor (`span.rs`): each records it
 /// (its history keeps what it showed) with its part as a cut, then shows
-/// that part. Temporary like any adjustment: another wallpaper on a monitor
-/// takes it out of the span.
-pub fn span_and_remember(runner: &dyn Runner, store: &Store, backend: WallpaperBackend, path: &Path) -> Result<ApplyReport> {
+/// that part, zoomed, moved and mirrored by `look`. The same picture again
+/// only cuts it anew (the history stays). Temporary like any adjustment:
+/// another wallpaper on a monitor ends the span.
+pub fn span_and_remember(runner: &dyn Runner, store: &Store, backend: WallpaperBackend, path: &Path, look: SpanLook) -> Result<ApplyReport> {
     if !crate::library::is_supported_image(path) {
         return Err(Error::Invalid(format!("unsupported image type: {}", path.display())));
     }
@@ -388,11 +389,13 @@ pub fn span_and_remember(runner: &dyn Runner, store: &Store, backend: WallpaperB
     }
     let (width, height) = image::image_dimensions(path).map_err(|e| Error::Image(format!("{}: {e}", path.display())))?;
     let gap = store.load_settings()?.span_gap;
-    let cuts = crate::span::cuts(&monitors, width, height, gap);
-    for (m, cut) in &cuts {
+    let look = look.sanitized();
+    let cuts = crate::span::cuts(&monitors, width, height, gap, &look);
+    // The same picture again (a new look): no new history.
+    for (m, _) in &cuts {
         store.set_current(m, path)?;
-        store.set_adjust(m, crate::settings::Adjust { span: Some(*cut), ..Default::default() })?;
     }
+    store.set_span(path, look, &cuts)?;
     // Read after the cuts are saved: each monitor is shown its part.
     let backend = Backend::new(backend, store);
     let fits = Fits::load(store);

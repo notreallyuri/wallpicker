@@ -7,7 +7,7 @@ use wallpicker_core::cmd::SystemRunner;
 use wallpicker_core::hyprpaper::{self, ApplyReport};
 use wallpicker_core::library;
 use wallpicker_core::monitors::Monitor;
-use wallpicker_core::settings::{self, Adjust, State};
+use wallpicker_core::settings::{self, Adjust, SpanLook, State};
 
 use wallpicker_core::store::Store;
 
@@ -31,8 +31,9 @@ pub async fn apply(state: &AppState, monitors: Vec<String>, path: String) -> Cmd
     .await
 }
 
-/// `path` across every monitor, each showing its part (`span.rs`).
-pub async fn span(state: &AppState, path: String) -> CmdResult<ApplyReport> {
+/// `path` across every monitor, each showing its part (`span.rs`), as
+/// `look` says (the same picture again: only its look changes).
+pub async fn span(state: &AppState, path: String, look: SpanLook) -> CmdResult<ApplyReport> {
     let path = wallpaper_path(&path)?;
     let store = state.store.clone();
     let lock = state.adjust_lock.clone();
@@ -40,12 +41,18 @@ pub async fn span(state: &AppState, path: String) -> CmdResult<ApplyReport> {
         // Like an adjust: it makes copies and prunes the unused ones.
         let _guard = lock.lock().unwrap_or_else(|p| p.into_inner());
         let backend = store.load_settings()?.wallpaper_backend;
-        let report = hyprpaper::span_and_remember(&SystemRunner, &store, backend, &path)?;
+        let report = hyprpaper::span_and_remember(&SystemRunner, &store, backend, &path, look)?;
         wallpicker_core::workspaces::remember_shown(&SystemRunner, &store, &report.applied);
         let _ = store.write_hyprpaper_conf();
         Ok(report)
     })
     .await
+}
+
+/// The monitors act on their own again, each keeping its part.
+pub async fn separate(state: &AppState) -> CmdResult<State> {
+    let store = state.store.clone();
+    blocking(move || store.separate()).await
 }
 
 /// Back to what each of `monitors` showed before.

@@ -48,6 +48,27 @@ file in `quickshell/views/online/` (its choices in `serve`'s `online.options`), 
 - [ ] **matugen hook** (optional): run matugen on each applied wallpaper, for setups themed with
   it.
 
+## Spanning, refined (2026-10-07)
+
+Spanned, the monitors act as one: the drawer shows one **Spanned** card (instead of each
+monitor and All) and the top bar one pill; the picture's tile one "Spanned" badge; a click on a
+tile spans that picture. The span has its own Adjust, as framing one monitor: zoom, position
+(drag, scroll, sliders), mirroring, over the whole layout (what the bezels hide shown dimmed).
+**Separate** goes back to a card per monitor, each keeping its part; Alt+1..N separates too.
+Anything else put on a monitor ends the span. Each step checked headless and committed:
+
+1. [ ] **Core and backend**: the span remembered in the state (the picture, its zoom, center
+   and mirroring) and dropped when a monitor shows something else; `span.rs` cuts with the
+   zoom and center (a frame over the whole layout) and mirroring; spanning the same picture
+   again re-cuts it without touching the history; `wallpicker span <image> [--frame ZOOM,X,Y]
+   [--flip h|v|both]`, `wallpicker span --separate`; `serve`'s `wallpapers.span` (with the
+   look) and `wallpapers.unspan`.
+2. [ ] **Drawer, pills, tiles**: the Spanned card (the monitors on a desk, Adjust, Separate,
+   Previous), the Spanned pill, the tile's badge; a tile click spans while spanned; Alt+N
+   separates.
+3. [ ] **The span's Adjust dialog**: the layout as it is (positions, sizes, the bezel gap),
+   the picture over it, drag, scroll, sliders, mirroring, Reset.
+
 ## Going public (if ever)
 
 - [ ] **AUR package** (`wallpicker-git`): a plain cargo build; installs the binary, the picker

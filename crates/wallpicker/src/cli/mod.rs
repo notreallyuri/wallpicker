@@ -243,20 +243,57 @@ pub fn apply(args: &[String]) -> i32 {
     }
 }
 
-/// `wallpicker span <image>`: one picture across every monitor, each
-/// showing its part of it (Settings → General's bezel gap between them).
+/// `wallpicker span <image> [--frame ZOOM,X,Y] [--flip h|v|both]`: one
+/// picture across every monitor, each showing its part of it (Settings →
+/// General's bezel gap between them), zoomed and moved like a monitor's
+/// frame (X and Y in percent) and mirrored as a whole. `wallpicker span
+/// --separate`: the monitors act on their own again, keeping their parts.
 pub fn span(args: &[String]) -> i32 {
-    let [path] = args else {
-        return usage("usage: wallpicker span <image>");
-    };
-    let path = PathBuf::from(path);
-    let path = std::path::absolute(&path).unwrap_or(path);
+    let usage_text = "usage: wallpicker span <image> [--frame ZOOM,X,Y] [--flip h|v|both]\n       wallpicker span --separate";
     let store = Store::new(Dirs::from_env());
+    if args == ["--separate"] {
+        return match store.separate() {
+            Ok(_) => 0,
+            Err(e) => fail(&e),
+        };
+    }
+    let mut look = wallpicker_core::settings::SpanLook::default();
+    let mut path = None;
+    let mut rest = args.iter();
+    while let Some(a) = rest.next() {
+        match a.as_str() {
+            "--frame" => {
+                let parts: Vec<f64> = rest.next().map(|v| v.split(',').filter_map(|n| n.trim().parse().ok()).collect()).unwrap_or_default();
+                let [zoom, x, y] = parts[..] else {
+                    return usage_for("span", "--frame needs ZOOM,X,Y (e.g. 150,50,50)", usage_text);
+                };
+                look.zoom = zoom.clamp(100.0, 400.0) as u16;
+                look.x = (x.clamp(0.0, 100.0) * 10.0) as u16;
+                look.y = (y.clamp(0.0, 100.0) * 10.0) as u16;
+            }
+            "--flip" => {
+                (look.flip.h, look.flip.v) = match rest.next().map(String::as_str) {
+                    Some("h") => (true, false),
+                    Some("v") => (false, true),
+                    Some("both") => (true, true),
+                    Some("none") => (false, false),
+                    other => return usage_for("span", &format!("--flip {}? use h, v, both or none", other.unwrap_or("")), usage_text),
+                };
+            }
+            other if other.starts_with("--") => return usage_for("span", &format!("unknown option {other}"), usage_text),
+            other if path.is_none() => path = Some(PathBuf::from(other)),
+            _ => return usage(usage_text),
+        }
+    }
+    let Some(path) = path else {
+        return usage(usage_text);
+    };
+    let path = std::path::absolute(&path).unwrap_or(path);
     let backend = match store.load_settings() {
         Ok(s) => s.wallpaper_backend,
         Err(e) => return fail(&e),
     };
-    match hyprpaper::span_and_remember(&SystemRunner, &store, backend, &path) {
+    match hyprpaper::span_and_remember(&SystemRunner, &store, backend, &path, look) {
         Ok(report) => {
             wallpicker_core::workspaces::remember_shown(&SystemRunner, &store, &report.applied);
             let _ = store.write_hyprpaper_conf();
