@@ -6,6 +6,9 @@ import qs.services
 Item {
     id: view
 
+    /// The panel's wallpaper, for the search card's glass.
+    property Item backdrop
+
     LocalModel {
         id: localModel
     }
@@ -37,6 +40,9 @@ Item {
         width: parent.width - 24
         local: localModel
         behind: grid
+        backdrop: view.backdrop
+        // The drawer opening moves the view, and the card with it.
+        follow: view.y
     }
 
     // Nothing in the folders at all.

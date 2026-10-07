@@ -39,6 +39,7 @@ Item {
         // the panel's rounded corners. Only it is clipped that way: clipping
         // the whole panel redraws everything through a shader.
         ClippingRectangle {
+            id: scenery
             anchors.fill: parent
             anchors.margins: 1
             radius: parent.radius - 1
@@ -72,6 +73,8 @@ Item {
                 Layout.fillWidth: true
             }
             LocalView {
+                // The glass over its grid blurs the wallpaper too.
+                backdrop: scenery
                 Layout.fillWidth: true
                 Layout.fillHeight: true
             }

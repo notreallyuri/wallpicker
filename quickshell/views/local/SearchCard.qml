@@ -10,8 +10,11 @@ Item {
     id: card
 
     required property LocalModel local
-    /// What's under the card, for the glass.
+    /// What's under the card, for the glass: the grid, the wallpaper
+    /// behind it, and what moves the card relative to them.
     property Item behind
+    property Item backdrop
+    property var follow
 
     implicitHeight: rows.implicitHeight + 18
 
@@ -30,7 +33,8 @@ Item {
         anchors.fill: parent
         radius: 22
         source: card.behind
-        origin: card.behind ? card.mapToItem(card.behind, 0, 0) : Qt.point(0, 0)
+        backdrop: card.backdrop
+        follow: card.follow
     }
     Rectangle {
         anchors.fill: parent
