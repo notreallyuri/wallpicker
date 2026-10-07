@@ -105,8 +105,9 @@ Item {
                     fillMode: Image.PreserveAspectCrop
                     asynchronous: true
                     cache: false
-                    // Decoded at the size it's shown, not the file's.
-                    sourceSize.width: picture.width * 2
+                    // Decoded at the size it's shown (in the screen's pixels: 1x at
+                    // scale 1; 2x took ~20 MB more), not the file's.
+                    sourceSize.width: picture.width * Screen.devicePixelRatio
                     scale: tile.hovered ? 1.03 : 1
                     opacity: status === Image.Ready ? 1 : 0
                     Behavior on scale {

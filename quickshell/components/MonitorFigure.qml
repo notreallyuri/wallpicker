@@ -97,7 +97,7 @@ Item {
                 anchors.fill: parent
                 source: figure.thumb ? "file://" + figure.thumb : ""
                 fillMode: Image.PreserveAspectCrop
-                sourceSize.width: figure.screenWidth * 2
+                sourceSize.width: figure.screenWidth * Screen.devicePixelRatio
                 asynchronous: true
                 // Mirrored like it's shown (Adjust).
                 transform: Scale {

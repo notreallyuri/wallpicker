@@ -47,7 +47,7 @@ Rectangle {
                 fillMode: Image.PreserveAspectCrop
                 asynchronous: true
                 cache: false
-                sourceSize.width: width * 2
+                sourceSize.width: width * Screen.devicePixelRatio
             }
             Rectangle {
                 x: 4

@@ -82,7 +82,7 @@ Item {
                 source: tile.w.thumb
                 fillMode: Image.PreserveAspectCrop
                 asynchronous: true
-                sourceSize.width: picture.width * 2
+                sourceSize.width: picture.width * Screen.devicePixelRatio
                 opacity: status === Image.Ready ? 1 : 0
                 Behavior on opacity {
                     NumberAnimation {
