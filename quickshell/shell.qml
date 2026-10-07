@@ -24,6 +24,10 @@ ShellRoot {
         function open(place: string, path: string): void {
             Views.go(place, path);
         }
+        /// Up, with the library read (scripts/open-timing.sh waits for it).
+        function ready(): bool {
+            return !Library.loading;
+        }
     }
 
     Loader {
