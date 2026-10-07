@@ -50,6 +50,16 @@ Singleton {
         });
     }
 
+    // The key or the username may have changed: the list again, if it was
+    // shown.
+    Connections {
+        target: Backend
+        function onEvent(name) {
+            if (name === "settings-changed" && collections.loaded)
+                collections.reload();
+        }
+    }
+
     function choose(id) {
         chosen = id;
         results = [];

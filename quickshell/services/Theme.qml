@@ -60,7 +60,7 @@ Singleton {
         target: Backend
         // A new wallpaper, new colors.
         function onEvent(name) {
-            if (name === "state-changed")
+            if (name === "state-changed" || name === "settings-changed")
                 theme.reload();
         }
     }

@@ -155,7 +155,7 @@ Singleton {
     Connections {
         target: Backend
         function onEvent(name) {
-            if (name === "library-changed")
+            if (name === "library-changed" || name === "settings-changed")
                 library.reload();
         }
     }

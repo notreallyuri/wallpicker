@@ -12,6 +12,7 @@ import qs.services
 import qs.views.local
 import qs.views.online
 import qs.views.collections
+import qs.views.settings
 
 Item {
     id: picker
@@ -115,6 +116,7 @@ Item {
     AdjustDialog {}
     FiltersDialog {}
     DetailsDialog {}
+    SettingsDialog {}
 
     ToastStack {
         anchors.right: panel.right

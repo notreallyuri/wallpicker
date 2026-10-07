@@ -1,6 +1,6 @@
-// wallpicker's settings (config.json), as far as the interface needs them
-// so far: the wallpaper backend and the fits (the Adjust dialog). Read once
-// at start; editing them comes with the Settings tab.
+// wallpicker's settings (config.json), as saved: what the interface reads
+// from them (the backend, the fits, the API key...) and what the Settings
+// dialog's form starts from. Read at start and again when they're saved.
 pragma Singleton
 import QtQuick
 import Quickshell
@@ -32,4 +32,12 @@ Singleton {
     }
 
     Component.onCompleted: reload()
+
+    Connections {
+        target: Backend
+        function onEvent(name) {
+            if (name === "settings-changed")
+                settings.reload();
+        }
+    }
 }

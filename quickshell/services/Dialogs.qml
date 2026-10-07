@@ -14,6 +14,8 @@ Singleton {
     property string adjusting: ""
     /// The Online provider's filters.
     property bool onlineFilters: false
+    /// The Settings section shown ("" closed).
+    property string settings: ""
     /// The online wallpaper whose details are shown (null none).
     property var details: null
     /// Popovers, menus and dialogs open now, the last on top: Esc closes
@@ -47,6 +49,9 @@ Singleton {
     }
     function adjust(monitor) {
         adjusting = monitor;
+    }
+    function openSettings(section) {
+        settings = section || "general";
     }
     function showDetails(w) {
         details = w;

@@ -84,7 +84,7 @@ Singleton {
                     done: data.done,
                     total: data.total || 0
                 });
-            else if (name === "library-changed")
+            else if (name === "library-changed" || name === "settings-changed")
                 downloads.reload();
         }
     }

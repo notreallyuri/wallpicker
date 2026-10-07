@@ -71,6 +71,7 @@ Rectangle {
             variant: "ghost"
             icon: "settings"
             tip: "Settings"
+            onClicked: Dialogs.openSettings()
         }
     }
 }
