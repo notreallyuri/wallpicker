@@ -145,6 +145,7 @@ ColumnLayout {
                 if (section.busy)
                     return;
                 section.busy = true;
+                Monitors.expectAll();
                 Backend.request("slideshow.now", {}, () => {
                     Toasts.info("New wallpaper");
                     section.busy = false;

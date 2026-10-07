@@ -1,7 +1,8 @@
 // The monitors, what each shows (and how it's adjusted), and where a click
 // applies: one monitor or all of them (the app's rule: single choice;
 // picking the chosen one again keeps it). Whether the drawer of monitors
-// under the top bar is open.
+// under the top bar is open. A wallpaper changed by something else while the
+// picker is open (the slideshow, a workspace, the plugin) gets a toast.
 pragma Singleton
 import QtQuick
 import Quickshell
@@ -26,6 +27,20 @@ Singleton {
 
     readonly property var targets: selection === all ? list.map(m => m.name) : (selection ? [selection] : [])
 
+    /// monitor -> when the picker last changed it itself (ms): changes then
+    /// aren't announced.
+    property var own: ({})
+    function mine(names) {
+        const next = Object.assign({}, own);
+        for (const n of names)
+            next[n] = Date.now();
+        own = next;
+    }
+    /// Every monitor is about to change by the picker's doing (Change now).
+    function expectAll() {
+        mine(list.map(m => m.name));
+    }
+
     /// Monitor names showing `path`.
     function showing(path) {
         return list.filter(m => current[m.name] === path).map(m => m.name);
@@ -48,6 +63,7 @@ Singleton {
     function applyTo(path, names) {
         if (names.length === 0)
             return;
+        mine(names);
         setApplying(path, true);
         Backend.request("wallpapers.apply", {
             monitors: names,
@@ -78,6 +94,7 @@ Singleton {
 
     /// Back on `names`; `message(applied)` says how it went.
     function previousOn(names, message) {
+        mine(names);
         Backend.request("wallpapers.previous", {
             monitors: names
         }, report => Toasts.info(message(report && report.applied ? report.applied : [])), e => Toasts.error("Could not go back", e));
@@ -113,6 +130,7 @@ Singleton {
 
     function sendAdjust(name, next, dones) {
         adjustSending[name] = true;
+        mine([name]);
         const finish = s => {
             const waiting = adjustWaiting[name];
             delete adjustWaiting[name];
@@ -163,8 +181,28 @@ Singleton {
     }
 
     function takeState(s) {
-        current = s && s.current ? s.current : {};
+        const next = s && s.current ? s.current : {};
+        announce(current, next);
+        current = next;
         adjust = s && s.adjust ? s.adjust : {};
+    }
+
+    /// Toast the monitors whose wallpaper changed by something else.
+    property bool started: false
+    function announce(before, after) {
+        if (!started) {
+            started = true;
+            return;
+        }
+        const now = Date.now();
+        const changed = Object.keys(after).filter(m => after[m] !== before[m] && !(own[m] && now - own[m] < 8000));
+        if (changed.length === 0)
+            return;
+        const name = p => p.split("/").pop();
+        if (changed.length === 1)
+            Toasts.info("New wallpaper on " + changed[0], name(after[changed[0]]));
+        else
+            Toasts.info("New wallpapers", changed.map(m => m + ": " + name(after[m])).join("\n"));
     }
 
     Component.onCompleted: reload()
