@@ -23,7 +23,27 @@ GridView {
     cellWidth: Math.floor(width / columns)
     // The tallest card (one with a row of tags) and the gap.
     cellHeight: (cellWidth - 16 - 12) * 10 / 16 + 12 + 54 + 16
-    model: grid.local.pageItems
+    // Not bound: a new model sends a GridView back to the top, which is
+    // right for another page or filter, not for the same page re-sorted
+    // (a favorite moving to the front). takeItems keeps the position then.
+    property string shownKey: ""
+    function takeItems() {
+        const same = model !== undefined && local.viewKey === shownKey;
+        const y = contentY;
+        shownKey = local.viewKey;
+        model = local.pageItems;
+        if (same) {
+            forceLayout();
+            contentY = Math.max(topY, Math.min(y, originY + contentHeight + bottomMargin - height));
+        }
+    }
+    Component.onCompleted: takeItems()
+    Connections {
+        target: grid.local
+        function onPageItemsChanged() {
+            grid.takeItems();
+        }
+    }
     clip: true
     boundsBehavior: Flickable.StopAtBounds
     ScrollBar.vertical: ScrollBar {}

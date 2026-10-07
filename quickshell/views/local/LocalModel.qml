@@ -32,6 +32,9 @@ QtObject {
     property string hovered: ""
     /// Random order: a number per path, drawn again each time it's picked.
     property var shuffle: ({})
+    /// What's being looked at: the same key with a new list (a favorite
+    /// moved, a tag changed) keeps the grid's scroll position.
+    readonly property string viewKey: [currentPage, query, favoritesOnly, JSON.stringify(tagFilter), sort, layout, tagsMatchAll, color, JSON.stringify(place)].join("|")
 
     readonly property bool folders: layout === "folders"
     readonly property bool filtering: favoritesOnly || query.trim() !== "" || tagFilter.length > 0 || color !== ""
