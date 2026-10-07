@@ -1,8 +1,8 @@
 # wallpicker for Noctalia
 
 A Noctalia v5 plugin: a bar icon that opens wallpicker's quick picker in a panel. Bigger jobs
-are the app's, and the panel hands them over (`wallpicker --open …`, which starts the app if it
-isn't running): **Settings** (the cog), **Duplicates** (the copy icon), **Collections** (header)
+are the picker's (wallpicker's own floating panel), and the plugin hands them over
+(`wallpicker --open …`, which opens it there): **Settings** (the cog), **Duplicates** (the copy icon), **Collections** (header)
 and **editing tags** (a wallpaper's view, or right-click → Edit tags in wallpicker…).
 
 - **Local**: your library, favorites first; filter by name or tag. The wallpaper on the chosen
@@ -18,7 +18,7 @@ and **editing tags** (a wallpaper's view, or right-click → Edit tags in wallpi
     the wallpaper before.
   - Sort, layout and All/Any are remembered.
 - **Online**: Wallhaven, Konachan or yande.re, with a sort and paging, and each provider's other
-  filters as saved in the app. Already-downloaded results show ✓; the border shows the rating:
+  filters as saved in the picker. Already-downloaded results show ✓; the border shows the rating:
   green SFW, yellow sketchy, red NSFW. Clicking downloads and applies.
 - Keys: Esc backs out of a view (then closes), Ctrl+F search field, Ctrl+R random, Alt+Up parent
   folder, Alt+Left/Right online pages, Ctrl+1/2 Local/Online.
@@ -30,30 +30,30 @@ and **editing tags** (a wallpaper's view, or right-click → Edit tags in wallpi
   wallpaper's view: favorite, fit, its tags (click one to show that tag's wallpapers; "Edit in
   wallpicker" to change them) and trash, which asks first. Menus need Noctalia's plugin API 28.
 - **Filters** (next to the search box, with a count when any are on): the provider's filters,
-  the same ones as the app's Filters dialog. Saved as you change them; Done searches again.
-- **Fit and mirroring** are per monitor, in the app (the monitor drawer's Adjust); the fits in the
-  app's Settings apply here too.
-- **Slideshow**: set up in the app (Settings → Slideshow). The plugin's background service asks
-  wallpicker every minute whether it's time, so it runs without the app; it does nothing while
-  the slideshow is off.
+  the same ones as the picker's Filters dialog. Saved as you change them; Done searches again.
+- **Fit and mirroring** are per monitor, in the picker (the monitor drawer's Adjust); the fits in
+  its Settings apply here too.
+- **Slideshow**: set up in the picker (Settings → Slideshow). The plugin's background service asks
+  wallpicker every minute whether it's time (so does `wallpicker daemon`; their ticks take turns,
+  so it never changes twice); it does nothing while the slideshow is off.
 - On Konachan and yande.re, typing shows the real tag names it may mean (they match exact tags
   only); click one to search with it. Commas separate tags typed with spaces ("long hair, night").
 - Thumbnails round their corners like the rest of Noctalia (its corner radius scale).
-- Pick a monitor (or all) at the top; it applies to both. "Open wallpicker" opens the app on the
-  tab you're on.
+- Pick a monitor (or all) at the top; it applies to both. "Open wallpicker" opens the picker on
+  the tab you're on.
 
 It goes through the `wallpicker` command (`list`, `apply`, `search`, `apply-online`), so it shares
-the app's library, favorites, tags, saved state, filters and wallpaper backend (hyprpaper or
-Noctalia). Noctalia is often started with a shorter PATH than your shell's, so the plugin also
+the picker's library, favorites, tags, saved state, filters and wallpaper backend (hyprpaper,
+awww or Noctalia). Noctalia is often started with a shorter PATH than your shell's, so the plugin also
 looks for the command in `~/.local/bin` and `~/.cargo/bin`.
 
 ## Install
 
-1. Build and install the `wallpicker` command somewhere on your PATH:
+1. Build and install wallpicker (the command and the picker the handoffs open):
 
    ```bash
    cargo build --release -p wallpicker
-   install -m755 target/release/wallpicker ~/.local/bin/wallpicker
+   scripts/install-local.sh
    ```
 
    (Or set the command's full path in the plugin's settings.)

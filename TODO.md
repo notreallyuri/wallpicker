@@ -2,12 +2,12 @@
 
 ## More wallpaper sources
 
-The Online tab has a provider abstraction (`crates/core/src/online.rs`, `ui/src/views/online/`).
+The Online tab has a provider abstraction (`crates/core/src/online.rs`, `quickshell/views/online/`).
 Another Moebooru site is one `Site` in `moebooru.rs` plus a `Provider`. Anything else means: a
 core module (query → params, response → `OnlineWallpaper`/`Page`), a branch in
-`online_search`/`online_details`, its image host in `Provider::download_prefixes`, its image host
-in the CSP (`src-tauri/tauri.conf.json`), a filters file in `ui/src/views/online/`, and a section
-in Settings.
+`service/online/` (search, details), its image host in `Provider::download_prefixes`, a filters
+file in `quickshell/views/online/` (and its choices in `serve`'s `online.options`), and a section
+in `quickshell/views/settings/`.
 
 - [x] **Konachan** (Moebooru): konachan.net (SFW) or konachan.com (all ratings), a setting.
 - [x] **yande.re** (Moebooru): same module as Konachan.
@@ -51,8 +51,9 @@ What stands between "my tool" and one others can install (2026-10-05):
 
 - [x] **awww (swww) backend**: `awww img` with fit and transitions, the daemon started when
   needed, a warning when another program draws wallpapers too.
-- [ ] **AUR package** (`wallpicker-git`): builds with trunk and the Tauri CLI, installs the binary,
-  the desktop entry, the icon and the Noctalia plugin.
+- [ ] **AUR package** (`wallpicker-git`): a plain cargo build; installs the binary, the picker
+  (`quickshell/` to /usr/share/wallpicker/ui), the desktop entry, the icon and the Noctalia
+  plugin; depends on quickshell.
 - [ ] **One-command hyprpaper setup**: add the `source` line for wallpicker's config to
   hyprpaper.conf (asking first), instead of documenting it.
 - [ ] **matugen hook** (optional): run matugen on each applied wallpaper, for people theming
@@ -195,7 +196,7 @@ and feels like the app (real transitions and easing, glass, shadows); the scroll
 - [ ] **6. Switch over**: `wallpicker` opens the Quickshell UI; the Noctalia plugin's handoffs
   (`--open`) go through it; remove the Tauri app, WebKit and Leptos (`ui/`, `src-tauri/`: the
   window's arguments go to Quickshell instead of `wallpicker-app`); README, install script, scripts/memory and scripts/open-timing redone for QML.
-  The plan (2026-10-07), in this order, each step checked and committed:
+  The plan (2026-10-07), in this order, each step checked and committed (1-4 done 2026-10-07):
   1. **`wallpicker` opens the picker**: no arguments opens it, `--toggle` opens or closes it,
      `--open local|online|collections|settings|duplicates` and `--open tags <image>` open it
      there (or move the open one there, over IPC), `--tray` runs the daemon (old autostarts
@@ -210,6 +211,9 @@ and feels like the app (real transitions and easing, glass, shadows); the scroll
      `wallpicker daemon`; the running Tauri app is stopped.
 
 ### Left over from the phases
+
+- [ ] **core's `native` feature**: only the wasm UI needed the split (data types without the
+  OS parts); the `#[cfg(feature = "native")]` gates can go.
 
 - [ ] **Settings changes** (with phase 4): reload Downloads (the download folder may move) and
   Collections (the key or username may change) after Settings saves, as the app does.

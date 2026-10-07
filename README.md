@@ -54,8 +54,9 @@ or **Noctalia**'s wallpaper manager (Settings → General → Wallpaper backend)
   makes the changed copy (cached, deleted when unused).
   `wallpicker adjust <monitor> --frame 200,70,40 --flip h --fit contain`.
 - The search bar (and the tags and folder path under it) stays at the top while you scroll.
-- **Keys**: Ctrl+F search field, Ctrl+R random, Alt+Up parent folder, Alt+Left/Right online pages,
-  Ctrl+1/2/3 Local/Online/Collections.
+- **Keys**: Ctrl+F search field, Ctrl+R random, Alt+Up parent folder, Alt+Left/Right pages,
+  Ctrl+1/2/3 Local/Online/Collections, Alt+1…N where a click applies (a monitor, in the top bar's
+  order) and Alt+N+1 All, Delete a tile's trash, Esc the top menu or dialog, then the picker.
 - **Duplicates** (Local → **⋯** → **Find duplicates…**): exact copies and the same picture at another size or
   re-saved, a group at a time. The largest copy is picked to keep; the others go to the trash, and
   their favorite and tags move to the kept one (a monitor showing one of them gets it instead).
@@ -63,9 +64,9 @@ or **Noctalia**'s wallpaper manager (Settings → General → Wallpaper backend)
 - **Slideshow** (Settings → Slideshow): a random wallpaper every few minutes, from favorites,
   some tags, a folder or a color, on all or some monitors, the same one or a different one on
   each. **Something else at night**: a second set for a time window (say 20:00–07:00, Dark), and
-  it changes right away when night starts and ends. `wallpicker random --color dark` too. The
-  Noctalia plugin keeps time for it while Noctalia runs; without Noctalia, run
-  `wallpicker slideshow run` (say, from Hyprland's autostart). **Change now** changes it at once.
+  it changes right away when night starts and ends. `wallpicker random --color dark` too.
+  `wallpicker daemon` keeps time for it (the Noctalia plugin does too; their ticks take turns, so
+  it never changes twice). **Change now** changes it at once.
 - **A wallpaper per workspace** (Settings → Workspaces): when a monitor switches to a Hyprland
   workspace that has a wallpaper, it goes on that monitor. With **Remember what I put on each
   workspace**, applying a wallpaper is all it takes: it becomes the wallpaper of the workspace its
@@ -73,22 +74,25 @@ or **Noctalia**'s wallpaper manager (Settings → General → Wallpaper backend)
   history, so Previous still means the one you chose before. Or pick one per workspace right
   there: click its picture (or the empty "+ Choose" slot) to open your library in place,
   searchable by name and tag.
-  wallpicker follows the workspaces
-  while it runs (the tray is enough); without it, `wallpicker workspaces run`. Also
+  `wallpicker daemon` follows the workspaces (or `wallpicker workspaces run`). Also
   `wallpicker workspaces list | on | off | set 3 image.png | clear 3`.
-- **Tray**: closing the window keeps wallpicker in the tray (Settings → General). The window is
-  closed for real then, so the tray costs ~30 MB instead of ~340 MB; it opens again in a moment. The tray menu
-  shows or hides the window, applies a random wallpaper, or quits. Running `wallpicker` again
-  brings the window back instead of starting a second app; `wallpicker --toggle` shows or hides it
-  (for a keybind), and `wallpicker --tray` starts with only the tray icon (for an autostart).
-  The tray needs a tray host in the bar (Noctalia has one) and libappindicator.
+- **The picker** is a floating panel over the focused monitor (Quickshell): it opens in about
+  half a second and frees all its memory when closed (~220 MB while open). Its size is a margin
+  round it, in the old window's shape (Settings → Appearance → Picker size: Large, Comfortable,
+  Compact). `wallpicker --toggle` opens or closes it (for a keybind). What must keep running
+  (workspaces, the slideshow, Noctalia's colors) is `wallpicker daemon`, a small process for the
+  autostart. No tray.
 - **Color themes** (Settings → Appearance): Blossom, Matcha, Peach, Lagoon, Lavender and Honey,
   each with a light and a dark half; **Dark mode** is on, off or like the system.
-- **Colors from the wallpaper** (Settings → Appearance): the app takes its colors from the
-  wallpaper on the monitor you pick (the first one by default), made by Noctalia's palette generator with its wallpaper scheme,
-  so it matches Noctalia. **Noctalia's colors follow the wallpaper** switches Noctalia's color
-  source to the wallpaper too (and back to the scheme it had). The panel uses Noctalia's colors, so
-  it follows along. `wallpicker theme` shows the palette; `wallpicker noctalia-colors on|off`.
+- **Colors from the wallpaper** (Settings → Appearance): the picker takes its colors from the
+  wallpaper on the monitor you pick (the first one by default), made by Noctalia's palette
+  generator with its wallpaper scheme, so it matches Noctalia. **Noctalia's colors follow the
+  wallpaper** makes Noctalia's colors follow too (and goes back to the scheme it had): with the
+  Noctalia backend that's Noctalia's own wallpaper mode; with awww or hyprpaper, Noctalia doesn't
+  know the wallpaper, so wallpicker makes it a palette from the one shown
+  (`~/.config/noctalia/palettes/wallpicker.json`, `custom wallpicker`) and the daemon keeps it
+  current. The plugin's panel uses Noctalia's colors, so it follows along. `wallpicker theme`
+  shows the palette; `wallpicker noctalia-colors on|off`.
 - **Color** (Local, next to the sort): show the wallpapers with a color (red, orange, yellow, green,
   teal, blue, purple, pink) or tone (Dark, Light, Warm: golden, brown, firelight; Muted: mostly
   white, grey or black), the most of it first. Each pixel is named by the nearest of a set of
@@ -104,92 +108,69 @@ or **Noctalia**'s wallpaper manager (Settings → General → Wallpaper backend)
   its wallpaper in the monitor's own shape and the file; click one to make it the target, or ↶ to
   go back on that monitor only. Remembered open or closed.
 - **Previous**: each monitor remembers its last 30 wallpapers; **↶ Previous** (in the monitor
-  bar, the tray menu, the panel, or `wallpicker previous` for a keybind) goes back through them.
+  bar, the plugin's panel, or `wallpicker previous` for a keybind) goes back through them.
 - **Saved choices**: every applied wallpaper is written to `state.json`, and
   `wallpicker --restore` re-applies them at login.
 - **Settings**: the cog at the top right.
 
-Built with Tauri 2 + Leptos 0.8 (CSR), with the UI on
-[nocomponents](https://crates.io/crates/nocomponents) (styled layer installed with `cargo nocli`).
+The picker is [Quickshell](https://quickshell.org) (QML) over a Rust backend; the logic is a
+Rust library with unit tests. (Until October 2026 it was a Tauri + Leptos window.)
 
 ## Requirements
 
 On Arch:
 
 ```bash
-sudo pacman -S --needed base-devel webkit2gtk-4.1 hyprpaper   # or awww instead of hyprpaper
-rustup target add wasm32-unknown-unknown
-cargo install trunk --locked
-cargo install tauri-cli --version "^2" --locked
+sudo pacman -S --needed base-devel quickshell hyprpaper   # or awww instead of hyprpaper
 ```
 
+Rust (stable) to build. `wl-clipboard` for Copy path, `xdg-desktop-portal` (with a backend such
+as KDE's or GTK's) for Settings → Backup's file dialogs, Noctalia for colors from the wallpaper.
 With hyprpaper, it must be running with IPC enabled, which is its default. With awww, wallpicker
 starts its daemon when needed.
 
-## Run and build
-
-wallpicker is two binaries:
-
-- `wallpicker` (`crates/wallpicker`): the command line, and `wallpicker serve`, the backend of the
-  new Quickshell interface (`wallpicker ui`). No Tauri, WebKit or GTK: a plain cargo build.
-- `wallpicker-app` (`src-tauri`): the old Tauri window, kept working until the Quickshell
-  interface replaces it, no longer developed. `wallpicker` with no arguments, `--tray`, `--toggle`
-  or `--open` hands over to it.
+## Build and install
 
 ```bash
 cargo build --release -p wallpicker   # target/release/wallpicker
-cargo tauri build --no-bundle         # target/release/wallpicker-app (the window)
-scripts/install-local.sh              # both in ~/.local/bin, the interface, a launcher entry
-cargo tauri dev                       # the window, with trunk serving its UI on :1420
+scripts/install-local.sh              # ~/.local/bin/wallpicker, the picker, a launcher entry
 ```
 
-`install-local.sh` also adds wallpicker to your app launcher (`wallpicker.desktop`, with Random
-and Previous as quick actions). Its entry uses the full path to the binary, since launchers
-often run with a PATH that doesn't include `~/.local/bin`. It refuses a build older than its
-sources, so a new interface never goes in with an old backend.
+`install-local.sh` puts the picker (`quickshell/`) in `~/.local/share/wallpicker/ui`, and adds
+wallpicker to your app launcher (`wallpicker.desktop`, with Random and Previous as quick actions;
+the full path to the binary, since launchers often run with a PATH without `~/.local/bin`). It
+refuses a build older than its sources, so a new picker never goes in with an old backend.
+
+While working on it, `cargo build && ./target/debug/wallpicker` runs the picker from the
+checkout (a binary built inside it finds its `quickshell/`; `WALLPICKER_UI` points elsewhere).
 
 ### Starting it
 
-The app doesn't need to run all the time: the Noctalia panel is the quick picker, the plugin keeps
-the slideshow going, and anything bigger in the panel opens the app where it's needed
-(`wallpicker --open local|online|collections|settings|duplicates`, `--open tags <image>`).
+- **The picker**: a keybind on `wallpicker --toggle` (in the Lua config:
+  `hl.bind("SUPER + SHIFT + W", hl.dsp.exec_cmd("/home/you/.local/bin/wallpicker --toggle"))`),
+  the launcher, or the Noctalia plugin. `wallpicker --open local|online|collections|settings|
+  duplicates` and `--open tags <image>` open it there (the plugin hands bigger jobs over that way).
+- **The daemon**, in Hyprland's autostart: `wallpicker daemon` (the wallpaper per workspace, the
+  slideshow's timer, Noctalia's colors following the wallpaper). One per session; a second one
+  says so and leaves. `wallpicker --tray`, from the old app's autostarts, runs it too.
 
-- Open it from the launcher, the tray menu, the panel, or a keybind on `wallpicker --toggle`. Any
-  of these brings up the one running app.
-- Optionally autostart `wallpicker --tray` (in Hyprland's autostart) to keep it in the tray from
-  login: it opens instantly then, at the cost of keeping it in memory.
-- Closing the window keeps it in the tray; quit from the tray menu.
+### How it fits together
 
-Build the window with `cargo tauri build`, not `cargo build --release`: the plain cargo build of
-`wallpicker-app` is a development build whose window loads the UI from the dev server on :1420
-instead of embedding it. Started without `cargo tauri dev` running, it says so and exits.
-`--no-bundle` skips making .deb/AppImage packages.
+- `quickshell/`: the picker, run as `qs -p <its folder>`, split by focus: `services/` (state and
+  the connection to Rust), `components/`, `bar/`, `views/` (local, online, collections, settings:
+  a file per section), `dialogs/`, `windows/`.
+- `wallpicker serve`: the picker's backend, one per open picker, JSON lines over stdin/stdout
+  (`crates/wallpicker/src/serve/`); it also announces changes other programs make (the
+  slideshow, the plugin, the command line) so the open picker follows.
+- `wallpicker ui` starts Quickshell with Vulkan (where there's a driver) and a leaner allocator:
+  ~40 MB less than the defaults.
+- Checks: `scripts/ui-check.sh` runs the picker headless with a throwaway profile, clicks and
+  scrolls through test hooks, screenshots, and fails on QML errors. `scripts/memory.sh` and
+  `scripts/open-timing.sh` measure the real thing on your desktop.
 
-The first trunk build downloads the Tailwind binary (pinned to 4.3.0 in `ui/Trunk.toml`).
+## Command line
 
-**Measuring memory**: `cargo tauri build --no-bundle --features automation`, then
-`scripts/memory/run.sh [default|nofx|noimg]`. It replays a browsing session (Online pages,
-details, another provider, Local) in a headless copy with a throwaway profile, and records each
-process's memory every second. The `automation` feature only exists for this; normal builds
-don't have it.
-
-## The new interface (Quickshell, in progress)
-
-The interface is moving to [Quickshell](https://quickshell.org) (QML) for a lighter, faster
-window; the plan is in TODO.md ("Quickshell frontend"). `wallpicker ui` opens it (the Local tab
-so far), `wallpicker ui --toggle` opens or closes it (a keybind). Closing exits: nothing stays in
-memory between opens. It needs `qs` (the quickshell package).
-
-- `quickshell/`: the interface, split by focus: `services/` (state and the connection to Rust),
-  `components/`, `bar/`, `views/`, `windows/`.
-- `wallpicker serve`: its backend, JSON lines over stdin/stdout (`src-tauri/src/serve/`), on the
-  same logic as the Tauri app's commands (`src-tauri/src/service/`).
-- `scripts/ui-check.sh`: runs it headless with a throwaway profile, clicks and scrolls through
-  test hooks, screenshots, and fails on QML errors.
-
-
-
-The same library, settings and backend as the app, without the window, for scripts and keybinds:
+The same library, settings and backend as the picker, for scripts and keybinds:
 
 ```bash
 wallpicker list                       # what's on each monitor, then the library (* = favorite)
@@ -221,7 +202,7 @@ wallpicker slideshow tick --now  # change it now
 wallpicker slideshow run         # keep it going without Noctalia (Ctrl+C to stop)
 ```
 
-Library edits, the same as the app's:
+Library edits, the same as the picker's:
 
 ```bash
 wallpicker favorite ~/Pictures/wpp/a.jpg [--off]
@@ -234,7 +215,7 @@ wallpicker fit ~/Pictures/wpp/a.jpg contain             # its own fit everywhere
 wallpicker settings set monitor_fit.DP-2=contain        # a monitor's fit ("" for the general one)
 ```
 
-Filters and settings, the same files as the app's Filters dialog and Settings (JSON out):
+Filters and settings, the same files as the picker's Filters dialog and Settings (JSON out):
 
 ```bash
 wallpicker filters                                          # every provider's filters + options
@@ -247,13 +228,13 @@ wallpicker settings set backend=noctalia thumb_width=480 "folders=~/Pictures/wpp
 ```
 
 Wrong keys or values change nothing. The Wallhaven API key is never printed and can only be set
-in the app, so it never sits on a command line.
+in the picker (Settings → Wallhaven), so it never sits on a command line.
 
-Online, with each provider's saved filters (the app's Filters dialog):
+Online, with each provider's saved filters (the picker's Filters dialog):
 
 ```bash
 wallpicker search konachan landscape --page 2 --json --thumbs
-wallpicker search wallhaven --sort toplist        # also saves the sort for the app
+wallpicker search wallhaven --sort toplist        # also saves the sort for the picker
 wallpicker details '<handle>'                     # tags, artist, uploader, source (JSON)
 wallpicker tags konachan mitsu                     # the real tag names a Konachan/yande.re search means
 wallpicker collections                             # your Wallhaven collections (API key)
@@ -264,19 +245,19 @@ wallpicker apply-online '<handle>' --download-only
 ```
 
 `apply` and `apply-online` go through the configured backend and are recorded like an apply from
-the app; `apply-online` downloads (or reuses) the file first, with the same host and id checks.
+the picker; `apply-online` downloads (or reuses) the file first, with the same host and id checks.
 `--thumbs` caches result thumbnails in `~/.cache/wallpicker/online/` (and `details --preview`
 a bigger image in `preview/` there); cached images unused for 14 days are removed. Exit codes: 0 on success,
 1 if anything failed, 2 for usage mistakes.
 
 ## Noctalia plugin
 
-`noctalia-plugin/` holds a Noctalia v5 plugin: a bar icon and a panel that works without the app
-window: the quick picker. **Local**: your library (favorites first, filter by name or tag);
+`noctalia-plugin/` holds a Noctalia v5 plugin: a bar icon and a small panel, native to the shell:
+the quickest picker. **Local**: your library (favorites first, filter by name or tag);
 right-click a caption for apply/favorite/fit/trash, or click it for the wallpaper's own view.
 **Online**: search Wallhaven, Konachan or yande.re with a sort, filters and paging;
 already-downloaded results are marked. Pick a monitor, click to apply. Settings, Duplicates,
-Collections and tag editing open in the app. It's built on the command line above.
+Collections and tag editing open in the picker (`wallpicker --open`). It's built on the command line above.
 See `noctalia-plugin/README.md` to install it.
 
 ## Noctalia as the backend
@@ -334,30 +315,20 @@ that were deleted, and says so on stderr.
 **wallpiper**: both it and hyprpaper draw on the background layer, so on a monitor where
 wallpiper is running, it covers whatever wallpicker sets.
 
-## Floating window
+## The floating panel
 
-The window is a fixed 1100×760 (not resizable). Hyprland floats fixed-size windows on its own,
-but centering is up to the compositor on Wayland, so a window rule does it. In the Lua config:
-
-```lua
-hl.window_rule({
-  match = { class = "^(dev\\.wallpicker\\.app|wallpicker)$" },
-  float = true,
-  center = true,
-  size = "1100 760",
-})
-```
-
-With a hyprlang config, write the same rule (float, center, size, matched on the class) in your
-Hyprland version's `windowrule` syntax. The class depends on the Tauri version (the identifier or
-the binary name), so the rule matches both. `hyprctl clients` shows the one in use while
-wallpicker is open.
+The picker is a layer-shell overlay (namespace `wallpicker`) on the focused monitor, not a window:
+no window rule is needed. Its size follows the screen (Settings → Appearance → Picker size), with
+a light dim around it; Esc or a click outside closes it. A file dialog (Settings → Backup) is a
+normal window, so the panel steps aside while one is open. `WALLPICKER_WINDOW=1` runs it as a
+normal window instead (the headless checks do).
 
 ## Files
 
 | what | where |
 | --- | --- |
 | settings (folders, download folder, API key, fit mode) | `~/.config/wallpicker/config.json` (mode 600) |
+| the picker's own choices (size, dark mode, theme, sort, layout) | `~/.local/state/wallpicker/ui.json` |
 | current wallpaper per monitor | `~/.local/state/wallpicker/state.json` |
 | the same, as hyprpaper config (for `source =`) | `~/.local/state/wallpicker/hyprpaper.conf` |
 | favorites and tags | `~/.local/share/wallpicker/library.json` |
@@ -437,25 +408,18 @@ each is its own provider with its own saved filters.
 ## Layout
 
 ```
-crates/core/        all logic that doesn't need a desktop: hyprpaper commands, monitor parsing,
-                    settings/state files, folder scanning, thumbnails, favorites/tags, and the
-                    online providers: `online.rs` (shared types), `wallhaven.rs`, `moebooru.rs`.
-                    76 unit tests: `cargo test -p wallpicker-core`
-src-tauri/          the Tauri backend: thin commands over core, HTTP calls to the providers,
-                    --restore
-ui/                 the Leptos frontend (trunk), reusing core's types (no native features)
-ui/src/app.rs           the shell: header tabs, monitor bar, tab panels
-ui/src/ctx.rs           app-wide state (Ctx) and the apply/toast actions
-ui/src/views/           local/ (view, tile, tag filter and dialog), online/ (view, pager, tile,
-                        details dialog, one filters file per provider), settings (the Settings
-                        dialog, one section per topic and provider)
-ui/src/tile_menu.rs     the wallpaper grid and its right-click menu
-ui/src/components/nc/   nocomponents styled layer, installed by `cargo nocli` (yours to edit)
-ui/styles/          nocomponents' globals.css (theme tokens) and animate.css
-noctalia-plugin/    the Noctalia v5 plugin (Luau), a panel over `wallpicker list` / `apply`
+crates/core/        all logic that doesn't need a desktop: hyprpaper/awww/Noctalia commands,
+                    monitor parsing, settings/state files, folder scanning, thumbnails, colors,
+                    duplicates, favorites/tags, backups, and the online providers: `online.rs`
+                    (shared types), `wallhaven.rs`, `moebooru.rs`. `cargo test -p wallpicker-core`
+crates/wallpicker/  the `wallpicker` binary: service/ (what it does, by area), serve/ (the
+                    picker's backend), cli/ (the command line, the daemon, `ui`), the HTTP calls
+                    to the providers, Noctalia's colors, the file dialogs (XDG portal)
+quickshell/         the picker (QML), see "How it fits together"
+noctalia-plugin/    the Noctalia v5 plugin (Luau), a panel over the command line
+packaging/          the launcher entry and the icon
+scripts/            install-local.sh, ui-check.sh, memory.sh, open-timing.sh
 ```
-
-To add another nocomponents component, run `cargo nocli components add <name>` inside `ui/`.
 
 ## Troubleshooting
 
@@ -467,15 +431,13 @@ To add another nocomponents component, run `cargo nocli components add <name>` i
   `hyprctl hyprpaper wallpaper "DP-1,/full/path/to/image.png"` with one of your monitor names.
 - **Thumbnails show "No preview"**: the image couldn't be decoded (PNG, JPEG and WebP are
   supported).
-- **Blank window in a release build only**: the CSP in `src-tauri/tauri.conf.json` applies to
-  release builds but not to `cargo tauri dev` (`devCsp` is null), so a CSP mistake only shows up
-  after `cargo tauri build`. `connect-src` must keep `'self'`: the UI's WebAssembly is fetched
-  from the app itself, and without it nothing starts. To find a blocked request, setting
-  `"csp": null` is a quick way to confirm it's the CSP.
-- **Blank window in `cargo tauri dev`**: open the web inspector (right-click → Inspect) and look
-  at the console.
+- **The picker doesn't open**: `qs` (quickshell) must be installed; `qs log -p
+  ~/.local/share/wallpicker/ui` shows the last run's log. "the interface isn't installed": run
+  `scripts/install-local.sh`.
+- **The picker opens but stays empty**: its backend is `wallpicker serve`; the picker shows a
+  failure if it stopped, and `qs log` has its messages.
 
 ## Credits
 
-The app's font is [Nunito](https://github.com/googlefonts/nunito), under the SIL Open Font License
-(`ui/assets/fonts/OFL.txt`).
+The picker's font is [Nunito](https://github.com/googlefonts/nunito), under the SIL Open Font
+License (`quickshell/fonts/OFL.txt`).
