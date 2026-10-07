@@ -199,6 +199,7 @@ QtObject {
                 adjust: Monitors.adjust,
                 current: Monitors.current,
                 selection: Monitors.selection,
+                spanned: Monitors.spanned,
                 applying: Monitors.applying,
                 drawer: Monitors.drawerOpen,
                 focus: String(hooks.root.Window.activeFocusItem).split("(")[0],

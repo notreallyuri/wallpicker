@@ -126,7 +126,8 @@ Item {
                     y: 8
                     spacing: 4
                     Repeater {
-                        model: Monitors.showing(tile.img.path)
+                        // Spanned: one badge for them all.
+                        model: Monitors.spanned && Monitors.spanState.path === tile.img.path ? ["Spanned"] : Monitors.showing(tile.img.path)
                         Badge {
                             required property string modelData
                             text: modelData

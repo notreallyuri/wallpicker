@@ -57,13 +57,13 @@ tile spans that picture. The span has its own Adjust, as framing one monitor: zo
 **Separate** goes back to a card per monitor, each keeping its part; Alt+1..N separates too.
 Anything else put on a monitor ends the span. Each step checked headless and committed:
 
-1. [ ] **Core and backend**: the span remembered in the state (the picture, its zoom, center
+1. [x] **Core and backend**: the span remembered in the state (the picture, its zoom, center
    and mirroring) and dropped when a monitor shows something else; `span.rs` cuts with the
    zoom and center (a frame over the whole layout) and mirroring; spanning the same picture
    again re-cuts it without touching the history; `wallpicker span <image> [--frame ZOOM,X,Y]
    [--flip h|v|both]`, `wallpicker span --separate`; `serve`'s `wallpapers.span` (with the
    look) and `wallpapers.unspan`.
-2. [ ] **Drawer, pills, tiles**: the Spanned card (the monitors on a desk, Adjust, Separate,
+2. [x] **Drawer, pills, tiles**: the Spanned card (the monitors on a desk, Adjust, Separate,
    Previous), the Spanned pill, the tile's badge; a tile click spans while spanned; Alt+N
    separates.
 3. [ ] **The span's Adjust dialog**: the layout as it is (positions, sizes, the bezel gap),

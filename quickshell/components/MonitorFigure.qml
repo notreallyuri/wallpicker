@@ -101,17 +101,26 @@ Item {
             color: "#27272a"
 
             // Spanned: the whole picture, scaled so the cut fills the screen
-            // and moved so it's there.
-            Image {
-                readonly property real k: figure.cut ? figure.screenWidth / Math.max(1, figure.cut.width) : 1
+            // and moved so it's there; mirrored like the span.
+            Item {
                 visible: custom.children.length === 0 && figure.cut !== null && figure.natural !== null
-                x: figure.cut ? -figure.cut.x * k : 0
-                y: figure.cut ? -figure.cut.y * k : 0
-                width: figure.natural ? figure.natural[0] * k : 0
-                height: figure.natural ? figure.natural[1] * k : 0
-                source: visible && figure.thumb ? "file://" + figure.thumb : ""
-                fillMode: Image.Stretch
-                asynchronous: true
+                anchors.fill: parent
+                transform: Scale {
+                    origin.x: figure.screenWidth / 2
+                    origin.y: figure.screenHeight / 2
+                    xScale: figure.flip.h ? -1 : 1
+                    yScale: figure.flip.v ? -1 : 1
+                }
+                Image {
+                    readonly property real k: figure.cut ? figure.screenWidth / Math.max(1, figure.cut.width) : 1
+                    x: figure.cut ? -figure.cut.x * k : 0
+                    y: figure.cut ? -figure.cut.y * k : 0
+                    width: figure.natural ? figure.natural[0] * k : 0
+                    height: figure.natural ? figure.natural[1] * k : 0
+                    source: parent.visible && figure.thumb ? "file://" + figure.thumb : ""
+                    fillMode: Image.Stretch
+                    asynchronous: true
+                }
             }
             Image {
                 visible: custom.children.length === 0 && !(figure.cut !== null && figure.natural !== null)

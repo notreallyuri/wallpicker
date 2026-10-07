@@ -12,6 +12,8 @@ Singleton {
     property bool duplicates: false
     /// The monitor being adjusted ("" none).
     property string adjusting: ""
+    /// The span is being adjusted (zoom, position, mirroring).
+    property bool spanAdjusting: false
     /// The Online provider's filters.
     property bool onlineFilters: false
     /// The Settings section shown ("" closed).
@@ -49,6 +51,9 @@ Singleton {
     }
     function adjust(monitor) {
         adjusting = monitor;
+    }
+    function adjustSpan() {
+        spanAdjusting = true;
     }
     function openSettings(section) {
         settings = section || "general";

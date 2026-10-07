@@ -1,6 +1,7 @@
 // The monitors, what each shows (and how it's adjusted), and where a click
 // applies: one monitor or all of them (the app's rule: single choice;
-// picking the chosen one again keeps it). Whether the drawer of monitors
+// picking the chosen one again keeps it). Spanned, they act as one: a
+// click spans the picture; picking a monitor separates them first. Whether the drawer of monitors
 // under the top bar is open. A wallpaper changed by something else while the
 // picker is open (the slideshow, a workspace, the plugin) gets a toast.
 pragma Singleton
@@ -24,8 +25,12 @@ Singleton {
     property string selection: ""
     /// Paths being applied (a spinner on their tile).
     property var applying: ({})
+    /// The span ({path, look: {zoom, x, y, flip}}) while there's one.
+    property var spanState: null
+    /// Every monitor shows its part of one picture: they act as one.
+    readonly property bool spanned: spanState !== null && list.length > 1 && list.every(m => current[m.name] === spanState.path)
 
-    readonly property var targets: selection === all ? list.map(m => m.name) : (selection ? [selection] : [])
+    readonly property var targets: spanned || selection === all ? list.map(m => m.name) : (selection ? [selection] : [])
 
     /// monitor -> when the picker last changed it itself (ms): changes then
     /// aren't announced.
@@ -51,12 +56,23 @@ Singleton {
     }
 
     function select(name) {
+        if (spanned)
+            separate();
         selection = name;
     }
 
-    /// On the chosen monitor(s).
+    /// On the chosen monitor(s); spanned, across them.
     function apply(path) {
-        applyTo(path, targets);
+        if (spanned)
+            span(path);
+        else
+            applyTo(path, targets);
+    }
+
+    /// The monitors on their own again, each keeping its part.
+    function separate() {
+        spanState = null;
+        Backend.request("wallpapers.separate", {}, s => monitors.takeState(s), e => Toasts.error("Could not separate them", e));
     }
 
     /// On `names` (the tile menu's Apply to...).
@@ -207,6 +223,7 @@ Singleton {
         announce(current, next);
         current = next;
         adjust = s && s.adjust ? s.adjust : {};
+        spanState = s && s.span ? s.span : null;
     }
 
     /// Toast the monitors whose wallpaper changed by something else.

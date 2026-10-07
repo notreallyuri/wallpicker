@@ -1,6 +1,7 @@
 // Under the top bar, opened by its chevron: each monitor bigger, with what
-// it shows (MonitorCard), and All. A card picks where a click applies, like
-// the pills. It slides open and pushes the tab below down.
+// it shows (MonitorCard), and All; spanned, one card for them all
+// (SpanCard). A card picks where a click applies, like the pills. It slides
+// open and pushes the tab below down.
 import QtQuick
 import qs.services
 
@@ -31,20 +32,24 @@ Item {
         }
         Flow {
             id: cards
-            readonly property real rowWidth: Math.min(drawer.width - 40, (Monitors.list.length + (Monitors.list.length > 1 ? 1 : 0)) * (288 + spacing) - spacing)
+            readonly property real rowWidth: Monitors.spanned ? spanCard.implicitWidth : Math.min(drawer.width - 40, (Monitors.list.length + (Monitors.list.length > 1 ? 1 : 0)) * (288 + spacing) - spacing)
             x: (drawer.width - width) / 2
             y: 16
             width: Math.max(288, rowWidth)
             spacing: 16
+            SpanCard {
+                id: spanCard
+                visible: Monitors.spanned
+            }
             Repeater {
-                model: Monitors.list
+                model: Monitors.spanned ? [] : Monitors.list
                 MonitorCard {
                     required property var modelData
                     monitor: modelData
                 }
             }
             AllCard {
-                visible: Monitors.list.length > 1
+                visible: Monitors.list.length > 1 && !Monitors.spanned
             }
         }
     }
