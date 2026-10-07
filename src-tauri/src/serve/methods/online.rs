@@ -29,12 +29,20 @@ pub(super) async fn call(state: &AppState, out: &Out, name: &str, params: &Value
             Ok(query) => json(online::search(state, query).await),
             Err(e) => Err(e),
         },
+        // A source that can't be opened (not a web link) comes back "".
         "details" => match wallpaper() {
-            Ok(w) => json(online::details(state, &w).await),
+            Ok(w) => json(online::details(state, &w).await.map(|mut d| {
+                if !wallhaven::is_openable_url(&d.source) {
+                    d.source.clear();
+                }
+                d
+            })),
             Err(e) => Err(e),
         },
-        // A local file, or null when it can't be had.
+        // The sharp image for the details, a local file; null when it can't
+        // be had, or when the quick `preview` already is the sharp one.
         "preview" => match wallpaper() {
+            Ok(w) if w.details_image() == w.preview => Ok(Value::Null),
             Ok(w) => json(Ok(online::preview(state, &w).await)),
             Err(e) => Err(e),
         },

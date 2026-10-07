@@ -11,6 +11,8 @@ Rectangle {
     property string text
     property string count
     property bool on: false
+    /// A tooltip (a tag's category).
+    property string tip
     signal clicked
 
     implicitWidth: row.implicitWidth + 24
@@ -51,5 +53,10 @@ Rectangle {
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
         onClicked: chip.clicked()
+    }
+    Tip {
+        text: chip.tip
+        over: mouse.containsMouse
+        pressed: mouse.pressed
     }
 }

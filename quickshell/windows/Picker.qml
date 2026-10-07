@@ -15,7 +15,6 @@ import qs.views.online
 Item {
     id: picker
 
-    property int tab: 0
     /// The content (for the test hooks' coordinates).
     readonly property alias content: content
 
@@ -72,8 +71,8 @@ Item {
                 // stuck out past the corners).
                 topLeftRadius: panel.radius
                 topRightRadius: panel.radius
-                tab: picker.tab
-                onTabPicked: index => picker.tab = index
+                tab: Views.current
+                onTabPicked: index => Views.current = index
             }
             MonitorDrawer {
                 Layout.fillWidth: true
@@ -82,7 +81,7 @@ Item {
             Loader {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                sourceComponent: [localTab, onlineTab, null][picker.tab]
+                sourceComponent: [localTab, onlineTab, null][Views.current]
             }
         }
     }
@@ -108,6 +107,7 @@ Item {
     DuplicatesDialog {}
     AdjustDialog {}
     FiltersDialog {}
+    DetailsDialog {}
 
     ToastStack {
         anchors.right: panel.right
