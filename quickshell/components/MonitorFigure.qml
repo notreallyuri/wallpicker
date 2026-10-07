@@ -37,10 +37,12 @@ Item {
     readonly property real screenWidth: Math.round(screenHeight * (monitorWidth > 0 && monitorHeight > 0 ? monitorWidth / monitorHeight : 16 / 9))
     readonly property var flip: Monitors.adjustOf(monitor).flip
 
-    readonly property var image: Library.images.find(i => i.path === path)
     // The library's thumbnail, else one made on demand.
     property string thumb: ""
     function loadThumb() {
+        // Looked up from `path` here: a binding on it can still hold the
+        // last wallpaper inside onPathChanged (the screen stayed one behind).
+        const image = Library.images.find(i => i.path === path);
         thumb = image && image.thumb ? image.thumb : "";
         if (path !== "" && thumb === "") {
             const wanted = path;
@@ -52,6 +54,13 @@ Item {
     }
     onPathChanged: loadThumb()
     Component.onCompleted: loadThumb()
+    // A rescan can bring the thumbnail (or a new file).
+    Connections {
+        target: Library
+        function onImagesChanged() {
+            figure.loadThumb();
+        }
+    }
 
     implicitWidth: Math.max(bezel.width, dims[8])
     implicitHeight: bezel.height + dims[5] + dims[7]
