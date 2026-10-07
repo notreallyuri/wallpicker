@@ -18,6 +18,8 @@ Item {
     property bool spread: false
     property alias hovered: mouse.containsMouse
     default property alias extra: row.data
+    /// Things before the label (the color picker's dots).
+    property alias leading: lead.data
     signal clicked
 
     readonly property bool primary: variant === "primary" || active
@@ -69,6 +71,11 @@ Item {
                 visible: btn.icon !== ""
                 name: btn.icon
                 color: btn.ink
+            }
+            Row {
+                id: lead
+                visible: children.length > 0
+                spacing: 6
             }
             Text {
                 visible: btn.text !== ""

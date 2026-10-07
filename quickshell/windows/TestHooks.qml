@@ -3,6 +3,7 @@
 //   qs -p quickshell ipc call wallpicker-test click 1848 166
 //   qs -p quickshell ipc call wallpicker-test probe 600 400
 import QtQuick
+import QtQuick.Window
 import Quickshell.Io
 
 QtObject {
@@ -18,9 +19,16 @@ QtObject {
     function hit(x, y) {
         function search(item, chain) {
             chain = chain.concat([String(item).split("(")[0]]);
-            const kids = item.children;
-            for (let i = kids.length - 1; i >= 0; i--) {
-                const c = kids[i];
+            // Topmost first: higher z, then later in the file.
+            const kids = [];
+            for (let i = 0; i < item.children.length; i++)
+                kids.push({
+                    item: item.children[i],
+                    order: i
+                });
+            kids.sort((a, b) => (b.item.z - a.item.z) || (b.order - a.order));
+            for (const k of kids) {
+                const c = k.item;
                 if (!c.visible || !c.enabled)
                     continue;
                 const p = root.mapToItem(c, x, y);
@@ -41,7 +49,9 @@ QtObject {
                 chain: chain
             };
         }
-        return search(root, []);
+        // The whole window: popovers, menus and dialogs live in its
+        // overlay, outside the content.
+        return search(root.Window.contentItem || root, []);
     }
 
     // Only what's here crosses IPC (plain types).

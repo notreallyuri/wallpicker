@@ -34,24 +34,8 @@ RowLayout {
         value: row.local.sort
         onPicked: value => row.local.sort = value
     }
-    Btn {
-        minWidth: 112
-        text: "Color"
-        Row {
-            spacing: -5
-            Repeater {
-                model: ["#ef4444", "#eab308", "#3b82f6"]
-                Rectangle {
-                    required property string modelData
-                    width: 12
-                    height: 12
-                    radius: 6
-                    color: modelData
-                    border.width: 2
-                    border.color: Theme.card
-                }
-            }
-        }
+    ColorPicker {
+        local: row.local
     }
     // Everything at once, or folder by folder (remembered).
     Btn {
