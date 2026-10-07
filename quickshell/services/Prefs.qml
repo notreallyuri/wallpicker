@@ -24,7 +24,8 @@ Singleton {
     property alias glass: data.glass
     property alias backdrop: data.backdrop
     property alias motion: data.motion
-    /// The floating panel's size, "WIDTHxHEIGHT" (Settings → Appearance).
+    /// The floating panel's size (Settings → Appearance): "large",
+    /// "comfortable", "compact" (an even margin round it) or "720p".
     property alias panelSize: data.panelSize
 
     FileView {
@@ -60,7 +61,7 @@ Singleton {
             property bool glass: true
             property bool backdrop: true
             property bool motion: true
-            property string panelSize: "1366x768"
+            property string panelSize: "comfortable"
         }
     }
 }

@@ -48,10 +48,27 @@ PanelWindow {
     Picker {
         id: picker
         anchors.centerIn: parent
-        // The chosen size (Settings → Appearance), kept inside the screen.
-        readonly property var size: (Prefs.panelSize || "1366x768").split("x").map(Number)
-        width: Math.min(size[0] || 1366, overlay.width - 48)
-        height: Math.min(size[1] || 768, overlay.height - 48)
+        // The chosen size (Settings → Appearance): an even margin all round
+        // (a share of the screen's height, so the panel suits any screen),
+        // or 1280x720. At least 1280x720, at most 2200 wide (an ultrawide
+        // screen would make it a strip), never closer than 24 px to an edge.
+        readonly property var size: {
+            const sw = overlay.width, sh = overlay.height;
+            const share = ({
+                    large: 0.05,
+                    comfortable: 0.10,
+                    compact: 0.15
+                })[Prefs.panelSize];
+            let w = 1280, h = 720;
+            if (Prefs.panelSize !== "720p") {
+                const m = Math.round(sh * (share === undefined ? 0.10 : share));
+                w = Math.max(1280, Math.min(2200, sw - 2 * m));
+                h = Math.max(720, sh - 2 * m);
+            }
+            return [Math.min(w, sw - 48), Math.min(h, sh - 48)];
+        }
+        width: size[0]
+        height: size[1]
         opacity: 0
         scale: 0.97
     }
