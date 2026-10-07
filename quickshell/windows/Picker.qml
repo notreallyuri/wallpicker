@@ -11,6 +11,7 @@ import qs.dialogs
 import qs.services
 import qs.views.local
 import qs.views.online
+import qs.views.collections
 
 Item {
     id: picker
@@ -81,7 +82,7 @@ Item {
             Loader {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                sourceComponent: [localTab, onlineTab, null][Views.current]
+                sourceComponent: [localTab, onlineTab, collectionsTab][Views.current]
             }
         }
     }
@@ -97,6 +98,12 @@ Item {
     Component {
         id: onlineTab
         OnlineView {
+            backdrop: scenery
+        }
+    }
+    Component {
+        id: collectionsTab
+        CollectionsView {
             backdrop: scenery
         }
     }

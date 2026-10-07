@@ -1,7 +1,8 @@
 #!/bin/bash
 # Runs the Quickshell interface headless (cage; as a window: cage has no
 # layer-shell for the floating panel) with a throwaway profile made
-# from yours (no API key, a download folder of its own, a stand-in hyprctl
+# from yours (no API key unless CHECK_API_KEY=1: the Collections tab needs
+# it; a download folder of its own, a stand-in hyprctl
 # with two 1920x1080 monitors),
 # then the given test-hook calls, a screenshot, and the log's warnings.
 # Fails if QML reported errors or warnings. CHECK_FOLDERS=a:b uses those
@@ -36,7 +37,8 @@ python3 - "$tmp" <<'PY'
 import json, os, sys
 tmp = sys.argv[1]
 s = json.load(open(os.path.expanduser('~/.config/wallpicker/config.json')))
-s['wallhaven_api_key'] = None
+if os.environ.get('CHECK_API_KEY') != '1':
+    s['wallhaven_api_key'] = None
 s['wallpaper_backend'] = 'hyprpaper'
 # Downloads in a check land in the throwaway profile, not your folder.
 s['download_dir'] = f'{tmp}/downloads'

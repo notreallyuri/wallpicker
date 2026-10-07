@@ -120,7 +120,7 @@ and feels like the app (real transitions and easing, glass, shadows); the scroll
   empty and loading states, Random.
 - [x] **2. Top bar and monitors** (done 2026-10-07; tooltips left over, below): the monitor
   drawer, All, Previous, the Adjust dialog (mirror, fit, framing by drag, scroll and sliders).
-- [ ] **3. Online and Collections**: providers, search, the filters dialog, details (preview,
+- [x] **3. Online and Collections** (done 2026-10-07): providers, search, the filters dialog, details (preview,
   tags, download, apply), downloads, Wallhaven collections, pages and Jump to.
   The plan (2026-10-07), in this order, each step checked headless and committed:
   1. **Backend**: `src-tauri/src/commands/online.rs`'s ten commands into `service/online.rs`
@@ -149,6 +149,9 @@ and feels like the app (real transitions and easing, glass, shadows); the scroll
   `src-tauri`); README, install script, scripts/memory and scripts/open-timing redone for QML.
 
 ### Left over from the phases
+
+- [ ] **Settings changes** (with phase 4): reload Downloads (the download folder may move) and
+  Collections (the key or username may change) after Settings saves, as the app does.
 
 - [x] **Tooltips** (done 2026-10-07): `Tip` (components/Tip.qml; Btn's `tip`), the app's tips
   on the monitor pills, All, the drawer's chevron and cards, Previous, Settings, ⋯, Random,
