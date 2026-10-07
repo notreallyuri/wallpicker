@@ -10,6 +10,7 @@
 //! by area; they call `service/`, like the Tauri window's commands do.
 
 mod methods;
+mod watch;
 
 use std::io::{BufRead, Write};
 use std::sync::{Arc, Mutex};
@@ -38,9 +39,11 @@ impl Out {
 }
 
 pub fn run() -> i32 {
-    let state = Arc::new(AppState::new(Store::new(Dirs::from_env())));
+    let dirs = Dirs::from_env();
+    let state = Arc::new(AppState::new(Store::new(dirs.clone())));
     let out = Out(Arc::new(Mutex::new(std::io::stdout())));
     out.event("ready", json!({ "version": env!("CARGO_PKG_VERSION") }));
+    watch::start(&dirs, out.clone());
     for line in std::io::stdin().lock().lines() {
         let Ok(line) = line else { break };
         if line.trim().is_empty() {

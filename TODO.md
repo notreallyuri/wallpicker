@@ -183,14 +183,15 @@ and feels like the app (real transitions and easing, glass, shadows); the scroll
   2. **Toasts for the background**: a monitor's wallpaper changed while the picker is open and
      it didn't do it: say so (which monitor, which file).
   3. **`wallpicker daemon`**: what must keep running without the window: the workspace
-     listener (it already guards against a second copy), and the tray if it stays. One
-     autostart line, replacing `wallpicker --tray` at the switch (phase 6).
-  4. **Noctalia's colors with awww or hyprpaper**: Noctalia only follows the wallpaper it draws
+     listener (it already guards against a second copy) and the slideshow's timer (decided
+     2026-10-07: the daemon does it, guarded so only one timer acts with the plugin's ticks).
+     One autostart line, replacing `wallpicker --tray` at the switch (phase 6).
+  4. **Noctalia's colors with awww or hyprpaper** (with the user at the desk: it means trying
+     palettes on the live Noctalia): Noctalia only follows the wallpaper it draws
      itself. A custom palette (`noctalia msg color-scheme-set custom <name>`, a folder in
      ~/.config/noctalia/colorschemes) made from the wallpaper shown, updated by the daemon as
      it changes.
-  5. **Tray** (if kept): a D-Bus tray item (ksni, no GTK) in the daemon: open the picker,
-     Random, Previous, quit.
+  No tray (decided 2026-10-07): the picker opens in ~0.5 s from a keybind or the plugin.
 - [ ] **6. Switch over**: `wallpicker` opens the Quickshell UI; the Noctalia plugin's handoffs
   (`--open`) go through it; remove the Tauri app, WebKit and Leptos (`ui/`, `src-tauri/`: the
   window's arguments go to Quickshell instead of `wallpicker-app`); README, install script, scripts/memory and scripts/open-timing redone for QML.
@@ -207,8 +208,7 @@ and feels like the app (real transitions and easing, glass, shadows); the scroll
 
 ### To decide on the way
 
-- Tray: keep it (ksni in the daemon) or drop it (Quickshell starts fast; a keybind and the
-  Noctalia plugin open it).
+- ~~Tray~~: dropped (2026-10-07).
 - File dialogs (backup export/import, snapshot folder): the XDG desktop portal's FileChooser,
   from Rust (`rfd` over the portal) or from QML.
 - Window kind: a normal window (FloatingWindow, as now) or a layer-shell overlay like a launcher.

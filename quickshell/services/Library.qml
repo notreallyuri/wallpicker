@@ -157,6 +157,8 @@ Singleton {
         function onEvent(name) {
             if (name === "library-changed" || name === "settings-changed")
                 library.reload();
+            else if (name === "catalog-changed")
+                Backend.request("library.catalog", {}, c => library.entries = c && c.items ? c.items : {});
         }
     }
 }
