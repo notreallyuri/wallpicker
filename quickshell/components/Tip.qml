@@ -1,10 +1,10 @@
 // A tooltip (the app's Tip, nocomponents' tooltip): a dark rounded bubble
 // with a short explanation, under (or over) what it's on, after a moment's
-// hover; never the system kind. Put it inside the item it explains:
-//   Tip { text: "Settings" }
-// It fills that item and only watches the pointer (clicks go through).
-// Pressing closes it; empty text shows nothing. Btn has it as `tip`.
-// The bubble takes no input: a click under it goes through.
+// hover; never the system kind. Only drawn: it takes no input at all (a
+// tip over a button kept the button from being hovered and clicked), so
+// what it's on says when the pointer is over it and when it's pressed:
+//   Tip { text: "Settings"; over: mouse.containsMouse; pressed: mouse.pressed }
+// Empty text shows nothing. Btn has it as `tip`; MonitorPill too.
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Window
@@ -16,22 +16,17 @@ Item {
     property string text
     /// "bottom" or "top".
     property string side: "bottom"
-    /// Whether the pointer is over it. Its own hover, unless what it's on
-    /// knows better: one covered by a MouseArea (a tile's) doesn't see it.
-    property bool over: hover.hovered
+    /// The pointer is over what it's on.
+    property bool over: false
+    /// What it's on is pressed (a click, a drag): it closes.
+    property bool pressed: false
 
+    // Its size, to place the bubble by; nothing to take input.
     anchors.fill: parent
 
-    HoverHandler {
-        id: hover
-    }
-    // Pressing what it's on (a click, a drag) closes it.
-    TapHandler {
-        gesturePolicy: TapHandler.DragThreshold
-        onPressedChanged: if (pressed) {
-            showing.stop();
-            bubble.close();
-        }
+    onPressedChanged: if (pressed) {
+        showing.stop();
+        bubble.close();
     }
     Timer {
         id: showing

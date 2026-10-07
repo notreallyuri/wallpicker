@@ -73,5 +73,7 @@ Rectangle {
     }
     Tip {
         text: pill.tip
+        over: mouse.containsMouse
+        pressed: mouse.pressed
     }
 }

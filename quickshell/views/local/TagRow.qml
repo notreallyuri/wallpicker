@@ -56,11 +56,14 @@ RowLayout {
         }
     }
     Switch2 {
+        id: matchSwitch
         visible: row.local.tagFilter.length > 1
         Layout.alignment: Qt.AlignTop
         onRight: !row.local.tagsMatchAll
         onToggled: row.local.tagsMatchAll = !row.local.tagsMatchAll
         Tip {
+            over: matchSwitch.hovered
+            pressed: matchSwitch.pressed
             text: row.local.tagsMatchAll ? "Wallpapers with every selected tag" : "Wallpapers with any selected tag"
         }
     }

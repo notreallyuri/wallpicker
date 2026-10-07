@@ -175,6 +175,7 @@ Item {
                             sourceComponent: Tip {
                                 // The tile's MouseArea covers it: it says.
                                 over: tile.overSize
+                                pressed: mouse.pressed
                                 text: "Smaller than " + tile.tooSmallFor.join(", ") + " (it would be scaled up)"
                             }
                         }

@@ -11,6 +11,9 @@ Rectangle {
     /// Whether the second word is chosen.
     property bool onRight: false
     signal toggled
+    /// For a tip on it.
+    readonly property alias hovered: mouse.containsMouse
+    readonly property alias pressed: mouse.pressed
 
     readonly property real half: Math.max(leftLabel.implicitWidth, rightLabel.implicitWidth) + 24
 
@@ -68,7 +71,9 @@ Rectangle {
         }
     }
     MouseArea {
+        id: mouse
         anchors.fill: parent
+        hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
         onClicked: sw.toggled()
     }

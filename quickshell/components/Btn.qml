@@ -101,5 +101,7 @@ Item {
     }
     Tip {
         text: btn.tip
+        over: mouse.containsMouse
+        pressed: mouse.pressed
     }
 }
