@@ -3,7 +3,6 @@
 // choice, kept between right-clicks); the favorite, tags, show in folder,
 // copy the path; move to the trash.
 import QtQuick
-import Quickshell
 import qs.components
 import qs.services
 
@@ -89,10 +88,7 @@ Menu {
     MenuItem {
         icon: "copy"
         text: "Copy path"
-        onTriggered: {
-            Quickshell.clipboardText = menu.path;
-            Toasts.info("Path copied");
-        }
+        onTriggered: Clipboard.copy(menu.path, "Path copied")
     }
     MenuSeparator {}
     MenuItem {
