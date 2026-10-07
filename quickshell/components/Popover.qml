@@ -11,8 +11,19 @@ Popup {
 
     padding: 6
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+    // Takes the keyboard while open (Esc reaches it); Esc closes the top
+    // one (services/Dialogs.closeTop).
+    focus: true
+    onOpened: Dialogs.opened(this)
+    onClosed: Dialogs.closed(this)
 
     background: Item {
+        // Esc closes it (a shortcut outside the popup is held back while
+        // it's open, and Popup's own Esc doesn't fire here).
+        Shortcut {
+            sequence: "Escape"
+            onActivated: popover.close()
+        }
         RectangularShadow {
             anchors.fill: panel
             radius: panel.radius

@@ -8,8 +8,10 @@
 #   cargo build
 #   scripts/ui-check.sh [OUT.png] ["click 1845 136" "wheel 900 600 3" ...]
 #
-# Test hooks (windows/TestHooks.qml): click X Y, wheel X Y NOTCHES,
-# scrollY X Y, probe X Y. Coordinates are in the window's content.
+# Test hooks (windows/TestHooks.qml): click X Y, rightclick X Y, wheel X Y
+# NOTCHES, scrollY X Y, probe X Y, contents X Y. Coordinates are in the
+# window's content. A call starting with ! is a command run in the session,
+# e.g. "!wtype -M ctrl -k f -m ctrl" for keys.
 set -e
 here=$(cd "$(dirname "$0")/.." && pwd)
 out=${1:-ui-check.png}
@@ -40,7 +42,12 @@ chmod +x "$tmp/bin/hyprctl"
     echo "WALLPICKER_TEST=1 WALLPICKER_WINDOW=1 WALLPICKER_BIN='$here/target/debug/wallpicker' qs -p '$here/quickshell' > '$tmp/ui.log' 2>&1 &"
     echo 'sleep 6'
     for call in "$@"; do
-        echo "echo \"$call -> \$(qs -p '$here/quickshell' ipc call wallpicker-test $call 2>&1)\" >> '$tmp/calls.txt'"
+        if [ "${call#!}" != "$call" ]; then
+            # A command run in the session (wtype for keys).
+            echo "( ${call#!} ) >> '$tmp/calls.txt' 2>&1; echo \"$call\" >> '$tmp/calls.txt'"
+        else
+            echo "echo \"$call -> \$(qs -p '$here/quickshell' ipc call wallpicker-test $call 2>&1)\" >> '$tmp/calls.txt'"
+        fi
         echo 'sleep 0.6'
     done
     echo "grim '$tmp/shot.png'"

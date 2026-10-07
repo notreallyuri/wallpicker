@@ -22,6 +22,11 @@ Popup {
     modal: true
     padding: 24
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+    // Takes the keyboard while open (Esc reaches it); Esc closes the top
+    // one (services/Dialogs.closeTop).
+    focus: true
+    onOpened: Dialogs.opened(this)
+    onClosed: Dialogs.closed(this)
 
     Overlay.modal: Rectangle {
         color: Qt.rgba(0, 0, 0, 0.45)
@@ -33,6 +38,11 @@ Popup {
     }
 
     background: Item {
+        // Esc closes it (as in Popover).
+        Shortcut {
+            sequence: "Escape"
+            onActivated: dialog.close()
+        }
         RectangularShadow {
             anchors.fill: panel
             radius: panel.radius

@@ -71,7 +71,7 @@ GridView {
             y: 4
             width: parent.width - 16
             height: item ? item.implicitHeight : 0
-            sourceComponent: cell.modelData.kind === "folder" ? folderCard : tile
+            sourceComponent: cell.modelData.kind === "folder" ? folderCard : cell.modelData.kind === "skeleton" ? skeleton : tile
         }
         Component {
             id: tile
@@ -79,7 +79,17 @@ GridView {
                 id: tileItem
                 img: cell.modelData.img
                 onMenuRequested: (x, y) => grid.tileMenu(img, tileItem, x, y)
+                onHoverChanged: on => {
+                    if (on)
+                        grid.local.hovered = img.path;
+                    else if (grid.local.hovered === img.path)
+                        grid.local.hovered = "";
+                }
             }
+        }
+        Component {
+            id: skeleton
+            SkeletonTile {}
         }
         Component {
             id: folderCard

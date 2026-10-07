@@ -28,6 +28,8 @@ QtObject {
     /// Where the Folders layout is (see Folders.js).
     property var place: Folders.top(Library.roots.length)
     property int page: 1
+    /// The tile under the pointer (Delete asks to trash it).
+    property string hovered: ""
     /// Random order: a number per path, drawn again each time it's picked.
     property var shuffle: ({})
 
@@ -77,13 +79,20 @@ QtObject {
     readonly property int currentPage: Math.min(Math.max(1, page), lastPage)
     /// This page: folders (first page only) as {kind: "folder", ...}, then
     /// images as {kind: "image", img}.
-    readonly property var pageItems: (currentPage === 1 ? subfolders.map(f => ({
+    readonly property var pageItems: Library.loading ? skeletons : (currentPage === 1 ? subfolders.map(f => ({
                     kind: "folder",
                     folder: f
                 })) : []).concat(shown.slice((currentPage - 1) * pageSize, currentPage * pageSize).map(i => ({
                 kind: "image",
                 img: i
             })))
+
+    // While scanning: placeholder tiles.
+    readonly property var skeletons: Array.from({
+        length: 16
+    }, () => ({
+                kind: "skeleton"
+            }))
 
     onQueryChanged: page = 1
     onFavoritesOnlyChanged: page = 1

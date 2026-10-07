@@ -15,6 +15,10 @@ Item {
 
     implicitHeight: rows.implicitHeight + 18
 
+    function focusSearch() {
+        searchRow.focusSearch();
+    }
+
     RectangularShadow {
         anchors.fill: parent
         radius: 22
@@ -43,6 +47,7 @@ Item {
         width: parent.width - 32
         spacing: 8
         SearchRow {
+            id: searchRow
             Layout.fillWidth: true
             local: card.local
         }

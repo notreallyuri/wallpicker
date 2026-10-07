@@ -33,12 +33,77 @@ Item {
         behind: grid
     }
 
+    // Nothing in the folders at all.
+    Column {
+        visible: !Library.loading && Library.images.length === 0
+        anchors.centerIn: parent
+        width: Math.min(520, parent.width - 48)
+        spacing: 8
+        Text {
+            width: parent.width
+            horizontalAlignment: Text.AlignHCenter
+            text: "No images found"
+            color: Theme.foreground
+            font.family: Theme.font
+            font.pixelSize: 18
+            font.weight: Font.ExtraBold
+        }
+        Text {
+            width: parent.width
+            horizontalAlignment: Text.AlignHCenter
+            wrapMode: Text.Wrap
+            text: "Looking in: " + Library.roots.map(r => r.path).join(", ") + ". Add folders in Settings, or download something from the Wallhaven tab."
+            color: Theme.mutedForeground
+            font.family: Theme.font
+            font.pixelSize: 14
+        }
+    }
+    // Some, but none pass the filters.
     Text {
-        visible: !Library.loading && localModel.shown.length === 0
+        visible: !Library.loading && Library.images.length > 0 && localModel.pageItems.length === 0
         anchors.centerIn: parent
         text: "No wallpapers match."
         color: Theme.mutedForeground
         font.family: Theme.font
         font.pixelSize: 14
+    }
+
+    // Keyboard (as shortcuts.rs), while no menu or dialog is open.
+    Shortcut {
+        enabled: Dialogs.calm
+        sequence: "Ctrl+F"
+        onActivated: card.focusSearch()
+    }
+    Shortcut {
+        enabled: Dialogs.calm
+        sequence: "Ctrl+R"
+        onActivated: localModel.applyRandom()
+    }
+    Shortcut {
+        enabled: Dialogs.calm && localModel.folders && localModel.canGoUp
+        sequence: "Alt+Up"
+        onActivated: localModel.up()
+    }
+    Shortcut {
+        enabled: Dialogs.calm && localModel.currentPage > 1
+        sequence: "Alt+Left"
+        onActivated: {
+            localModel.page = localModel.currentPage - 1;
+            grid.toTop();
+        }
+    }
+    Shortcut {
+        enabled: Dialogs.calm && localModel.currentPage < localModel.lastPage
+        sequence: "Alt+Right"
+        onActivated: {
+            localModel.page = localModel.currentPage + 1;
+            grid.toTop();
+        }
+    }
+    // Delete: the tile under the pointer, to the trash (asking first).
+    Shortcut {
+        enabled: Dialogs.calm && localModel.hovered !== ""
+        sequence: "Delete"
+        onActivated: Dialogs.confirmTrash(localModel.hovered)
     }
 }

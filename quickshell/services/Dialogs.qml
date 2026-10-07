@@ -10,6 +10,25 @@ Singleton {
     /// The wallpaper asked to be moved to the trash ("" none).
     property string trashFor: ""
     property bool duplicates: false
+    /// Popovers, menus and dialogs open now, the last on top: Esc closes
+    /// the top one (not the picker), and the shortcuts wait while any is.
+    property var open: []
+    readonly property int popups: open.length
+    readonly property bool calm: popups === 0
+
+    function opened(popup) {
+        open = open.filter(p => p !== popup).concat([popup]);
+    }
+    function closed(popup) {
+        open = open.filter(p => p !== popup);
+    }
+    /// Close the top popup; false if there was none.
+    function closeTop() {
+        if (open.length === 0)
+            return false;
+        open[open.length - 1].close();
+        return true;
+    }
 
     function editTags(path) {
         tagsFor = path;

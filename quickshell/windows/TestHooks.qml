@@ -5,6 +5,7 @@
 import QtQuick
 import QtQuick.Window
 import Quickshell.Io
+import qs.services
 
 QtObject {
     id: hooks
@@ -117,6 +118,17 @@ QtObject {
                 out.push(String(c).split("(")[0] + "[" + Math.round(c.x) + "," + Math.round(c.y) + " " + Math.round(c.width) + "x" + Math.round(c.height) + "] kids " + c.children.length);
             }
             return kids.length + ": " + out.join(", ");
+        }
+
+        /// The interface's state that checks look at.
+        function state(): string {
+            return JSON.stringify({
+                popups: Dialogs.popups,
+                trashFor: Dialogs.trashFor,
+                tagsFor: Dialogs.tagsFor,
+                focus: String(hooks.root.Window.activeFocusItem).split("(")[0],
+                active: hooks.root.Window.active
+            });
         }
 
         /// What's at (x, y).

@@ -23,6 +23,8 @@ Item {
     }
 
     readonly property bool hovered: mouse.containsMouse || star.hovered
+    signal hoverChanged(bool on)
+    onHoveredChanged: hoverChanged(hovered)
     readonly property bool favorite: Library.favorite(img.path)
     readonly property var tags: Library.tags(img.path)
     readonly property bool busy: !!Monitors.applying[img.path]

@@ -10,11 +10,16 @@ RowLayout {
 
     required property LocalModel local
 
+    function focusSearch() {
+        search.forceFocus();
+    }
+
     spacing: 8
 
     // Takes what the row has left, within 160-320 px (as in the app); the
     // spacer before ⋯ gets the rest.
     TextField {
+        id: search
         Layout.fillWidth: true
         Layout.minimumWidth: 160
         Layout.maximumWidth: 320

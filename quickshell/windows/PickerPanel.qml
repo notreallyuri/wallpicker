@@ -5,6 +5,7 @@
 // in.
 import QtQuick
 import Quickshell
+import qs.services
 import Quickshell.Hyprland
 import Quickshell.Wayland
 
@@ -73,8 +74,10 @@ PanelWindow {
         }
     }
 
+    // Esc closes the top menu or dialog; with none open, the picker.
     Shortcut {
         sequence: "Escape"
-        onActivated: overlay.dismissed()
+        onActivated: if (!Dialogs.closeTop())
+            overlay.dismissed()
     }
 }

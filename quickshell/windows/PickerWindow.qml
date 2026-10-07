@@ -3,6 +3,7 @@
 // headless checks (cage has none).
 import QtQuick
 import Quickshell
+import qs.services
 
 FloatingWindow {
     id: window
@@ -23,8 +24,10 @@ FloatingWindow {
         anchors.fill: parent
     }
 
+    // Esc closes the top menu or dialog; with none open, the picker.
     Shortcut {
         sequence: "Escape"
-        onActivated: window.dismissed()
+        onActivated: if (!Dialogs.closeTop())
+            window.dismissed()
     }
 }
