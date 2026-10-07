@@ -16,12 +16,12 @@ const MAX_DOWNLOAD_BYTES: usize = 64 * 1024 * 1024;
 
 /// Keys ("provider:id") of the wallpapers already in the download folder: the
 /// files [`download_and_tag`] would reuse instead of downloading again.
-pub(crate) async fn downloaded(state: &AppState) -> CmdResult<Vec<String>> {
+pub async fn downloaded(state: &AppState) -> CmdResult<Vec<String>> {
     let store = state.store.clone();
     blocking(move || downloaded_keys(&store)).await
 }
 
-pub(crate) fn downloaded_keys(store: &Store) -> wallpicker_core::Result<Vec<String>> {
+pub fn downloaded_keys(store: &Store) -> wallpicker_core::Result<Vec<String>> {
     let dir = store.load_settings()?.download_dir;
     let entries = match std::fs::read_dir(&dir) {
         Ok(entries) => entries,
@@ -39,7 +39,7 @@ pub(crate) fn downloaded_keys(store: &Store) -> wallpicker_core::Result<Vec<Stri
 /// it was saved. Already-downloaded files are reused. New downloads (and
 /// untagged old ones) get their artist tags, where the provider marks them.
 /// `progress(done, total)` follows the bytes (total when the server says).
-pub(crate) async fn download_and_tag(
+pub async fn download_and_tag(
     state: &AppState,
     wallpaper: &OnlineWallpaper,
     progress: impl Fn(usize, Option<usize>),

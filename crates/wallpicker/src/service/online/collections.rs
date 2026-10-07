@@ -7,7 +7,7 @@ use super::{get_text, wallhaven_key};
 use crate::{AppState, CmdResult, blocking, err};
 
 /// Your Wallhaven collections: they need the API key (private ones too).
-pub(crate) async fn wallhaven_collections(state: &AppState) -> CmdResult<Vec<wallhaven::Collection>> {
+pub async fn wallhaven_collections(state: &AppState) -> CmdResult<Vec<wallhaven::Collection>> {
     let Some(key) = wallhaven_key(state).await? else {
         return Err("Your collections need a Wallhaven API key (Settings → Wallhaven).".into());
     };
@@ -18,7 +18,7 @@ pub(crate) async fn wallhaven_collections(state: &AppState) -> CmdResult<Vec<wal
 
 /// A page of one of your collections. Opening one needs your username too:
 /// the API doesn't tell whose key it is.
-pub(crate) async fn wallhaven_collection_page(state: &AppState, id: u64, page: u32) -> CmdResult<Page> {
+pub async fn wallhaven_collection_page(state: &AppState, id: u64, page: u32) -> CmdResult<Page> {
     let store = state.store.clone();
     let username = blocking(move || Ok(store.load_settings()?.wallhaven_username)).await?;
     let Some(username) = username else {

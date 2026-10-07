@@ -5,8 +5,8 @@
 mod collections;
 mod download;
 
-pub(crate) use collections::{wallhaven_collection_page, wallhaven_collections};
-pub(crate) use download::{download_and_tag, downloaded, downloaded_keys};
+pub use collections::{wallhaven_collection_page, wallhaven_collections};
+pub use download::{download_and_tag, downloaded, downloaded_keys};
 
 use std::path::PathBuf;
 
@@ -18,7 +18,7 @@ use crate::cli;
 use crate::{AppState, CmdResult, blocking, err};
 
 /// One page of results from any provider (the app and `wallpicker search`).
-pub(crate) async fn search(state: &AppState, query: OnlineQuery) -> CmdResult<Page> {
+pub async fn search(state: &AppState, query: OnlineQuery) -> CmdResult<Page> {
     match query {
         OnlineQuery::Wallhaven(q) => {
             let key = wallhaven_key(state).await?;
@@ -59,7 +59,7 @@ async fn moebooru_search(state: &AppState, site: Site, q: &MoebooruQuery) -> Cmd
 
 /// Uploader, source and tags. Some providers include them in the search
 /// result; Wallhaven needs a request.
-pub(crate) async fn details(state: &AppState, wallpaper: &OnlineWallpaper) -> CmdResult<Details> {
+pub async fn details(state: &AppState, wallpaper: &OnlineWallpaper) -> CmdResult<Details> {
     if let Some(d) = &wallpaper.details {
         return Ok(d.clone());
     }
@@ -85,14 +85,14 @@ pub(crate) async fn details(state: &AppState, wallpaper: &OnlineWallpaper) -> Cm
 
 /// The image for an online wallpaper's details: downloaded, cached and fitted
 /// to the screen (see `cli::online::fetch_preview`); None when it can't be.
-pub(crate) async fn preview(state: &AppState, wallpaper: &OnlineWallpaper) -> Option<PathBuf> {
+pub async fn preview(state: &AppState, wallpaper: &OnlineWallpaper) -> Option<PathBuf> {
     cli::online::fetch_preview(state, wallpaper).await
 }
 
 /// The real tags a Konachan or yande.re search means (they match exact tag
 /// names only): several words tried as one tag, and the last word anywhere
 /// in a tag; most used first. Wallhaven searches loosely: nothing to suggest.
-pub(crate) async fn tag_suggestions(
+pub async fn tag_suggestions(
     state: &AppState,
     provider: Provider,
     text: &str,
@@ -122,7 +122,7 @@ pub(crate) async fn tag_suggestions(
 
 /// [`tag_suggestions`] for the search box: none once the last tag typed is
 /// a real one (nothing left to fix).
-pub(crate) async fn suggestions(
+pub async fn suggestions(
     state: &AppState,
     provider: Provider,
     text: &str,
@@ -134,18 +134,18 @@ pub(crate) async fn suggestions(
 }
 
 /// The filters from last session (without search text), for every provider.
-pub(crate) async fn filters(state: &AppState) -> CmdResult<OnlineFilters> {
+pub async fn filters(state: &AppState) -> CmdResult<OnlineFilters> {
     let store = state.store.clone();
     blocking(move || store.load_online_filters()).await
 }
 
-pub(crate) async fn save_filters(state: &AppState, filters: OnlineFilters) -> CmdResult<()> {
+pub async fn save_filters(state: &AppState, filters: OnlineFilters) -> CmdResult<()> {
     let store = state.store.clone();
     blocking(move || store.save_online_filters(&filters)).await
 }
 
 /// Open a web link (a wallpaper's source or page) in the browser.
-pub(crate) fn open_url(url: &str) -> CmdResult<()> {
+pub fn open_url(url: &str) -> CmdResult<()> {
     if !wallhaven::is_openable_url(url) {
         return Err(format!("Refusing to open {url:?}"));
     }
@@ -161,7 +161,7 @@ pub(crate) fn open_url(url: &str) -> CmdResult<()> {
     Ok(())
 }
 
-pub(crate) fn http_error(provider: Provider, status: reqwest::StatusCode) -> String {
+pub fn http_error(provider: Provider, status: reqwest::StatusCode) -> String {
     let name = provider.label();
     match (provider, status.as_u16()) {
         (Provider::Wallhaven, 401) => "Wallhaven rejected the request (check your API key in Settings).".into(),

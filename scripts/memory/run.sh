@@ -13,7 +13,7 @@ here=$(cd "$(dirname "$0")" && pwd)
 variant=${1:-default}
 out=${2:-memory-$variant.csv}
 tmp=$(mktemp -d)
-bin=$here/../../target/release/wallpicker
+bin=$here/../../target/release/wallpicker-app
 cp "$bin" "$tmp/wallpicker-auto"
 mkdir -p "$tmp/config/wallpicker" "$tmp/state" "$tmp/data" "$tmp/bin"
 # A fixed runtime folder, kept between runs: services on the run's own

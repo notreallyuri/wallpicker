@@ -10,7 +10,7 @@ use crate::AppState;
 
 /// Run a library change and report it; `what` is the success line.
 fn run_edit(future: impl std::future::Future<Output = Result<(), String>>, what: String) -> i32 {
-    match tauri::async_runtime::block_on(future) {
+    match crate::rt::block_on(future) {
         Ok(()) => {
             println!("{what}");
             0
@@ -208,7 +208,7 @@ pub fn duplicates(args: &[String]) -> i32 {
     match args {
         [] | [_] if args.iter().all(|a| a == "--json") => {
             let json = !args.is_empty();
-            let groups = match tauri::async_runtime::block_on(crate::service::library::duplicates(&state)) {
+            let groups = match crate::rt::block_on(crate::service::library::duplicates(&state)) {
                 Ok(g) => g,
                 Err(e) => return fail(&e),
             };
@@ -235,7 +235,7 @@ pub fn duplicates(args: &[String]) -> i32 {
         [action, keep, others @ ..] if action == "keep" && !others.is_empty() => {
             let keep = absolute(keep).to_string_lossy().into_owned();
             let others: Vec<String> = others.iter().map(|o| absolute(o).to_string_lossy().into_owned()).collect();
-            match tauri::async_runtime::block_on(crate::service::library::resolve_duplicates_with(&state, &keep, &others)) {
+            match crate::rt::block_on(crate::service::library::resolve_duplicates_with(&state, &keep, &others)) {
                 Ok(r) => {
                     for t in &r.trashed {
                         println!("trashed {t}");

@@ -156,7 +156,7 @@ pub fn search(args: &[String]) -> i32 {
     };
 
     let state = AppState::new(store.clone());
-    let result = tauri::async_runtime::block_on(async {
+    let result = crate::rt::block_on(async {
         let page = crate::service::online::search(&state, online_query).await?;
         let thumbs = if want_thumbs {
             fetch_thumbs(&state, &page.items).await
@@ -323,7 +323,7 @@ pub fn tags(args: &[String]) -> i32 {
     };
     let text = words.iter().map(|w| w.as_str()).collect::<Vec<_>>().join(" ");
     let state = AppState::new(Store::new(Dirs::from_env()));
-    match tauri::async_runtime::block_on(crate::service::online::tag_suggestions(&state, provider, &text)) {
+    match crate::rt::block_on(crate::service::online::tag_suggestions(&state, provider, &text)) {
         Ok(list) if json => {
             // Each with the search it makes, and whether what's typed already
             // ends in a real tag (then there's nothing to suggest).
@@ -355,7 +355,7 @@ pub fn tags(args: &[String]) -> i32 {
 pub fn collections(args: &[String]) -> i32 {
     let json = args.iter().any(|a| a == "--json");
     let state = AppState::new(Store::new(Dirs::from_env()));
-    match tauri::async_runtime::block_on(crate::service::online::wallhaven_collections(&state)) {
+    match crate::rt::block_on(crate::service::online::wallhaven_collections(&state)) {
         Ok(list) if json => print_json(&list),
         Ok(list) => {
             for c in &list {
@@ -402,7 +402,7 @@ pub fn collection(args: &[String]) -> i32 {
     };
     let store = Store::new(Dirs::from_env());
     let state = AppState::new(store.clone());
-    let result = tauri::async_runtime::block_on(async {
+    let result = crate::rt::block_on(async {
         let page = crate::service::online::wallhaven_collection_page(&state, id, page).await?;
         let thumbs = if want_thumbs { fetch_thumbs(&state, &page.items).await } else { Vec::new() };
         Ok::<_, String>((page, thumbs))
@@ -443,7 +443,7 @@ async fn fetch_thumbs(state: &AppState, items: &[OnlineWallpaper]) -> Vec<Option
         .map(|w| {
             let (http, gate, url) = (state.http.clone(), gate.clone(), w.thumb.clone());
             let dest = cache_path(&dir, w, &url);
-            tauri::async_runtime::spawn(async move {
+            crate::rt::spawn(async move {
                 let dest = dest?;
                 let _permit = gate.acquire().await.ok()?;
                 cache_image(http, url, dest, MAX_THUMB_BYTES).await
@@ -500,7 +500,7 @@ const FITTED_PREVIEW: u32 = 1600;
 
 /// The sharpest image for `w`'s details, downloaded (cached), then fitted to
 /// [`FITTED_PREVIEW`] unless originals are wanted or it's already small.
-pub(crate) async fn fetch_preview(state: &AppState, w: &OnlineWallpaper) -> Option<PathBuf> {
+pub async fn fetch_preview(state: &AppState, w: &OnlineWallpaper) -> Option<PathBuf> {
     let dir = state.store.dirs().cache.join("online").join("preview");
     std::fs::create_dir_all(&dir).ok()?;
     prune_cache(&dir);
@@ -512,7 +512,7 @@ pub(crate) async fn fetch_preview(state: &AppState, w: &OnlineWallpaper) -> Opti
     }
     let fit_dir = state.store.dirs().cache.join("online").join("preview-fit");
     prune_cache(&fit_dir.join("thumbs"));
-    tauri::async_runtime::spawn_blocking(move || {
+    crate::rt::spawn_blocking(move || {
         wallpicker_core::thumbs::fit_within(&fit_dir, &original, FITTED_PREVIEW).ok()
     })
     .await
@@ -537,7 +537,7 @@ pub fn preview(args: &[String]) -> i32 {
         Err(e) => return fail(&format!("not a wallpaper handle: {e}")),
     };
     let state = AppState::new(Store::new(Dirs::from_env()));
-    let preview = tauri::async_runtime::block_on(fetch_preview(&state, &w));
+    let preview = crate::rt::block_on(fetch_preview(&state, &w));
     print_json(&PreviewOutput { preview })
 }
 
@@ -565,7 +565,7 @@ pub fn details(args: &[String]) -> i32 {
     };
     let store = Store::new(Dirs::from_env());
     let state = AppState::new(store.clone());
-    let result = tauri::async_runtime::block_on(async {
+    let result = crate::rt::block_on(async {
         let preview = async {
             if want_preview { fetch_preview(&state, &w).await } else { None }
         };
@@ -655,7 +655,7 @@ pub fn apply_online(args: &[String]) -> i32 {
         Err(e) => return fail(&e),
     };
     let state = AppState::new(store.clone());
-    let path = match tauri::async_runtime::block_on(crate::service::online::download_and_tag(&state, &wallpaper, |_, _| {})) {
+    let path = match crate::rt::block_on(crate::service::online::download_and_tag(&state, &wallpaper, |_, _| {})) {
         Ok(p) => PathBuf::from(p),
         Err(e) => return fail(&e),
     };

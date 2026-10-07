@@ -21,7 +21,7 @@ use crate::AppState;
 
 /// Where answers and events go: one line each, never interleaved.
 #[derive(Clone)]
-pub(crate) struct Out(Arc<Mutex<std::io::Stdout>>);
+pub struct Out(Arc<Mutex<std::io::Stdout>>);
 
 impl Out {
     fn line(&self, value: &Value) {
@@ -32,7 +32,7 @@ impl Out {
     }
 
     /// Something the UI didn't ask for (state changed, ...).
-    pub(crate) fn event(&self, event: &str, data: Value) {
+    pub fn event(&self, event: &str, data: Value) {
         self.line(&json!({ "event": event, "data": data }));
     }
 }
@@ -47,7 +47,7 @@ pub fn run() -> i32 {
             continue;
         }
         let (state, out) = (state.clone(), out.clone());
-        tauri::async_runtime::spawn(async move {
+        crate::rt::spawn(async move {
             let reply = answer(&state, &out, &line).await;
             out.line(&reply);
         });

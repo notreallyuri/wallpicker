@@ -12,7 +12,7 @@ set -e
 here=$(cd "$(dirname "$0")" && pwd)
 opens=${1:-3}
 tmp=$(mktemp -d)
-cp "$here/../../target/release/wallpicker" "$tmp/wallpicker-auto"
+cp "$here/../../target/release/wallpicker-app" "$tmp/wallpicker-auto"
 mkdir -p "$tmp/config/wallpicker" "$tmp/state" "$tmp/data" "$tmp/bin"
 run=/tmp/wallpicker-memory-$UID
 mkdir -p "$run" && chmod 700 "$run"

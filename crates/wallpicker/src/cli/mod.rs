@@ -15,12 +15,12 @@ use wallpicker_core::thumbs;
 
 mod config;
 mod library_edits;
-pub(crate) mod online;
+pub mod online;
 mod random;
 mod ui;
 mod workspaces;
 mod backup;
-pub(crate) mod slideshow;
+pub mod slideshow;
 
 pub use config::{filters, settings};
 pub use library_edits::{adjust, colors, duplicates, favorite, show_in_folder, tag, trash};

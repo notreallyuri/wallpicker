@@ -3,7 +3,7 @@
 //! `wallpicker serve` (`serve/`, for the Quickshell UI) both call these.
 //! Moved here area by area as the Quickshell UI needs them.
 
-pub(crate) mod app;
-pub(crate) mod library;
-pub(crate) mod online;
-pub(crate) mod wallpapers;
+pub mod app;
+pub mod library;
+pub mod online;
+pub mod wallpapers;

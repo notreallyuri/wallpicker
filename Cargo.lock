@@ -5465,16 +5465,25 @@ name = "wallpicker"
 version = "0.1.0"
 dependencies = [
  "chrono",
- "libc",
  "reqwest 0.12.28",
  "serde",
  "serde_json",
+ "tokio",
+ "trash",
+ "wallpicker-core",
+]
+
+[[package]]
+name = "wallpicker-app"
+version = "0.1.0"
+dependencies = [
+ "libc",
+ "serde",
  "tauri",
  "tauri-build",
  "tauri-plugin-dialog",
  "tauri-plugin-single-instance",
- "tokio",
- "trash",
+ "wallpicker",
  "wallpicker-core",
  "webkit2gtk",
 ]

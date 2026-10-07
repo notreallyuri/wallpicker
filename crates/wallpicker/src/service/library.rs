@@ -16,7 +16,7 @@ use crate::{AppState, CmdResult, blocking, err, wallpaper_path};
 
 /// Every image in the wallpaper folders, each with its cached thumbnail when
 /// there is one.
-pub(crate) async fn scan(state: &AppState) -> CmdResult<Vec<LocalImage>> {
+pub async fn scan(state: &AppState) -> CmdResult<Vec<LocalImage>> {
     let store = state.store.clone();
     blocking(move || {
         let s = store.load_settings()?;
@@ -28,7 +28,7 @@ pub(crate) async fn scan(state: &AppState) -> CmdResult<Vec<LocalImage>> {
 /// A scanned image and where it sits: which wallpaper folder (`root`, an
 /// index into `Library::roots`) and the subfolder in it ("" at its top).
 #[derive(serde::Serialize)]
-pub(crate) struct Placed {
+pub struct Placed {
     #[serde(flatten)]
     pub image: LocalImage,
     pub root: usize,
@@ -37,19 +37,19 @@ pub(crate) struct Placed {
 
 /// A wallpaper folder from the settings.
 #[derive(serde::Serialize)]
-pub(crate) struct Root {
+pub struct Root {
     pub path: PathBuf,
     pub name: String,
 }
 
 /// The library with each image's place, for browsing by folder.
 #[derive(serde::Serialize)]
-pub(crate) struct Library {
+pub struct Library {
     pub images: Vec<Placed>,
     pub roots: Vec<Root>,
 }
 
-pub(crate) async fn library(state: &AppState) -> CmdResult<Library> {
+pub async fn library(state: &AppState) -> CmdResult<Library> {
     let store = state.store.clone();
     let images = scan(state).await?;
     blocking(move || {
@@ -72,7 +72,7 @@ pub(crate) async fn library(state: &AppState) -> CmdResult<Library> {
 
 /// The path of `path`'s thumbnail, made now if there's none (a few at once:
 /// decoding a big picture is memory-hungry).
-pub(crate) async fn thumbnail(state: &AppState, path: String) -> CmdResult<String> {
+pub async fn thumbnail(state: &AppState, path: String) -> CmdResult<String> {
     let _permit = state.thumb_gate.acquire().await.map_err(err)?;
     let store = state.store.clone();
     blocking(move || {
@@ -89,7 +89,7 @@ pub(crate) async fn thumbnail(state: &AppState, path: String) -> CmdResult<Strin
 
 /// Change the catalog under the lock and return the saved version (two
 /// changes at once mustn't lose one).
-pub(crate) async fn update_catalog(state: &AppState, change: impl FnOnce(&mut Catalog) + Send + 'static) -> CmdResult<Catalog> {
+pub async fn update_catalog(state: &AppState, change: impl FnOnce(&mut Catalog) + Send + 'static) -> CmdResult<Catalog> {
     let store = state.store.clone();
     let lock = state.catalog_lock.clone();
     blocking(move || {
@@ -101,17 +101,17 @@ pub(crate) async fn update_catalog(state: &AppState, change: impl FnOnce(&mut Ca
 }
 
 /// Favorites and tags.
-pub(crate) async fn catalog(state: &AppState) -> CmdResult<Catalog> {
+pub async fn catalog(state: &AppState) -> CmdResult<Catalog> {
     let store = state.store.clone();
     blocking(move || store.load_catalog()).await
 }
 
-pub(crate) async fn set_favorite(state: &AppState, path: String, favorite: bool) -> CmdResult<Catalog> {
+pub async fn set_favorite(state: &AppState, path: String, favorite: bool) -> CmdResult<Catalog> {
     let path = wallpaper_path(&path)?;
     update_catalog(state, move |c| c.set_favorite(&path, favorite)).await
 }
 
-pub(crate) async fn add_tag(state: &AppState, path: String, tag: String) -> CmdResult<Catalog> {
+pub async fn add_tag(state: &AppState, path: String, tag: String) -> CmdResult<Catalog> {
     let path = wallpaper_path(&path)?;
     if catalog::normalize_tag(&tag).is_none() {
         return Err(format!("Tags must be 1 to {} characters, without control characters.", catalog::MAX_TAG_LEN));
@@ -122,14 +122,14 @@ pub(crate) async fn add_tag(state: &AppState, path: String, tag: String) -> CmdR
     .await
 }
 
-pub(crate) async fn remove_tag(state: &AppState, path: String, tag: String) -> CmdResult<Catalog> {
+pub async fn remove_tag(state: &AppState, path: String, tag: String) -> CmdResult<Catalog> {
     let path = wallpaper_path(&path)?;
     update_catalog(state, move |c| c.remove_tag(&path, &tag)).await
 }
 
 /// The wallpapers with `color` (a hue, or dark / light / warm / muted), the
 /// most of it first: (path, score).
-pub(crate) async fn with_color(state: &AppState, color: String) -> CmdResult<Vec<(PathBuf, f32)>> {
+pub async fn with_color(state: &AppState, color: String) -> CmdResult<Vec<(PathBuf, f32)>> {
     let Some(color) = wallpicker_core::settings::known_color(Some(color.clone())) else {
         return Err(format!("{color}? one of {}", wallpicker_core::colors::HUES.iter().chain(wallpicker_core::colors::TONES.iter()).map(|(k, _)| *k).collect::<Vec<_>>().join(", ")));
     };
@@ -150,7 +150,7 @@ pub(crate) async fn with_color(state: &AppState, color: String) -> CmdResult<Vec
 }
 
 #[derive(Debug, Default, serde::Serialize)]
-pub(crate) struct ResolveReport {
+pub struct ResolveReport {
     pub trashed: Vec<String>,
     /// (path, why)
     pub failed: Vec<(String, String)>,
@@ -159,7 +159,7 @@ pub(crate) struct ResolveReport {
 }
 
 /// The library's duplicate groups, best first in each.
-pub(crate) async fn duplicates(state: &AppState) -> CmdResult<Vec<DuplicateGroup>> {
+pub async fn duplicates(state: &AppState) -> CmdResult<Vec<DuplicateGroup>> {
     let store = state.store.clone();
     blocking(move || {
         let settings = store.load_settings()?;
@@ -176,7 +176,7 @@ pub(crate) async fn duplicates(state: &AppState) -> CmdResult<Vec<DuplicateGroup
 }
 
 /// Every library image's colors (computed once, cached), by path.
-pub(crate) fn color_profiles(
+pub fn color_profiles(
     store: &Store,
 ) -> wallpicker_core::error::Result<
     std::collections::BTreeMap<PathBuf, wallpicker_core::colors::ColorProfile>,
@@ -194,7 +194,7 @@ pub(crate) fn color_profiles(
 /// favorite, tags and fit (when it has none), and goes on any monitor that
 /// showed one of them. Each copy is trashed with the usual checks; one that
 /// fails doesn't stop the rest.
-pub(crate) async fn resolve_duplicates_with(
+pub async fn resolve_duplicates_with(
     state: &AppState,
     keep: &str,
     others: &[String],

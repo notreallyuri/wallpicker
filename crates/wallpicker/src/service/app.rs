@@ -4,31 +4,31 @@ use wallpicker_core::settings::{Settings, State as SavedState};
 
 use crate::{AppState, CmdResult, blocking, err, theme};
 
-pub(crate) async fn settings(state: &AppState) -> CmdResult<Settings> {
+pub async fn settings(state: &AppState) -> CmdResult<Settings> {
     let store = state.store.clone();
     blocking(move || store.load_settings()).await
 }
 
 /// What each monitor shows, its history and adjustments.
-pub(crate) async fn saved_state(state: &AppState) -> CmdResult<SavedState> {
+pub async fn saved_state(state: &AppState) -> CmdResult<SavedState> {
     let store = state.store.clone();
     blocking(move || store.load_state()).await
 }
 
 /// The app's colors from the current wallpaper (None: its own).
-pub(crate) async fn palette(state: &AppState) -> CmdResult<Option<theme::Palette>> {
+pub async fn palette(state: &AppState) -> CmdResult<Option<theme::Palette>> {
     let store = state.store.clone();
-    tauri::async_runtime::spawn_blocking(move || theme::palette(&store)).await.map_err(err)?
+    crate::rt::spawn_blocking(move || theme::palette(&store)).await.map_err(err)?
 }
 
 /// Put `text` on the Wayland clipboard (`wl-copy`, which stays to serve it:
 /// it outlives the interface, which exits on close; WebKitGTK's clipboard
 /// API wasn't reliable either).
-pub(crate) async fn copy_text(text: String) -> CmdResult<()> {
+pub async fn copy_text(text: String) -> CmdResult<()> {
     if text.len() > 64 * 1024 {
         return Err("That's too long to copy.".into());
     }
-    tauri::async_runtime::spawn_blocking(move || {
+    crate::rt::spawn_blocking(move || {
         use std::io::Write as _;
         let mut child = std::process::Command::new("wl-copy")
             .stdin(std::process::Stdio::piped())

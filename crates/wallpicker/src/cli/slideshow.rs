@@ -54,7 +54,7 @@ fn tick(force: bool) -> i32 {
 
 /// Change the wallpaper if the slideshow is on and it's time (or `force`).
 /// Ok(false) when some monitor failed. Shared with the app's "Change now".
-pub(crate) fn tick_with(store: &Store, force: bool) -> Result<bool, String> {
+pub fn tick_with(store: &Store, force: bool) -> Result<bool, String> {
     let settings = store.load_settings().map_err(|e| e.to_string())?;
     let show = &settings.slideshow;
     if !show.enabled && !force {
@@ -111,7 +111,7 @@ fn run() -> i32 {
 }
 
 #[derive(Serialize)]
-pub(crate) struct Status {
+pub struct Status {
     enabled: bool,
     minutes: u32,
     /// Seconds until the next change, if it's on.
@@ -128,7 +128,7 @@ fn status() -> i32 {
 }
 
 /// On or off, how often, and when it changes next. Shared with the app.
-pub(crate) fn status_of(store: &Store) -> Result<Status, String> {
+pub fn status_of(store: &Store) -> Result<Status, String> {
     let settings = store.load_settings().map_err(|e| e.to_string())?;
     let last = store.load_state().unwrap_or_default().slideshow_changed;
     let show = &settings.slideshow;

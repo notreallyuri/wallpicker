@@ -140,13 +140,17 @@ and feels like the app (real transitions and easing, glass, shadows); the scroll
      pages; the top bar's tabs switch views (Picker hosts one at a time).
   6. Online's tooltips (the app's: "Sorting and filters", "Already in your download
      folder", the details dialog's two).
+- [x] **Split from Tauri** (done 2026-10-07): `wallpicker` (`crates/wallpicker`: the command line,
+  `serve`, the shared service layer; tokio, no Tauri/WebKit/GTK, 5.9 MB) and `wallpicker-app`
+  (`src-tauri`: the old window only, frozen: no more fixes or features). `wallpicker` with no
+  arguments, `--tray`, `--toggle` or `--open` hands over to `wallpicker-app` until phase 6.
 - [ ] **4. Settings**: every section (General, Appearance, Downloads, Slideshow, Workspaces with
   its picker, Performance, Backup with file dialogs, providers), conflicts and Stop it.
 - [ ] **5. Background**: `wallpicker daemon` (workspace listener, tray or not), following the
   wallpaper's colors live, Noctalia colors, toasts for what happens in the background.
 - [ ] **6. Switch over**: `wallpicker` opens the Quickshell UI; the Noctalia plugin's handoffs
-  (`--open`) go through it; remove the Tauri app, WebKit and Leptos (`ui/`, the GUI half of
-  `src-tauri`); README, install script, scripts/memory and scripts/open-timing redone for QML.
+  (`--open`) go through it; remove the Tauri app, WebKit and Leptos (`ui/`, `src-tauri/`: the
+  window's arguments go to Quickshell instead of `wallpicker-app`); README, install script, scripts/memory and scripts/open-timing redone for QML.
 
 ### Left over from the phases
 

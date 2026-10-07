@@ -128,15 +128,25 @@ starts its daemon when needed.
 
 ## Run and build
 
+wallpicker is two binaries:
+
+- `wallpicker` (`crates/wallpicker`): the command line, and `wallpicker serve`, the backend of the
+  new Quickshell interface (`wallpicker ui`). No Tauri, WebKit or GTK: a plain cargo build.
+- `wallpicker-app` (`src-tauri`): the old Tauri window, kept working until the Quickshell
+  interface replaces it, no longer developed. `wallpicker` with no arguments, `--tray`, `--toggle`
+  or `--open` hands over to it.
+
 ```bash
-cargo tauri dev                  # trunk serves the UI on :1420, the window hot-reloads
-cargo tauri build --no-bundle    # release binary at target/release/wallpicker
-scripts/install-local.sh         # ~/.local/bin/wallpicker, a launcher entry and its icon
+cargo build --release -p wallpicker   # target/release/wallpicker
+cargo tauri build --no-bundle         # target/release/wallpicker-app (the window)
+scripts/install-local.sh              # both in ~/.local/bin, the interface, a launcher entry
+cargo tauri dev                       # the window, with trunk serving its UI on :1420
 ```
 
 `install-local.sh` also adds wallpicker to your app launcher (`wallpicker.desktop`, with Random
 and Previous as quick actions). Its entry uses the full path to the binary, since launchers
-often run with a PATH that doesn't include `~/.local/bin`.
+often run with a PATH that doesn't include `~/.local/bin`. It refuses a build older than its
+sources, so a new interface never goes in with an old backend.
 
 ### Starting it
 
@@ -150,10 +160,10 @@ the slideshow going, and anything bigger in the panel opens the app where it's n
   login: it opens instantly then, at the cost of keeping it in memory.
 - Closing the window keeps it in the tray; quit from the tray menu.
 
-Build releases with `cargo tauri build`, not `cargo build --release`: the plain cargo build is a
-development build whose window loads the UI from the dev server on :1420 instead of embedding
-it. Started without `cargo tauri dev` running, it says so and exits (`list` and `apply` still
-work in it). `--no-bundle` skips making .deb/AppImage packages.
+Build the window with `cargo tauri build`, not `cargo build --release`: the plain cargo build of
+`wallpicker-app` is a development build whose window loads the UI from the dev server on :1420
+instead of embedding it. Started without `cargo tauri dev` running, it says so and exits.
+`--no-bundle` skips making .deb/AppImage packages.
 
 The first trunk build downloads the Tailwind binary (pinned to 4.3.0 in `ui/Trunk.toml`).
 

@@ -14,13 +14,13 @@ use wallpicker_core::store::Store;
 use crate::service::library::update_catalog;
 use crate::{AppState, CmdResult, blocking, err, wallpaper_path};
 
-pub(crate) async fn monitors() -> CmdResult<Vec<Monitor>> {
+pub async fn monitors() -> CmdResult<Vec<Monitor>> {
     blocking(|| hyprpaper::list_monitors(&SystemRunner)).await
 }
 
 /// `path` on `monitors`, remembered for `--restore` (and, with workspaces
 /// remembering, for the workspace each monitor shows).
-pub(crate) async fn apply(state: &AppState, monitors: Vec<String>, path: String) -> CmdResult<ApplyReport> {
+pub async fn apply(state: &AppState, monitors: Vec<String>, path: String) -> CmdResult<ApplyReport> {
     let store = state.store.clone();
     blocking(move || {
         let settings = store.load_settings()?;
@@ -32,7 +32,7 @@ pub(crate) async fn apply(state: &AppState, monitors: Vec<String>, path: String)
 }
 
 /// Back to what each of `monitors` showed before.
-pub(crate) async fn previous(state: &AppState, monitors: Vec<String>) -> CmdResult<ApplyReport> {
+pub async fn previous(state: &AppState, monitors: Vec<String>) -> CmdResult<ApplyReport> {
     let store = state.store.clone();
     blocking(move || {
         let backend = store.load_settings()?.wallpaper_backend;
@@ -46,7 +46,7 @@ pub(crate) async fn previous(state: &AppState, monitors: Vec<String>) -> CmdResu
 /// Adjust what `monitor` shows (mirrored...), and show it there now. Every
 /// backend: the changed copy is a file of its own. Temporary: another
 /// wallpaper on that monitor clears it.
-pub(crate) async fn set_adjust(
+pub async fn set_adjust(
     state: &AppState,
     monitor: String,
     adjust: Adjust,
@@ -73,25 +73,25 @@ pub(crate) async fn set_adjust(
 
 /// The picture the Adjust dialog frames on: sharp enough to zoom into
 /// (fitted inside 1600 px, cached), not the whole original.
-pub(crate) async fn framing_image(state: &AppState, path: String) -> CmdResult<PathBuf> {
+pub async fn framing_image(state: &AppState, path: String) -> CmdResult<PathBuf> {
     let path = wallpaper_path(&path)?;
     let cache = state.store.dirs().cache.join("framing");
     blocking(move || wallpicker_core::thumbs::fit_within(&cache, &path, 1600)).await
 }
 
 /// The fit modes the chosen backend does, with labels ("" is its default).
-pub(crate) async fn fit_modes(state: &AppState) -> CmdResult<Vec<(&'static str, &'static str)>> {
+pub async fn fit_modes(state: &AppState) -> CmdResult<Vec<(&'static str, &'static str)>> {
     let store = state.store.clone();
     blocking(move || Ok(settings::fit_modes(store.load_settings()?.wallpaper_backend).to_vec())).await
 }
 
-pub(crate) async fn show_in_folder(state: &AppState, path: String) -> CmdResult<()> {
+pub async fn show_in_folder(state: &AppState, path: String) -> CmdResult<()> {
     let store = state.store.clone();
-    tauri::async_runtime::spawn_blocking(move || show_in_folder_blocking(&store, &path)).await.map_err(err)?
+    crate::rt::spawn_blocking(move || show_in_folder_blocking(&store, &path)).await.map_err(err)?
 }
 
 /// [`trash_wallpaper`] without Tauri (the app and `wallpicker trash`).
-pub(crate) async fn trash_path(state: &AppState, path: &str) -> CmdResult<()> {
+pub async fn trash_path(state: &AppState, path: &str) -> CmdResult<()> {
     let given = wallpaper_path(path)?;
     let store = state.store.clone();
     let real = blocking(move || {
@@ -103,7 +103,7 @@ pub(crate) async fn trash_path(state: &AppState, path: &str) -> CmdResult<()> {
     .await?;
 
     let file = real.clone();
-    tauri::async_runtime::spawn_blocking(move || trash::delete(&file))
+    crate::rt::spawn_blocking(move || trash::delete(&file))
         .await
         .map_err(err)?
         .map_err(|e| format!("Could not move it to the trash: {e}"))?;
@@ -127,7 +127,7 @@ pub(crate) async fn trash_path(state: &AppState, path: &str) -> CmdResult<()> {
 /// Show a library image in the file manager: selected, through the standard
 /// FileManager1 D-Bus call (Thunar, Nautilus, Dolphin, Nemo...), or else its
 /// folder opened with `xdg-open`. Shared by the app and the command line.
-pub(crate) fn show_in_folder_blocking(store: &Store, path: &str) -> CmdResult<()> {
+pub fn show_in_folder_blocking(store: &Store, path: &str) -> CmdResult<()> {
     let given = wallpaper_path(path)?;
     let settings = store.load_settings().map_err(err)?;
     let mut roots = settings.folders.clone();

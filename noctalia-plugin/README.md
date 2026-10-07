@@ -52,7 +52,7 @@ looks for the command in `~/.local/bin` and `~/.cargo/bin`.
 1. Build and install the `wallpicker` command somewhere on your PATH:
 
    ```bash
-   cargo tauri build --no-bundle
+   cargo build --release -p wallpicker
    install -m755 target/release/wallpicker ~/.local/bin/wallpicker
    ```
 
