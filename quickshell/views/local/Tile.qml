@@ -14,6 +14,13 @@ Item {
     id: tile
 
     required property var img
+    /// A right-click at (x, y) of the tile.
+    signal menuRequested(real x, real y)
+
+    /// For a right-click (and the test hooks).
+    function rightClicked(x, y) {
+        menuRequested(x, y);
+    }
 
     readonly property bool hovered: mouse.containsMouse || star.hovered
     readonly property bool favorite: Library.favorite(img.path)
@@ -176,7 +183,15 @@ Item {
             anchors.fill: parent
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
-            onClicked: Monitors.apply(tile.img.path)
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
+            onClicked: mouseEvent => {
+                if (mouseEvent && mouseEvent.button === Qt.RightButton) {
+                    const p = mapToItem(tile, mouseEvent.x, mouseEvent.y);
+                    tile.rightClicked(p.x, p.y);
+                } else {
+                    Monitors.apply(tile.img.path);
+                }
+            }
         }
 
         TileStar {

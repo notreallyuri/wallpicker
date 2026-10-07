@@ -23,9 +23,10 @@ Item {
     signal clicked
 
     readonly property bool primary: variant === "primary" || active
+    readonly property bool destructive: variant === "destructive"
     readonly property bool chunky: variant !== "ghost"
-    readonly property color face: primary ? Theme.primary : variant === "ghost" ? (hovered ? Theme.a(Theme.primary, 0.12) : "transparent") : (hovered ? Theme.muted : Theme.a(Theme.card, 0.8))
-    readonly property color ink: primary ? Theme.primaryForeground : Theme.foreground
+    readonly property color face: destructive ? "#fd4663" : primary ? Theme.primary : variant === "ghost" ? (hovered ? Theme.a(Theme.primary, 0.12) : "transparent") : (hovered ? Theme.muted : Theme.a(Theme.card, 0.8))
+    readonly property color ink: destructive ? "white" : primary ? Theme.primaryForeground : Theme.foreground
     readonly property real press: mouse.pressed ? 2 : hovered ? -1 : 0
 
     implicitWidth: Math.max(minWidth, row.implicitWidth + (text ? 28 : 18))
@@ -38,7 +39,7 @@ Item {
         height: parent.height
         y: 3 + (mouse.pressed ? -1 : btn.hovered ? 0 : 0)
         radius: 14
-        color: btn.primary ? Qt.darker(Theme.primary, 1.8) : Theme.a(Theme.foreground, 0.16)
+        color: btn.destructive ? Qt.darker("#fd4663", 1.8) : btn.primary ? Qt.darker(Theme.primary, 1.8) : Theme.a(Theme.foreground, 0.16)
     }
     Rectangle {
         id: face
@@ -47,7 +48,7 @@ Item {
         y: btn.press
         radius: 14
         color: btn.face
-        border.width: btn.primary || !btn.chunky ? 0 : 1
+        border.width: btn.primary || btn.destructive || !btn.chunky ? 0 : 1
         border.color: Theme.input
         Behavior on y {
             NumberAnimation {

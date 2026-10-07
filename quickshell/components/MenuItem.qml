@@ -10,6 +10,8 @@ Rectangle {
     property string text
     property string icon
     property string hint
+    /// A second, muted line (the ⋯ menu's entries).
+    property string description
     property bool destructive: false
     property bool closes: true
     /// Space for a check mark, so MenuCheck labels line up.
@@ -22,7 +24,7 @@ Rectangle {
 
     Layout.fillWidth: true
     implicitWidth: row.implicitWidth + 20
-    implicitHeight: 34
+    implicitHeight: description !== "" ? 52 : 34
     radius: 10
     color: hovered && enabled ? (destructive ? Qt.rgba(0.99, 0.27, 0.39, 0.12) : Theme.a(Theme.primary, 0.12)) : "transparent"
 
@@ -50,13 +52,33 @@ Rectangle {
             name: item.icon
             color: item.ink
         }
-        Text {
+        // The label, and the description under it: its own width from the
+        // texts' (theirs follow it).
+        Item {
             Layout.fillWidth: true
-            text: item.text
-            color: item.ink
-            font.family: Theme.font
-            font.pixelSize: 14
-            elide: Text.ElideRight
+            implicitWidth: Math.max(label.implicitWidth, more.visible ? more.implicitWidth : 0)
+            implicitHeight: label.implicitHeight + (more.visible ? more.implicitHeight : 0)
+            Text {
+                id: label
+                width: parent.width
+                text: item.text
+                color: item.ink
+                font.family: Theme.font
+                font.pixelSize: 14
+                font.weight: item.description !== "" ? Font.Bold : Font.Normal
+                elide: Text.ElideRight
+            }
+            Text {
+                id: more
+                y: label.implicitHeight
+                visible: item.description !== ""
+                width: parent.width
+                text: item.description
+                color: Theme.mutedForeground
+                font.family: Theme.font
+                font.pixelSize: 12
+                elide: Text.ElideRight
+            }
         }
         Row {
             id: extras

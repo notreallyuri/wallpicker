@@ -14,6 +14,7 @@ Popover {
 
     padding: 6
     margins: 8
+    width: Math.max(minWidth, column.implicitWidth) + leftPadding + rightPadding
 
     /// Open with its corner at (x, y) of `item`.
     function openAt(item, x, y) {
@@ -28,6 +29,5 @@ Popover {
         /// What MenuItems close when chosen.
         property var owner: menu
         spacing: 1
-        width: Math.max(menu.minWidth, implicitWidth)
     }
 }

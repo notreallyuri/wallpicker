@@ -1,4 +1,5 @@
-// A menu entry opening another menu at its side (on hover or click).
+// A menu entry opening another menu at its side (on hover or click). Its
+// children are the nested menu's entries.
 import QtQuick
 import qs.services
 
@@ -12,10 +13,12 @@ MenuItem {
     onHoveredChanged: if (hovered)
         nested.openAt(sub, sub.width + 4, -6)
 
-    Icon {
-        name: "chevron-right"
-        color: Theme.mutedForeground
-    }
+    trailing: [
+        Icon {
+            name: "chevron-right"
+            color: Theme.mutedForeground
+        }
+    ]
 
     Menu {
         id: nested

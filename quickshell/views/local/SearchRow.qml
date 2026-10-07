@@ -59,8 +59,5 @@ RowLayout {
     Item {
         Layout.fillWidth: true
     }
-    Btn {
-        variant: "ghost"
-        icon: "ellipsis"
-    }
+    MoreMenu {}
 }

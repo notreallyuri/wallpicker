@@ -29,12 +29,18 @@ Singleton {
         selection = name;
     }
 
+    /// On the chosen monitor(s).
     function apply(path) {
-        if (targets.length === 0)
+        applyTo(path, targets);
+    }
+
+    /// On `names` (the tile menu's Apply to...).
+    function applyTo(path, names) {
+        if (names.length === 0)
             return;
         setApplying(path, true);
         Backend.request("wallpapers.apply", {
-            monitors: targets,
+            monitors: names,
             path: path
         }, () => setApplying(path, false), e => {
             setApplying(path, false);

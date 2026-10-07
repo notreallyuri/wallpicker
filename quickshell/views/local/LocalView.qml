@@ -16,6 +16,12 @@ Item {
         anchors.rightMargin: 4
         local: localModel
         headerSpace: card.height + 12 + 28
+        onTileMenu: (img, at, x, y) => tileMenu.openFor(img, at, x, y)
+    }
+
+    // One menu for every tile, as in the app.
+    TileMenu {
+        id: tileMenu
     }
 
     SearchCard {

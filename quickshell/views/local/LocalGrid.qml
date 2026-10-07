@@ -12,6 +12,9 @@ GridView {
 
     required property LocalModel local
     property real headerSpace: 0
+    /// A tile asked for its menu: the wallpaper, and where (an item and a
+    /// point in it).
+    signal tileMenu(var img, Item at, real x, real y)
 
     readonly property int columns: Math.max(1, Math.floor(width / (220 + 16)))
 
@@ -73,7 +76,9 @@ GridView {
         Component {
             id: tile
             Tile {
+                id: tileItem
                 img: cell.modelData.img
+                onMenuRequested: (x, y) => grid.tileMenu(img, tileItem, x, y)
             }
         }
         Component {

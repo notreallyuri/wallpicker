@@ -95,6 +95,51 @@ Singleton {
         }, c => library.entries = c.items || {}, e => Toasts.error("Could not remove the tag", e));
     }
 
+    /// To the trash (restorable from the file manager); the backend says the
+    /// library changed and it's scanned again.
+    function trash(path, done) {
+        Backend.request("wallpapers.trash", {
+            path: path
+        }, () => {
+            Toasts.info("Moved " + path.split("/").pop() + " to the trash");
+            if (done)
+                done(true);
+        }, e => {
+            Toasts.error("Could not move it to the trash", e);
+            if (done)
+                done(false);
+        });
+    }
+
+    function showInFolder(path) {
+        Backend.request("wallpapers.show_in_folder", {
+            path: path
+        }, null, e => Toasts.error("Could not show it in its folder", e));
+    }
+
+    /// The duplicate groups (best first in each); `done(groups)`, or
+    /// `failed(message)`.
+    function duplicates(done, failed) {
+        Backend.request("library.duplicates", {}, done, failed);
+    }
+
+    /// Keep `keep`, trash `others`; `done()` either way.
+    function resolveDuplicates(keep, others, done) {
+        Backend.request("library.resolve_duplicates", {
+            keep: keep,
+            others: others
+        }, r => {
+            if (r.failed.length === 0)
+                Toasts.info("Moved " + r.trashed.length + " to the trash");
+            else
+                Toasts.error("Some copies could not be moved to the trash", r.failed.map(f => f[0] + ": " + f[1]).join("\n"));
+            done();
+        }, e => {
+            Toasts.error("Could not clear the duplicates", e);
+            done();
+        });
+    }
+
     /// Paths with `color`, the most of it first; `done(paths)`.
     function withColor(color, done) {
         Backend.request("library.with_color", {

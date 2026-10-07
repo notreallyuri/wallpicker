@@ -13,6 +13,10 @@ Rectangle {
     property int align: TextInput.AlignLeft
     signal accepted
 
+    function forceFocus() {
+        input.forceActiveFocus();
+    }
+
     implicitWidth: 240
     implicitHeight: 36
     radius: height / 2

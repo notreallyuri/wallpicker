@@ -67,6 +67,19 @@ QtObject {
             return "clicked " + h.area.parent;
         }
 
+        /// Right-click at (x, y): the nearest item there with a
+        /// rightClicked(x, y) gets it (a tile opens its menu).
+        function rightclick(x: real, y: real): string {
+            let item = hooks.hit(x, y).area;
+            while (item && typeof item.rightClicked !== "function")
+                item = item.parent;
+            if (!item)
+                return "nothing takes a right-click at " + x + "," + y;
+            const p = hooks.root.mapToItem(item, x, y);
+            item.rightClicked(p.x, p.y);
+            return "right-clicked " + String(item).split("(")[0];
+        }
+
         /// Wheel notches over (x, y), through the view's SmoothScroll (as a
         /// mouse's would); says where it's heading.
         function wheel(x: real, y: real, notches: real): string {

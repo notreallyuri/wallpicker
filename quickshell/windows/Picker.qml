@@ -7,6 +7,7 @@ import Quickshell
 import Quickshell.Widgets
 import qs.bar
 import qs.components
+import qs.dialogs
 import qs.services
 import qs.views.local
 
@@ -69,6 +70,11 @@ Item {
             }
         }
     }
+
+    // The dialogs, once for everything (services/Dialogs opens them).
+    TagsDialog {}
+    TrashDialog {}
+    DuplicatesDialog {}
 
     ToastStack {
         anchors.right: panel.right
