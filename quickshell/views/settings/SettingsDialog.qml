@@ -82,13 +82,6 @@ DialogFrame {
             group: "Providers",
             file: "Yandere.qml",
             blurb: "High-resolution anime scans."
-        },
-        {
-            slug: "unsplash",
-            label: "Unsplash",
-            group: "Providers",
-            file: "Unsplash.qml",
-            blurb: "Photography, free to use. Needs a free Access Key."
         }
     ]
     /// The section shown.

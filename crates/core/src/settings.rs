@@ -94,9 +94,6 @@ pub struct Settings {
     /// Your Wallhaven username: opening your collections needs it (the API
     /// doesn't say whose key it is).
     pub wallhaven_username: Option<String>,
-    /// Unsplash's Access Key (unsplash.com/developers): every request needs
-    /// one.
-    pub unsplash_access_key: Option<String>,
     pub wallpaper_backend: WallpaperBackend,
     /// The fit for every monitor (None: the backend's default).
     pub fit_mode: Option<FitMode>,
@@ -145,7 +142,6 @@ impl Default for Settings {
             recursive: true,
             wallhaven_api_key: None,
             wallhaven_username: None,
-            unsplash_access_key: None,
             wallpaper_backend: WallpaperBackend::default(),
             fit_mode: None,
             monitor_fits: BTreeMap::new(),
@@ -216,7 +212,6 @@ impl Settings {
             .wallhaven_username
             .map(|u| u.trim().to_string())
             .filter(|u| crate::wallhaven::is_valid_username(u));
-        self.unsplash_access_key = self.unsplash_access_key.map(|k| k.trim().to_string()).filter(|k| !k.is_empty());
         self.theme_monitor = self.theme_monitor.map(|m| m.trim().to_string()).filter(|m| !m.is_empty());
         self.transition = self.transition.sanitized();
         self.slideshow.color = known_color(self.slideshow.color.take());

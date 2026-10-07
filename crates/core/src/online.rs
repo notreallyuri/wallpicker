@@ -1,5 +1,5 @@
 //! Provider-neutral types for the online sources (Wallhaven, Konachan,
-//! yande.re, Unsplash): what
+//! yande.re): what
 //! the search results, the details dialog and the downloads work with.
 //!
 //! Each provider module turns its own API types into these.
@@ -8,7 +8,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::{Error, Result};
 use crate::moebooru::MoebooruQuery;
-use crate::unsplash::UnsplashQuery;
 use crate::wallhaven::{self, SearchQuery};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -18,11 +17,10 @@ pub enum Provider {
     Wallhaven,
     Konachan,
     Yandere,
-    Unsplash,
 }
 
 impl Provider {
-    pub const ALL: [Provider; 4] = [Provider::Wallhaven, Provider::Konachan, Provider::Yandere, Provider::Unsplash];
+    pub const ALL: [Provider; 3] = [Provider::Wallhaven, Provider::Konachan, Provider::Yandere];
 
     /// Also the prefix of downloaded file names.
     pub fn as_str(self) -> &'static str {
@@ -30,7 +28,6 @@ impl Provider {
             Provider::Wallhaven => "wallhaven",
             Provider::Konachan => "konachan",
             Provider::Yandere => "yandere",
-            Provider::Unsplash => "unsplash",
         }
     }
 
@@ -39,7 +36,6 @@ impl Provider {
             Provider::Wallhaven => "Wallhaven",
             Provider::Konachan => "Konachan",
             Provider::Yandere => "yande.re",
-            Provider::Unsplash => "Unsplash",
         }
     }
 
@@ -60,7 +56,6 @@ impl Provider {
                 "https://konachan.com/jpeg/",
             ],
             Provider::Yandere => &["https://files.yande.re/image/", "https://files.yande.re/jpeg/"],
-            Provider::Unsplash => &["https://images.unsplash.com/"],
         }
     }
 }
@@ -160,7 +155,6 @@ pub enum OnlineQuery {
     Wallhaven(SearchQuery),
     Konachan(MoebooruQuery),
     Yandere(MoebooruQuery),
-    Unsplash(UnsplashQuery),
 }
 
 impl OnlineQuery {
@@ -169,7 +163,6 @@ impl OnlineQuery {
             OnlineQuery::Wallhaven(_) => Provider::Wallhaven,
             OnlineQuery::Konachan(_) => Provider::Konachan,
             OnlineQuery::Yandere(_) => Provider::Yandere,
-            OnlineQuery::Unsplash(_) => Provider::Unsplash,
         }
     }
 
@@ -181,7 +174,6 @@ impl OnlineQuery {
                 q.seed = seed;
             }
             OnlineQuery::Konachan(q) | OnlineQuery::Yandere(q) => q.page = page,
-            OnlineQuery::Unsplash(q) => q.page = page,
         }
         self
     }
@@ -196,7 +188,6 @@ pub struct OnlineFilters {
     pub wallhaven: SearchQuery,
     pub konachan: MoebooruQuery,
     pub yandere: MoebooruQuery,
-    pub unsplash: UnsplashQuery,
 }
 
 impl OnlineFilters {
@@ -206,7 +197,6 @@ impl OnlineFilters {
             wallhaven: self.wallhaven.filters_only(),
             konachan: self.konachan.filters_only(),
             yandere: self.yandere.filters_only(),
-            unsplash: self.unsplash.filters_only(),
         }
     }
 }
@@ -261,11 +251,9 @@ impl OnlineWallpaper {
     }
 }
 
-/// Provider ids are short strings of letters, digits, `-` and `_`
-/// ("94x38z", "409210", Unsplash's "xg8z_KhSorQ"): safe in a file name
-/// and a URL path.
+/// Provider ids are short alphanumeric strings ("94x38z", "409210").
 pub fn is_valid_id(id: &str) -> bool {
-    !id.is_empty() && id.len() <= 32 && id.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
+    !id.is_empty() && id.len() <= 32 && id.bytes().all(|b| b.is_ascii_alphanumeric())
 }
 
 /// The [`OnlineWallpaper::key`] of a downloaded file, from its name, so the

@@ -9,7 +9,6 @@ use wallpicker_core::moebooru::{MoebooruQuery, MoebooruSort, Ratings};
 use wallpicker_core::online::{MIN_RESOLUTIONS, OnlineFilters, Provider};
 use wallpicker_core::settings::{self, Settings, WallpaperBackend};
 use wallpicker_core::store::{Dirs, Store};
-use wallpicker_core::unsplash::{self, UnsplashQuery};
 use wallpicker_core::wallhaven::{self, SearchQuery, Sorting};
 use wallpicker_core::cmd::SystemRunner;
 use wallpicker_core::hyprpaper;
@@ -24,7 +23,6 @@ struct FiltersOutput {
     wallhaven: WallhavenOut,
     konachan: MoebooruOut,
     yandere: MoebooruOut,
-    unsplash: UnsplashOut,
     options: FilterOptions,
     /// NSFW Wallhaven results need an API key (set in the app).
     api_key_set: bool,
@@ -49,16 +47,6 @@ struct WallhavenOut {
     sketchy: bool,
     nsfw: bool,
     /// How many filters differ from the defaults.
-    active: usize,
-}
-
-#[derive(Serialize)]
-struct UnsplashOut {
-    sort: &'static str,
-    /// "" for any.
-    orientation: String,
-    color: String,
-    content_filter: String,
     active: usize,
 }
 
@@ -158,13 +146,6 @@ fn print_filters(store: &Store, f: &OnlineFilters) -> i32 {
         wallhaven: wallhaven_out(&f.wallhaven),
         konachan: moebooru_out(&f.konachan),
         yandere: moebooru_out(&f.yandere),
-        unsplash: UnsplashOut {
-            sort: if f.unsplash.order == unsplash::Order::Latest { "latest" } else { "relevant" },
-            orientation: f.unsplash.orientation.clone(),
-            color: f.unsplash.color.clone(),
-            content_filter: f.unsplash.content_filter.clone(),
-            active: f.unsplash.active_filters(),
-        },
         options: FilterOptions {
             wallhaven_sorts: Sorting::ALL
                 .iter()
@@ -192,7 +173,6 @@ fn reset(f: &mut OnlineFilters, provider: Provider) {
         Provider::Wallhaven => f.wallhaven = SearchQuery::default(),
         Provider::Konachan => f.konachan = MoebooruQuery::default(),
         Provider::Yandere => f.yandere = MoebooruQuery::default(),
-        Provider::Unsplash => f.unsplash = UnsplashQuery::default(),
     }
 }
 
@@ -205,7 +185,6 @@ fn set_filters(f: &mut OnlineFilters, provider: Provider, pairs: &[String]) -> R
             Provider::Wallhaven => set_wallhaven(&mut next.wallhaven, key, value)?,
             Provider::Konachan => set_moebooru(&mut next.konachan, key, value)?,
             Provider::Yandere => set_moebooru(&mut next.yandere, key, value)?,
-            Provider::Unsplash => set_unsplash(&mut next.unsplash, key, value)?,
         }
     }
     *f = next;
@@ -247,24 +226,6 @@ fn set_moebooru(q: &mut MoebooruQuery, key: &str, value: &str) -> Result<(), Str
         "questionable" => r.questionable = boolean(key, value)?,
         "explicit" => r.explicit = boolean(key, value)?,
         _ => return Err(format!("{key} isn't a Konachan/yande.re filter")),
-    }
-    Ok(())
-}
-
-fn set_unsplash(q: &mut UnsplashQuery, key: &str, value: &str) -> Result<(), String> {
-    let one_of = |list: &[(&str, &str)]| list.iter().any(|(v, _)| *v == value).then(|| value.to_string()).ok_or_else(|| bad(key, value));
-    match key {
-        "sort" | "order" => {
-            q.order = match value {
-                "relevant" => unsplash::Order::Relevant,
-                "latest" => unsplash::Order::Latest,
-                _ => return Err(bad(key, value)),
-            }
-        }
-        "orientation" => q.orientation = one_of(&unsplash::ORIENTATIONS)?,
-        "color" => q.color = one_of(&unsplash::COLORS)?,
-        "content_filter" => q.content_filter = one_of(&unsplash::CONTENT_FILTERS)?,
-        _ => return Err(format!("{key} isn't an Unsplash filter")),
     }
     Ok(())
 }

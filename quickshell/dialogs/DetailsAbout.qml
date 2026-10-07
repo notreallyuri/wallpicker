@@ -12,8 +12,6 @@ ColumnLayout {
 
     /// {details} or {error}; null while loading.
     property var info: null
-    /// Unsplash credits the photographer: "Photo by", their page.
-    property bool photo: false
     signal search(string query)
     signal openUrl(string url)
 
@@ -71,7 +69,7 @@ ColumnLayout {
         spacing: 8
         DetailsLabel {
             visible: !!(about.d && about.d.uploader)
-            text: about.photo ? "Photo by" : "Uploaded by"
+            text: "Uploaded by"
             muted: true
         }
         DetailsLabel {
@@ -88,7 +86,7 @@ ColumnLayout {
             visible: !!(about.d && about.d.source)
             small: true
             icon: "external-link"
-            text: about.photo ? "Their Unsplash page" : "Open source"
+            text: "Open source"
             tip: about.d ? about.d.source : ""
             onClicked: about.openUrl(about.d.source)
         }

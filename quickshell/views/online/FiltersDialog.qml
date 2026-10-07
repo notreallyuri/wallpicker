@@ -20,11 +20,7 @@ Dialog {
 
     Loader {
         Layout.fillWidth: true
-        sourceComponent: Online.provider === "wallhaven" ? wallhaven : Online.provider === "unsplash" ? unsplash : moebooru
-    }
-    Component {
-        id: unsplash
-        UnsplashFilters {}
+        sourceComponent: Online.provider === "wallhaven" ? wallhaven : moebooru
     }
     Component {
         id: wallhaven

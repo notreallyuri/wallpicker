@@ -12,17 +12,10 @@ in `quickshell/views/settings/`.
 - [x] **Konachan** (Moebooru): konachan.net (SFW) or konachan.com (all ratings), a setting.
 - [x] **yande.re** (Moebooru): same module as Konachan.
   Artists come from the API's tag kinds (`api_version=2&include_tags=1`).
-- [x] **Unsplash** (done 2026-10-07): photography. Free key, 50 requests/hour in demo mode, 5,000/hour once the
-  app is approved. Orientation filter, no exact resolution filter. Attribution required by its
-  guidelines. The plan (2026-10-07):
-  1. **Core**: `unsplash.rs` (search, or the Wallpapers topic when there's no search text;
-     orientation, color, order, content filter; results to `OnlineWallpaper`/`Page`, the
-     photographer as the artist), ids with `-` and `_` allowed, `images.unsplash.com` as its
-     download host; the Access Key in Settings (sent as `Authorization: Client-ID`).
-  2. **Service**: search and details, the download trigger the API guidelines ask for
-     (`download_location`), the rate limit's error; the command line's `search unsplash`.
-  3. **Picker**: the provider, its filters file, the photographer on tiles and in details
-     ("Photo by … on Unsplash", linked), Settings → Unsplash (the key, the limits).
+- [ ] **Unsplash**: not allowed (checked 2026-10-07). Its API guidelines say you cannot
+  "replicate the core user experience of Unsplash (unofficial clients, wallpaper applications,
+  etc.)", and wallpicker is a wallpaper application. It was built, then taken out before any key
+  was made.
 - [ ] **Wallpaper Abyss** (Alpha Coders): blocked (checked 2026-10). The old APIs
   (`wall.alphacoders.com/api1.0`, `api2.0`) return 404; `api.alphacoders.com/3.0` exists but
   answers `invalid_auth`, and the only offer on https://api.alphacoders.com/api/instructions is

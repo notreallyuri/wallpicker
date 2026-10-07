@@ -31,11 +31,6 @@ or **Noctalia**'s wallpaper manager (Settings → General → Wallpaper backend)
   - **Konachan** (anime): sorting, minimum size (a preset or any size typed in), ratings. konachan.net (safe-for-work only, the
     default) or konachan.com (all ratings), set in Settings → Konachan.
   - **yande.re** (anime, high-resolution scans): sorting, minimum size, ratings.
-  - **Unsplash** (photography, free to use): order, orientation, color, content filter. An empty
-    search shows its Wallpapers topic; `user:<name>` a photographer's photos. Needs a free Access
-    Key (unsplash.com/developers → New Application), set in Settings → Unsplash; a new key allows
-    50 requests an hour. The photographer is credited on each tile and in the details (with a
-    link to their page), and downloads are reported to Unsplash, as its guidelines ask.
 
   Sorting and filters are in the dialog behind the **Filters** button (it shows how many differ
   from the defaults). The picture's border shows the rating: green SFW, yellow sketchy, red NSFW. Then **Apply** (download + set) or just **Download**. Results already in the download folder
@@ -269,7 +264,7 @@ a bigger image in `preview/` there); cached images unused for 14 days are remove
 `noctalia-plugin/` holds a Noctalia v5 plugin: a bar icon and a small panel, native to the shell:
 the quickest picker. **Local**: your library (favorites first, filter by name or tag);
 right-click a caption for apply/favorite/fit/trash, or click it for the wallpaper's own view.
-**Online**: search Wallhaven, Konachan, yande.re or Unsplash with a sort, filters and paging;
+**Online**: search Wallhaven, Konachan or yande.re with a sort, filters and paging;
 already-downloaded results are marked. Pick a monitor, click to apply. Settings, Duplicates,
 Collections and tag editing open in the picker (`wallpicker --open`). It's built on the command line above.
 See `noctalia-plugin/README.md` to install it.
@@ -378,7 +373,7 @@ Paths containing a comma can't be applied: hyprpaper splits its argument on comm
   (Local has it too). Pages re-run the last search, so
   changing the filters takes effect on the next search (the dialog's **Search** button runs it).
 - Downloads are only accepted from each provider's image host (`https://w.wallhaven.cc/`,
-  `https://konachan.net/image/` or `.com`, `https://files.yande.re/image/`, `https://images.unsplash.com/`), must be images, and
+  `https://konachan.net/image/` or `.com`, `https://files.yande.re/image/`), must be images, and
   are capped at 64 MiB. Files are named
   `<provider>-<id>.<ext>`, and an existing file is reused instead of downloaded again.
 
