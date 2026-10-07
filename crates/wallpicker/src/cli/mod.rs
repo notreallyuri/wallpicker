@@ -310,7 +310,7 @@ pub fn noctalia_colors(args: &[String]) -> i32 {
     let result = match args.first().map(String::as_str) {
         Some("on") => crate::theme::set_noctalia_follow(&store, true),
         Some("off") => crate::theme::set_noctalia_follow(&store, false),
-        Some("status") | None => Ok(crate::theme::noctalia_colors()),
+        Some("status") | None => Ok(crate::theme::noctalia_colors(&store)),
         Some(other) => return fail(&format!("noctalia-colors: {other}? use on, off or status")),
     };
     match result {

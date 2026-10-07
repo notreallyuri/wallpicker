@@ -55,8 +55,9 @@ pub async fn copy_text(text: String) -> CmdResult<()> {
 }
 
 /// Whether Noctalia's colors follow the wallpaper (and what they are now).
-pub async fn noctalia_colors() -> CmdResult<theme::NoctaliaColors> {
-    crate::rt::spawn_blocking(theme::noctalia_colors).await.map_err(err)
+pub async fn noctalia_colors(state: &AppState) -> CmdResult<theme::NoctaliaColors> {
+    let store = state.store.clone();
+    crate::rt::spawn_blocking(move || theme::noctalia_colors(&store)).await.map_err(err)
 }
 
 /// Noctalia's colors follow the wallpaper, or go back to its scheme before.

@@ -69,8 +69,8 @@ pub(crate) async fn wallpaper_palette(state: tauri::State<'_, AppState>) -> CmdR
 }
 
 #[tauri::command]
-pub(crate) async fn noctalia_colors() -> CmdResult<theme::NoctaliaColors> {
-    service::app::noctalia_colors().await
+pub(crate) async fn noctalia_colors(state: tauri::State<'_, AppState>) -> CmdResult<theme::NoctaliaColors> {
+    service::app::noctalia_colors(&state).await
 }
 
 #[tauri::command]

@@ -24,9 +24,18 @@ fn noctalia_scheme() -> Option<String> {
     (out.status.success() && !s.is_empty()).then_some(s)
 }
 
-/// Following the wallpaper: Noctalia's own mode, or wallpicker's palette.
-fn follows(scheme: &str) -> bool {
-    scheme.starts_with("wallpaper") || scheme == format!("custom {CUSTOM}")
+/// Following the wallpaper shown: with the Noctalia backend, Noctalia's own
+/// wallpaper mode; with another, only wallpicker's palette (Noctalia's mode
+/// would follow a wallpaper of its own that isn't the one on screen).
+fn follows(scheme: &str, backend: WallpaperBackend) -> bool {
+    match backend {
+        WallpaperBackend::Noctalia => scheme.starts_with("wallpaper"),
+        _ => scheme == format!("custom {CUSTOM}"),
+    }
+}
+
+fn backend_of(store: &Store) -> WallpaperBackend {
+    store.load_settings().map(|s| s.wallpaper_backend).unwrap_or_default()
 }
 
 #[derive(Debug, Serialize)]
@@ -39,9 +48,10 @@ pub struct NoctaliaColors {
     pub scheme: Option<String>,
 }
 
-pub fn noctalia_colors() -> NoctaliaColors {
+pub fn noctalia_colors(store: &Store) -> NoctaliaColors {
     let scheme = noctalia_scheme();
-    NoctaliaColors { available: scheme.is_some(), following: scheme.as_deref().is_some_and(follows), scheme }
+    let backend = backend_of(store);
+    NoctaliaColors { available: scheme.is_some(), following: scheme.as_deref().is_some_and(|s| follows(s, backend)), scheme }
 }
 
 fn set_scheme(args: &[&str]) -> Result<(), String> {
@@ -62,8 +72,9 @@ fn set_scheme(args: &[&str]) -> Result<(), String> {
 pub fn set_noctalia_follow(store: &Store, follow: bool) -> Result<NoctaliaColors, String> {
     let now = noctalia_scheme().ok_or("Noctalia isn't running.")?;
     let mut settings = store.load_settings().map_err(|e| e.to_string())?;
+    let backend = settings.wallpaper_backend;
     if follow {
-        if !follows(&now) {
+        if !follows(&now, backend) {
             settings.noctalia_previous_scheme = Some(now);
             store.save_settings(&settings).map_err(|e| e.to_string())?;
         }
@@ -74,7 +85,7 @@ pub fn set_noctalia_follow(store: &Store, follow: bool) -> Result<NoctaliaColors
             write_palette(store, true)?;
             set_scheme(&["custom", CUSTOM])?;
         }
-    } else if follows(&now) {
+    } else if follows(&now, backend) {
         let previous = settings.noctalia_previous_scheme.clone().ok_or(
             "There's no earlier Noctalia scheme to go back to; pick one in Noctalia's settings.",
         )?;
@@ -83,7 +94,7 @@ pub fn set_noctalia_follow(store: &Store, follow: bool) -> Result<NoctaliaColors
         settings.noctalia_previous_scheme = None;
         store.save_settings(&settings).map_err(|e| e.to_string())?;
     }
-    Ok(noctalia_colors())
+    Ok(noctalia_colors(store))
 }
 
 /// While Noctalia uses wallpicker's palette: make it again from the

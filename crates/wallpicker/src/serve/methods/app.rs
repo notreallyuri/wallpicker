@@ -17,7 +17,7 @@ pub(super) async fn call(state: &AppState, name: &str, params: &Value) -> Option
             Err(e) => Err(e),
         },
         "usage" => json(app::usage().await),
-        "noctalia_colors" => json(app::noctalia_colors().await),
+        "noctalia_colors" => json(app::noctalia_colors(state).await),
         "set_noctalia_colors" => match param::<bool>(params, "follow") {
             Ok(follow) => json(app::set_noctalia_colors(state, follow).await),
             Err(e) => Err(e),
