@@ -19,7 +19,7 @@ ColumnLayout {
 
     Field {
         label: "Picker size"
-        description: "The floating panel's size, with an even margin round it on any screen, 720p to QHD and up: Large leaves 5% of the screen's height, Comfortable 10%, Compact 15%. Applies right away."
+        description: "The floating panel's size on any screen, 720p to QHD and up, in the old window's shape: Large leaves 5% of the screen's height above and below, Comfortable 10%, Compact 15% (about the old window on a 1080p screen). Applies right away."
         Select {
             minWidth: 200
             options: [["large", "Large"], ["comfortable", "Comfortable"], ["compact", "Compact"]]

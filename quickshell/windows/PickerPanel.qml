@@ -48,10 +48,11 @@ PanelWindow {
     Picker {
         id: picker
         anchors.centerIn: parent
-        // The chosen size (Settings → Appearance): an even margin all round,
-        // a share of the screen's height, so each preset suits any screen
-        // (a 720p one too). At least 960x540, at most 2200 wide (an ultrawide
-        // screen would make it a strip), never closer than 24 px to an edge.
+        // The chosen size (Settings → Appearance): a share of the screen's
+        // height as the margin above and below, and the old window's shape
+        // (1100x760, ~1.45:1) for the width, so each preset suits any screen
+        // (Compact on 1080p is about the old window). At least 960x540,
+        // never closer than 24 px to an edge.
         readonly property var size: {
             const sw = overlay.width, sh = overlay.height;
             const share = ({
@@ -60,8 +61,8 @@ PanelWindow {
                     compact: 0.15
                 })[Prefs.panelSize];
             const m = Math.round(sh * (share === undefined ? 0.10 : share));
-            const w = Math.max(960, Math.min(2200, sw - 2 * m));
             const h = Math.max(540, sh - 2 * m);
+            const w = Math.max(960, Math.round(h * 1100 / 760));
             return [Math.min(w, sw - 48), Math.min(h, sh - 48)];
         }
         width: size[0]
