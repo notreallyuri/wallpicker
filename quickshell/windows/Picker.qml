@@ -61,6 +61,10 @@ Item {
             spacing: 0
             TopBar {
                 Layout.fillWidth: true
+                // Its own background, rounded like the panel's top (it
+                // stuck out past the corners).
+                topLeftRadius: panel.radius
+                topRightRadius: panel.radius
                 tab: picker.tab
                 onTabPicked: index => picker.tab = index
             }

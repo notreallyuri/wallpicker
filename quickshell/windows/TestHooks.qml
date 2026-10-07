@@ -55,6 +55,27 @@ QtObject {
         return search(root.Window.contentItem || root, []);
     }
 
+    /// The deepest scrolling view under (x, y) (as a wheel finds it:
+    /// whatever is clickable there or not).
+    function flickableAt(x, y) {
+        let found = null;
+        function walk(item) {
+            for (let i = 0; i < item.children.length; i++) {
+                const c = item.children[i];
+                if (!c.visible)
+                    continue;
+                const p = root.mapToItem(c, x, y);
+                if (p.x < 0 || p.y < 0 || p.x > c.width || p.y > c.height)
+                    continue;
+                if (c instanceof Flickable)
+                    found = c;
+                walk(c);
+            }
+        }
+        walk(root.Window.contentItem || root);
+        return found;
+    }
+
     // Only what's here crosses IPC (plain types).
     property IpcHandler ipc: IpcHandler {
         target: "wallpicker-test"
@@ -84,12 +105,13 @@ QtObject {
         /// Wheel notches over (x, y), through the view's SmoothScroll (as a
         /// mouse's would); says where it's heading.
         function wheel(x: real, y: real, notches: real): string {
-            let item = hooks.hit(x, y).item;
-            while (item && !(item instanceof Flickable))
-                item = item.parent;
+            const item = hooks.flickableAt(x, y);
             if (!item)
                 return "no scrolling view at " + x + "," + y;
-            const smooth = item.contentItem.data.find(o => typeof o.notches === "function");
+            let smooth = null;
+            for (let i = 0; i < item.children.length; i++)
+                if (typeof item.children[i].notches === "function")
+                    smooth = item.children[i];
             if (!smooth)
                 return "no SmoothScroll in " + item;
             smooth.notches(notches);
@@ -98,9 +120,7 @@ QtObject {
 
         /// The scroll position of the view at (x, y).
         function scrollY(x: real, y: real): string {
-            let item = hooks.hit(x, y).item;
-            while (item && !(item instanceof Flickable))
-                item = item.parent;
+            const item = hooks.flickableAt(x, y);
             return item ? String(Math.round(item.contentY)) : "no scrolling view";
         }
 
@@ -129,6 +149,26 @@ QtObject {
                 focus: String(hooks.root.Window.activeFocusItem).split("(")[0],
                 active: hooks.root.Window.active
             });
+        }
+
+        /// Every item the search looks into at (x, y), for debugging hits.
+        function trace(x: real, y: real): string {
+            const seen = [];
+            function walk(item, depth) {
+                if (depth > 9 || seen.length > 60)
+                    return;
+                for (let i = 0; i < item.children.length; i++) {
+                    const c = item.children[i];
+                    const p = hooks.root.mapToItem(c, x, y);
+                    const inside = p.x >= 0 && p.y >= 0 && p.x <= c.width && p.y <= c.height;
+                    if (!c.visible || (!inside && c.width > 0 && c.height > 0))
+                        continue;
+                    seen.push(" ".repeat(depth) + String(c).split("(")[0] + (c instanceof MouseArea ? " [area]" : "") + " z" + c.z);
+                    walk(c, depth + 1);
+                }
+            }
+            walk(hooks.root.Window.contentItem, 0);
+            return seen.join(" | ");
         }
 
         /// What's at (x, y).

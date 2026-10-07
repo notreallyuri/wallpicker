@@ -1,43 +1,65 @@
-// Smooth mouse-wheel scrolling for any Flickable (a GridView, ListView...):
-// put it inside the view. A wheel notch sets a target `step` px further and
-// the view glides there (ease-out); notches in a row add to the target, so a
-// fast spin goes further without stutter. Only mice: touchpads keep Qt's own
-// scrolling (1:1, with momentum). A mouse on Wayland also reports a few
-// pixels per notch; those are ignored for the notch (120 angle units).
+// Smooth, generous mouse-wheel scrolling for any Flickable (a GridView,
+// ListView...). Declare it anywhere with `flickable:`; it lays itself over
+// that view (an invisible layer that only takes the wheel: clicks and hover
+// go through), so it's first under the pointer: on the view's content, the
+// view itself could take the wheel first, in Qt's small steps.
+//
+// A notch sets a target `step` px further and the view glides there
+// (ease-out). Notches in quick succession speed up (a fast spin goes much
+// further) and add to the target. Touchpads keep Qt's own scrolling (1:1,
+// with momentum).
 import QtQuick
 
-WheelHandler {
+Item {
     id: smooth
 
-    /// The view to scroll. (Declared inside a Flickable, a handler lands on
-    /// its contentItem: set this.)
-    property Flickable flickable
-    /// Pixels per notch (120 units of a wheel's angle).
-    property real step: 180
-    property int duration: 260
+    required property Flickable flickable
+    /// Pixels per notch (120 units of a wheel's angle), before speed-up.
+    property real step: 220
+    property int duration: 320
 
-    // Where the glide is heading (null: not gliding).
+    // Where the glide is heading (null: not gliding), and the run of quick
+    // notches for the speed-up.
     property var goal: null
+    property real lastNotch: 0
+    property int streak: 0
 
-    readonly property real top: flickable ? flickable.originY - flickable.topMargin : 0
-    readonly property real bottom: flickable ? Math.max(top, flickable.originY + flickable.contentHeight + flickable.bottomMargin - flickable.height) : 0
+    readonly property real minY: flickable.originY - flickable.topMargin
+    readonly property real maxY: Math.max(minY, flickable.originY + flickable.contentHeight + flickable.bottomMargin - flickable.height)
 
-    acceptedDevices: PointerDevice.Mouse
-    target: null
-    // Ours, not the view's: it would jump a step at once.
-    onWheel: event => smooth.notches(-event.angleDelta.y / 120)
+    parent: flickable
+    anchors.fill: parent
+    z: 1000
+
+    WheelHandler {
+        acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+        target: null
+        onWheel: event => {
+            if (event.device.type === PointerDevice.TouchPad) {
+                event.accepted = false;
+                return;
+            }
+            smooth.notches(-event.angleDelta.y / 120);
+        }
+    }
 
     /// Scroll by `n` notches (positive: down).
     function notches(n) {
+        const now = Date.now();
+        // Notches less than 150 ms apart are a spin: up to 3x the step.
+        streak = now - lastNotch < 150 ? streak + 1 : 0;
+        lastNotch = now;
+        const speed = 1 + Math.min(streak, 8) * 0.25;
         const from = glide.running && goal !== null ? goal : flickable.contentY;
-        goal = Math.max(top, Math.min(bottom, from + n * step));
+        goal = Math.max(minY, Math.min(maxY, from + n * step * speed));
         flickable.cancelFlick();
         glide.from = flickable.contentY;
         glide.to = goal;
         glide.restart();
     }
 
-    property NumberAnimation glide: NumberAnimation {
+    NumberAnimation {
+        id: glide
         target: smooth.flickable
         property: "contentY"
         duration: smooth.duration

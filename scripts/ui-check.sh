@@ -41,6 +41,9 @@ chmod +x "$tmp/bin/hyprctl"
     echo 'wlr-randr --output HEADLESS-1 --custom-mode 1920x1080'
     echo "WALLPICKER_TEST=1 WALLPICKER_WINDOW=1 WALLPICKER_BIN='$here/target/debug/wallpicker' qs -p '$here/quickshell' > '$tmp/ui.log' 2>&1 &"
     echo 'sleep 6'
+    # wtype's first key after startup is lost (its keyboard isn't set up
+    # yet): a harmless one first.
+    echo 'wtype -k Shift_L 2>/dev/null; sleep 0.3'
     for call in "$@"; do
         if [ "${call#!}" != "$call" ]; then
             # A command run in the session (wtype for keys).
