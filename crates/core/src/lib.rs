@@ -24,6 +24,7 @@ pub mod noctalia;
 pub mod store;
 pub mod thumbs;
 pub mod transform;
+pub mod unsplash;
 pub mod workspaces;
 
 pub use error::{Error, Result};

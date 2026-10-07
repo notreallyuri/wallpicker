@@ -1,9 +1,10 @@
-//! The online providers (Wallhaven, Konachan, yande.re): search, details,
-//! tag suggestions, previews, the saved filters, links. Downloads and
-//! Wallhaven collections are in their own files.
+//! The online providers (Wallhaven, Konachan, yande.re, Unsplash): search,
+//! details, tag suggestions, previews, the saved filters, links. Downloads,
+//! Wallhaven collections and Unsplash's requests are in their own files.
 
 mod collections;
 mod download;
+mod unsplash;
 
 pub use collections::{wallhaven_collection_page, wallhaven_collections};
 pub use download::{download_and_tag, downloaded, downloaded_keys};
@@ -42,6 +43,7 @@ pub async fn search(state: &AppState, query: OnlineQuery) -> CmdResult<Page> {
             moebooru_search(state, site, &q).await
         }
         OnlineQuery::Yandere(q) => moebooru_search(state, Site::Yandere, &q).await,
+        OnlineQuery::Unsplash(q) => unsplash::search(state, q).await,
     }
 }
 
@@ -79,7 +81,7 @@ pub async fn details(state: &AppState, wallpaper: &OnlineWallpaper) -> CmdResult
         }
         // Moebooru results carry their details, so this is only reached for
         // a result that somehow lost them.
-        Provider::Konachan | Provider::Yandere => Ok(Details::default()),
+        Provider::Konachan | Provider::Yandere | Provider::Unsplash => Ok(Details::default()),
     }
 }
 
@@ -98,7 +100,7 @@ pub async fn tag_suggestions(
     text: &str,
 ) -> CmdResult<Vec<moebooru::TagSuggestion>> {
     let site = match provider {
-        Provider::Wallhaven => return Ok(Vec::new()),
+        Provider::Wallhaven | Provider::Unsplash => return Ok(Vec::new()),
         Provider::Yandere => Site::Yandere,
         Provider::Konachan => konachan_site(state).await?,
     };
@@ -172,6 +174,9 @@ pub fn http_error(provider: Provider, status: reqwest::StatusCode) -> String {
             containing \"like\" (such as like:<id>) are always blocked, on the website too."
             .into(),
         (Provider::Wallhaven, 429) => "Wallhaven rate limit reached (45 requests per minute). Wait a moment.".into(),
+        (Provider::Unsplash, 401) => "Unsplash rejected the Access Key (check it in Settings → Unsplash).".into(),
+        // Unsplash answers 403 when the hour's requests are used up.
+        (Provider::Unsplash, 403) => "Unsplash's hourly limit is reached (50 requests an hour for a new key). Try again later.".into(),
         (_, 429) => format!("{name} is limiting requests. Wait a moment."),
         (_, code) => format!("{name} returned HTTP {code}."),
     }

@@ -45,6 +45,9 @@ pub async fn download_and_tag(
     progress: impl Fn(usize, Option<usize>),
 ) -> CmdResult<String> {
     let (dest, fresh) = download(state, wallpaper, progress).await?;
+    if fresh && wallpaper.provider == wallpicker_core::online::Provider::Unsplash {
+        super::unsplash::report_download(state, &wallpaper.id).await;
+    }
 
     let store = state.store.clone();
     let check = dest.clone();

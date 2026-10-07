@@ -684,6 +684,11 @@ mod tests {
                 sorting: MoebooruSort::Random,
                 ..MoebooruQuery::default()
             },
+            unsplash: crate::unsplash::UnsplashQuery {
+                query: "fog".into(),
+                color: "teal".into(),
+                ..Default::default()
+            },
         };
         store.save_online_filters(&f).unwrap();
         let loaded = store.load_online_filters().unwrap();
@@ -693,6 +698,7 @@ mod tests {
         assert_eq!(loaded.konachan.sorting, MoebooruSort::Score);
         assert_eq!(loaded.yandere.sorting, MoebooruSort::Random);
         assert_eq!(loaded.konachan.tags, "");
+        assert_eq!((loaded.unsplash.color.as_str(), loaded.unsplash.query.as_str()), ("teal", ""));
     }
 
     #[test]

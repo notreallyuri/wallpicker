@@ -11,6 +11,7 @@ use wallpicker_core::hyprpaper;
 use wallpicker_core::moebooru::MoebooruSort;
 use wallpicker_core::online::{OnlineQuery, OnlineWallpaper, Page, Provider};
 use wallpicker_core::store::{Dirs, Store};
+use wallpicker_core::unsplash;
 use wallpicker_core::wallhaven::Sorting;
 
 use super::{Choice, fail, print_json, usage_for};
@@ -66,12 +67,13 @@ fn sorts_for(provider: Provider) -> Vec<Choice> {
             .iter()
             .map(|s| Choice { value: s.as_str(), label: s.label() })
             .collect(),
+        Provider::Unsplash => unsplash::ORDERS.iter().map(|(value, label)| Choice { value, label }).collect(),
     }
 }
 
 fn likes_label(w: &OnlineWallpaper) -> String {
     match w.provider {
-        Provider::Wallhaven => format!("♥ {}", w.likes),
+        Provider::Wallhaven | Provider::Unsplash => format!("♥ {}", w.likes),
         Provider::Konachan | Provider::Yandere => format!("Score {}", w.likes),
     }
 }
@@ -120,6 +122,13 @@ pub fn search(args: &[String]) -> i32 {
             Provider::Wallhaven => Sorting::from_str(sort).map(|s| filters.wallhaven.sorting = s).is_some(),
             Provider::Konachan => MoebooruSort::from_str(sort).map(|s| filters.konachan.sorting = s).is_some(),
             Provider::Yandere => MoebooruSort::from_str(sort).map(|s| filters.yandere.sorting = s).is_some(),
+            Provider::Unsplash => match sort.as_str() {
+                "relevant" => Some(unsplash::Order::Relevant),
+                "latest" => Some(unsplash::Order::Latest),
+                _ => None,
+            }
+            .map(|o| filters.unsplash.order = o)
+            .is_some(),
         };
         if !ok {
             let valid: Vec<&str> = sorts_for(provider).iter().map(|c| c.value).collect();
@@ -133,6 +142,7 @@ pub fn search(args: &[String]) -> i32 {
         Provider::Wallhaven => filters.wallhaven.active_filters(),
         Provider::Konachan => filters.konachan.active_filters(),
         Provider::Yandere => filters.yandere.active_filters(),
+        Provider::Unsplash => filters.unsplash.active_filters(),
     };
     let (online_query, current_sort) = match provider {
         Provider::Wallhaven => {
@@ -152,6 +162,12 @@ pub fn search(args: &[String]) -> i32 {
             (q.tags, q.page) = (query.clone(), page);
             let sort = q.sorting.as_str();
             (OnlineQuery::Yandere(q), sort)
+        }
+        Provider::Unsplash => {
+            let mut q = filters.unsplash.clone();
+            (q.query, q.page) = (query.clone(), page);
+            let sort = if q.order == unsplash::Order::Latest { "latest" } else { "relevant" };
+            (OnlineQuery::Unsplash(q), sort)
         }
     };
 
