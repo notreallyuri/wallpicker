@@ -6,6 +6,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import qs.services
 import qs.windows
 
 ShellRoot {
@@ -18,6 +19,10 @@ ShellRoot {
         /// Close (the launcher only calls it when it's open).
         function toggle(): void {
             Qt.quit();
+        }
+        /// Go to a tab or a dialog (`wallpicker --open PLACE [IMAGE]`).
+        function open(place: string, path: string): void {
+            Views.go(place, path);
         }
     }
 
@@ -35,6 +40,17 @@ ShellRoot {
         id: windowHost
         PickerWindow {
             onDismissed: Qt.quit()
+        }
+    }
+
+    // Opened somewhere (`wallpicker --open`): there once the picker is up,
+    // so its dialogs are there to answer.
+    Timer {
+        running: host.item !== null && !!Quickshell.env("WALLPICKER_OPEN")
+        interval: 150
+        onTriggered: {
+            const [place, path] = String(Quickshell.env("WALLPICKER_OPEN")).split("\n");
+            Views.go(place, path || "");
         }
     }
 

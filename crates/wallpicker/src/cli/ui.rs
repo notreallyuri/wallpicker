@@ -1,9 +1,11 @@
-//! `wallpicker ui [--toggle]`: the Quickshell interface (quickshell/). It
-//! runs as `qs -p <its folder>` with this binary as its backend
-//! (WALLPICKER_BIN, for `wallpicker serve`). `--toggle` closes it when it's
-//! open (a keybind); otherwise both open it.
+//! The picker: the Quickshell interface (quickshell/), run as `qs -p <its
+//! folder>` with this binary as its backend (WALLPICKER_BIN, for `wallpicker
+//! serve`). `wallpicker` (or `wallpicker ui`) opens it; `--toggle` closes it
+//! when it's open (a keybind); `--open PLACE [IMAGE]` opens it at a tab or a
+//! dialog (the Noctalia plugin hands bigger jobs over that way), or moves
+//! the open one there.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
 use super::fail;
@@ -68,18 +70,33 @@ fn running(dir: &PathBuf) -> bool {
 
 pub fn ui(args: &[String]) -> i32 {
     let toggle = args.iter().any(|a| a == "--toggle");
+    let cwd = std::env::current_dir().unwrap_or_default();
+    let place = match parse_open(args, &cwd) {
+        Ok(place) => place,
+        Err(e) => {
+            eprintln!("wallpicker: {e}");
+            return 2;
+        }
+    };
     let Some(dir) = ui_dir() else {
         return fail(&"the interface isn't installed (scripts/install-local.sh puts it in ~/.local/share/wallpicker/ui)");
     };
     if running(&dir) {
-        if toggle {
-            let _ = Command::new("qs").arg("-p").arg(&dir).args(["ipc", "call", "wallpicker", "toggle"]).status();
+        let call = |args: &[&str]| Command::new("qs").arg("-p").arg(&dir).args(["ipc", "call", "wallpicker"]).args(args).status();
+        if let Some(p) = &place {
+            let _ = call(&["open", &p.view, p.path.as_deref().unwrap_or("")]);
+        } else if toggle {
+            let _ = call(&["toggle"]);
         }
         return 0;
     }
     let exe = std::env::current_exe().map(|p| p.into_os_string()).unwrap_or_else(|_| "wallpicker".into());
     let mut qs = Command::new("qs");
     qs.arg("-p").arg(&dir).args(["--no-duplicate", "--daemonize"]).env("WALLPICKER_BIN", exe);
+    // Where to open, read once it's up (shell.qml).
+    if let Some(p) = &place {
+        qs.env("WALLPICKER_OPEN", format!("{}\n{}", p.view, p.path.as_deref().unwrap_or("")));
+    }
     lighter(&mut qs);
     match qs
         .stdin(Stdio::null())
@@ -91,5 +108,60 @@ pub fn ui(args: &[String]) -> i32 {
         Ok(s) if s.success() => 0,
         Ok(s) => fail(&format!("quickshell exited with {s}")),
         Err(e) => fail(&format!("could not start quickshell (qs): {e}")),
+    }
+}
+
+/// Where `--open` can go.
+const PLACES: [&str; 6] = ["local", "online", "collections", "settings", "duplicates", "tags"];
+
+#[derive(Debug, PartialEq, Eq)]
+struct Place {
+    view: String,
+    /// The image, for "tags" (absolute).
+    path: Option<String>,
+}
+
+/// The place `args` ask for (None: no `--open`). A relative image path is
+/// taken from `cwd`, where `wallpicker` was started.
+fn parse_open(args: &[String], cwd: &Path) -> Result<Option<Place>, String> {
+    let Some(i) = args.iter().position(|a| a == "--open") else {
+        return Ok(None);
+    };
+    let Some(view) = args.get(i + 1) else {
+        return Err("--open needs a place: local, online, collections, settings, duplicates or tags <image>".into());
+    };
+    if !PLACES.contains(&view.as_str()) {
+        return Err(format!("--open {view}? use local, online, collections, settings, duplicates or tags <image>"));
+    }
+    let path = if view == "tags" {
+        let image = args.get(i + 2).ok_or("--open tags needs the image")?;
+        Some(cwd.join(image).to_string_lossy().into_owned())
+    } else {
+        None
+    };
+    Ok(Some(Place { view: view.clone(), path }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn args(a: &[&str]) -> Vec<String> {
+        a.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn parses_places() {
+        let cwd = Path::new("/home/u");
+        assert_eq!(parse_open(&args(&["--toggle"]), cwd), Ok(None));
+        assert_eq!(parse_open(&args(&["--open", "settings"]), cwd), Ok(Some(Place { view: "settings".into(), path: None })));
+        assert_eq!(
+            parse_open(&args(&["--open", "tags", "pics/a.png"]), cwd),
+            Ok(Some(Place { view: "tags".into(), path: Some("/home/u/pics/a.png".into()) }))
+        );
+        assert_eq!(parse_open(&args(&["--open", "tags", "/w/b.jpg"]), cwd).unwrap().unwrap().path.as_deref(), Some("/w/b.jpg"));
+        assert!(parse_open(&args(&["--open"]), cwd).is_err());
+        assert!(parse_open(&args(&["--open", "nowhere"]), cwd).is_err());
+        assert!(parse_open(&args(&["--open", "tags"]), cwd).is_err());
     }
 }

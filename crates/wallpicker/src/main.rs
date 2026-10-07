@@ -1,10 +1,4 @@
-//! `wallpicker`: the command line and the Quickshell interface's backend.
-//! The window's own arguments (none, `--tray`, `--toggle`, `--open`) go to
-//! the old Tauri window, `wallpicker-app`, until the Quickshell interface
-//! takes its place.
-
-use std::os::unix::process::CommandExt;
-use std::path::PathBuf;
+//! `wallpicker`: the picker (Quickshell), its backend, the command line.
 
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -73,7 +67,6 @@ fn main() {
              adjust what a monitor shows, until another wallpaper goes there\n  \
              wallpicker workspaces [list | on | off | remember on|off | set WS IMAGE | clear WS | run]\n                                     \
              a wallpaper per Hyprland workspace\n  \
-             wallpicker ui [--toggle]           the new interface (Quickshell; in progress)\n  \
              wallpicker daemon                  follow workspaces and keep the slideshow on time\n                                     \
              (for an autostart; one at a time)\n  \
              wallpicker duplicates [--json] | duplicates keep <image> <other>...\n                                     \
@@ -87,13 +80,12 @@ fn main() {
              wallpicker filters [<provider> set KEY=VALUE...|reset]  read or change the online filters\n  \
              wallpicker settings [set KEY=VALUE...]  read or change the settings\n  \
              wallpicker --restore               re-apply the saved wallpapers (hyprpaper) and exit\n  \
-             wallpicker --tray                  start in the tray, window hidden (for an autostart)\n  \
-             wallpicker --toggle                show or hide the window (opens it if not running)\n  \
+             wallpicker --toggle                open or close the picker (for a keybind)\n  \
              wallpicker --open local|online|collections|settings|duplicates\n                                     \
-             show the window at that tab or dialog (opens it if not running)\n  \
-             wallpicker --open tags <image>     edit an image's tags in the window\n\n\
-             Running `wallpicker` while it's open brings up that window. Closing the window\n\
-             keeps it in the tray (Settings → General); quit from the tray menu."
+             open the picker at that tab or dialog\n  \
+             wallpicker --open tags <image>     edit an image's tags in the picker\n\n\
+             The picker (Quickshell) frees all its memory when closed; `wallpicker daemon` is\n\
+             what keeps running (workspaces, the slideshow, Noctalia's colors)."
         );
         return;
     }
@@ -102,17 +94,10 @@ fn main() {
         std::process::exit(wallpicker::restore_cli());
     }
 
-    // The rest is the window's: none, --tray, --toggle, --open.
-    std::process::exit(window(&args));
-}
-
-/// Hand over to the Tauri window, `wallpicker-app`: next to this binary
-/// (installed, or a build), else on PATH. It checks `--open`'s arguments
-/// itself, before a running window gets them.
-fn window(args: &[String]) -> i32 {
-    let beside = std::env::current_exe().ok().and_then(|exe| Some(exe.parent()?.join("wallpicker-app")));
-    let app = beside.filter(|p| p.is_file()).unwrap_or_else(|| PathBuf::from("wallpicker-app"));
-    let e = std::process::Command::new(&app).args(args).exec();
-    eprintln!("wallpicker: could not start the window ({}): {e}", app.display());
-    1
+    // The rest is the picker's: none (open it), --toggle, --open; --tray,
+    // from the old app's autostarts, is the daemon now.
+    if args.iter().any(|a| a == "--tray") {
+        std::process::exit(wallpicker::cli::daemon(&[]));
+    }
+    std::process::exit(wallpicker::cli::ui(&args));
 }
