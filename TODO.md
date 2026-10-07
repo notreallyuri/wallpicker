@@ -118,8 +118,8 @@ and feels like the app (real transitions and easing, glass, shadows); the scroll
   Folders layout and breadcrumbs, Color filter, the ⋯ menu, the tile's right-click menu (apply
   to, favorite, tags, show in folder, trash, duplicates), the Tags dialog, keyboard shortcuts,
   empty and loading states, Random.
-- [ ] **2. Top bar and monitors**: the monitor drawer, All, Previous, the Adjust dialog (mirror,
-  fit, framing by drag, scroll and sliders).
+- [x] **2. Top bar and monitors** (done 2026-10-07; tooltips left over, below): the monitor
+  drawer, All, Previous, the Adjust dialog (mirror, fit, framing by drag, scroll and sliders).
 - [ ] **3. Online and Collections**: providers, search, the filters dialog, details (preview,
   tags, download, apply), downloads, Wallhaven collections, pages and Jump to.
 - [ ] **4. Settings**: every section (General, Appearance, Downloads, Slideshow, Workspaces with
@@ -129,6 +129,15 @@ and feels like the app (real transitions and easing, glass, shadows); the scroll
 - [ ] **6. Switch over**: `wallpicker` opens the Quickshell UI; the Noctalia plugin's handoffs
   (`--open`) go through it; remove the Tauri app, WebKit and Leptos (`ui/`, the GUI half of
   `src-tauri`); README, install script, scripts/memory and scripts/open-timing redone for QML.
+
+### Left over from the phases
+
+- [ ] **Tooltips**: a Tooltip component like the app's Tip (nocomponents' tooltip, a popover
+  after a short hover; never the plain system kind), then the app's tips: the monitor pills
+  (name · size, "Showing" the file) and All ("Every monitor"), the drawer's chevron ("Show the
+  monitors, bigger" / "Hide the monitors"), a drawer card's Adjust and ↶ (with the monitor's
+  name), Previous, Settings, ⋯ ("More"), Random (Ctrl+R), Flat/Folders, Color, Up a folder
+  (Alt+Up), the tag row's, a tile's, and Online's when phase 3 brings them.
 
 ### To decide on the way
 

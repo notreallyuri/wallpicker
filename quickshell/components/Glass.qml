@@ -27,7 +27,7 @@ ClippingRectangle {
         source: under
         blurEnabled: true
         blur: 1
-        blurMax: 48
+        blurMax: 64
     }
     Rectangle {
         anchors.fill: parent
