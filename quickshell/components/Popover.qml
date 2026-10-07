@@ -41,13 +41,13 @@ Popup {
             property: "opacity"
             from: 0
             to: 1
-            duration: 150
+            duration: Theme.ms(150)
         }
         NumberAnimation {
             property: "scale"
             from: 0.96
             to: 1
-            duration: 200
+            duration: Theme.ms(200)
             easing.type: Easing.OutCubic
         }
     }
@@ -55,7 +55,7 @@ Popup {
         NumberAnimation {
             property: "opacity"
             to: 0
-            duration: 100
+            duration: Theme.ms(100)
         }
     }
 }

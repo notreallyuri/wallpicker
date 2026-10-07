@@ -25,7 +25,7 @@ Rectangle {
     border.color: on ? Theme.primary : Theme.a(Theme.foreground, 0.08)
     Behavior on border.color {
         ColorAnimation {
-            duration: 150
+            duration: Theme.ms(150)
         }
     }
 

@@ -86,7 +86,7 @@ Item {
                 opacity: status === Image.Ready ? 1 : 0
                 Behavior on opacity {
                     NumberAnimation {
-                        duration: 200
+                        duration: Theme.ms(200)
                     }
                 }
             }
@@ -113,7 +113,7 @@ Item {
                 visible: opacity > 0
                 Behavior on opacity {
                     NumberAnimation {
-                        duration: 150
+                        duration: Theme.ms(150)
                     }
                 }
                 Rectangle {
@@ -207,7 +207,7 @@ Item {
                     color: Theme.primary
                     Behavior on width {
                         NumberAnimation {
-                            duration: 100
+                            duration: Theme.ms(100)
                         }
                     }
                 }

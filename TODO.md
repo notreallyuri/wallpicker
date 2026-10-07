@@ -144,7 +144,7 @@ and feels like the app (real transitions and easing, glass, shadows); the scroll
   `serve`, the shared service layer; tokio, no Tauri/WebKit/GTK, 5.9 MB) and `wallpicker-app`
   (`src-tauri`: the old window only, frozen: no more fixes or features). `wallpicker` with no
   arguments, `--tray`, `--toggle` or `--open` hands over to `wallpicker-app` until phase 6.
-- [ ] **4. Settings**: every section (General, Appearance, Downloads, Slideshow, Workspaces with
+- [x] **4. Settings** (done 2026-10-07; the file dialogs need a check on the real desktop): every section (General, Appearance, Downloads, Slideshow, Workspaces with
   its picker, Performance, Backup with file dialogs, providers), conflicts and Stop it.
   The plan (2026-10-07), in this order, each step checked headless and committed:
   1. **Backend**: Tauri's save_settings logic (keeping the snapshot folder and workspace

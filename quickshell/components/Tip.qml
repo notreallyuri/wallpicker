@@ -84,12 +84,12 @@ Item {
         height: label.implicitHeight
         Behavior on opacity {
             NumberAnimation {
-                duration: 100
+                duration: Theme.ms(100)
             }
         }
         Behavior on scale {
             NumberAnimation {
-                duration: 100
+                duration: Theme.ms(100)
             }
         }
 

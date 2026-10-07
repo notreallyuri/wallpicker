@@ -24,7 +24,7 @@ Rectangle {
     opacity: kept || mouse.containsMouse ? 1 : 0.6
     Behavior on opacity {
         NumberAnimation {
-            duration: 150
+            duration: Theme.ms(150)
         }
     }
 

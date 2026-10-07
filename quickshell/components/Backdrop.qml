@@ -1,6 +1,7 @@
 // The wallpaper, big and blurred, behind everything (palette.rs's Backdrop:
 // blur-2xl, saturate-150, 70%, scaled 110%).
 import QtQuick
+import qs.services
 import QtQuick.Effects
 
 Item {
@@ -29,7 +30,7 @@ Item {
         saturation: 0.5
         Behavior on opacity {
             NumberAnimation {
-                duration: 400
+                duration: Theme.ms(400)
             }
         }
     }

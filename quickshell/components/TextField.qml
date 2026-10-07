@@ -28,7 +28,7 @@ Rectangle {
     border.color: invalid ? "#fd4663" : input.activeFocus ? Theme.a(Theme.primary, 0.7) : Theme.input
     Behavior on border.color {
         ColorAnimation {
-            duration: 150
+            duration: Theme.ms(150)
         }
     }
 

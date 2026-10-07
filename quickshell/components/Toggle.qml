@@ -18,7 +18,7 @@ Rectangle {
     opacity: enabled ? 1 : 0.5
     Behavior on color {
         ColorAnimation {
-            duration: 150
+            duration: Theme.ms(150)
         }
     }
 

@@ -76,13 +76,13 @@ MonitorFigure {
             yScale: framer.adjusted.flip.v ? -1 : 1
             Behavior on xScale {
                 NumberAnimation {
-                    duration: 300
+                    duration: Theme.ms(300)
                     easing.type: Easing.OutCubic
                 }
             }
             Behavior on yScale {
                 NumberAnimation {
-                    duration: 300
+                    duration: Theme.ms(300)
                     easing.type: Easing.OutCubic
                 }
             }

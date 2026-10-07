@@ -59,7 +59,7 @@ Rectangle {
                 color: !on && mouse.containsMouse ? Theme.a(Theme.primary, 0.12) : "transparent"
                 Behavior on color {
                     ColorAnimation {
-                        duration: 200
+                        duration: Theme.ms(200)
                     }
                 }
                 Text {
@@ -69,7 +69,7 @@ Rectangle {
                     color: tab.on ? Theme.primaryForeground : Theme.mutedForeground
                     Behavior on color {
                         ColorAnimation {
-                            duration: 200
+                            duration: Theme.ms(200)
                         }
                     }
                     font.family: Theme.font

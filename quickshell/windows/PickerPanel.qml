@@ -61,19 +61,19 @@ PanelWindow {
             target: dim
             property: "opacity"
             to: 1
-            duration: 200
+            duration: Theme.ms(200)
         }
         NumberAnimation {
             target: picker
             property: "opacity"
             to: 1
-            duration: 200
+            duration: Theme.ms(200)
         }
         NumberAnimation {
             target: picker
             property: "scale"
             to: 1
-            duration: 260
+            duration: Theme.ms(260)
             easing.type: Easing.OutCubic
         }
     }

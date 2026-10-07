@@ -13,7 +13,7 @@ Item {
     clip: true
     Behavior on implicitHeight {
         NumberAnimation {
-            duration: 300
+            duration: Theme.ms(300)
             easing.type: Easing.OutCubic
         }
     }

@@ -56,13 +56,13 @@ Item {
         border.color: Theme.input
         Behavior on y {
             NumberAnimation {
-                duration: 120
+                duration: Theme.ms(120)
                 easing.type: Easing.OutCubic
             }
         }
         Behavior on color {
             ColorAnimation {
-                duration: 150
+                duration: Theme.ms(150)
             }
         }
         RowLayout {

@@ -1,6 +1,7 @@
 // Settings → Appearance: dark mode and the color theme (both at once, kept
 // in the interface's own choices), colors from the wallpaper and from
-// which monitor (saved with the form), Noctalia's colors (at once).
+// which monitor (saved with the form), Noctalia's colors and the
+// wallpaper behind the picker (at once).
 import QtQuick
 import QtQuick.Layouts
 import qs.components
@@ -83,5 +84,13 @@ ColumnLayout {
 
     NoctaliaColors {
         Layout.fillWidth: true
+    }
+
+    ToggleField {
+        Layout.fillWidth: true
+        label: "Wallpaper behind the picker"
+        description: "Your current wallpaper, blurred, as the picker's background. Applies right away."
+        checked: Prefs.backdrop
+        onToggled: Prefs.backdrop = !Prefs.backdrop
     }
 }

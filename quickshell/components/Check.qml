@@ -28,7 +28,7 @@ Item {
             border.color: mouse.containsMouse ? Theme.a(Theme.primary, 0.7) : Theme.input
             Behavior on color {
                 ColorAnimation {
-                    duration: 150
+                    duration: Theme.ms(150)
                 }
             }
             Icon {

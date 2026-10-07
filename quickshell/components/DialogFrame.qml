@@ -32,7 +32,7 @@ Popup {
         color: Qt.rgba(0, 0, 0, 0.45)
         Behavior on opacity {
             NumberAnimation {
-                duration: 150
+                duration: Theme.ms(150)
             }
         }
     }
@@ -60,13 +60,13 @@ Popup {
             property: "opacity"
             from: 0
             to: 1
-            duration: 150
+            duration: Theme.ms(150)
         }
         NumberAnimation {
             property: "scale"
             from: 0.95
             to: 1
-            duration: 220
+            duration: Theme.ms(220)
             easing.type: Easing.OutCubic
         }
     }
@@ -74,7 +74,7 @@ Popup {
         NumberAnimation {
             property: "opacity"
             to: 0
-            duration: 120
+            duration: Theme.ms(120)
         }
     }
 }

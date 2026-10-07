@@ -23,7 +23,7 @@ Rectangle {
     border.color: Theme.a(Theme.primary, 0.25)
     Behavior on color {
         ColorAnimation {
-            duration: 150
+            duration: Theme.ms(150)
         }
     }
 

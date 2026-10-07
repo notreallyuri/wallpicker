@@ -21,7 +21,7 @@ Rectangle {
     y: mouse.containsMouse ? -2 : 0
     Behavior on y {
         NumberAnimation {
-            duration: 200
+            duration: Theme.ms(200)
             easing.type: Easing.BezierSpline
             easing.bezierCurve: Theme.bounce
         }

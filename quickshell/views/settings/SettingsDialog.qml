@@ -84,8 +84,6 @@ DialogFrame {
             blurb: "High-resolution anime scans."
         }
     ]
-    /// Sections built so far (the rest show Pending until their step).
-    readonly property var built: ["general", "appearance", "downloads", "slideshow", "workspaces", "wallhaven", "konachan", "yandere"]
     /// The section shown.
     property string current: "general"
     readonly property var section: sections.find(s => s.slug === current) || sections[0]
@@ -172,7 +170,7 @@ DialogFrame {
                         id: sectionLoader
                         Layout.fillWidth: true
                         // Built when shown, with the form to edit.
-                        source: dialog.opened ? Qt.resolvedUrl(dialog.built.includes(dialog.section.slug) ? dialog.section.file : "Pending.qml") : ""
+                        source: dialog.opened ? Qt.resolvedUrl(dialog.section.file) : ""
                         onLoaded: {
                             item.form = form;
                             pane.contentY = 0;

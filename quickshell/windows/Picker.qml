@@ -52,6 +52,8 @@ Item {
             radius: parent.radius - 1
             color: "transparent"
             Backdrop {
+                // Settings → Performance (and Appearance): off, the plain color.
+                visible: Prefs.backdrop
                 anchors.fill: parent
                 source: {
                     const name = Monitors.selection === Monitors.all ? (Monitors.list[0] || {}).name : Monitors.selection;

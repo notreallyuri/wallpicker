@@ -19,6 +19,11 @@ Singleton {
     property alias darkMode: data.darkMode
     /// A color theme (services/Themes.js).
     property alias colorTheme: data.colorTheme
+    /// Settings → Performance: the frosted glass, the wallpaper behind the
+    /// picker, animations.
+    property alias glass: data.glass
+    property alias backdrop: data.backdrop
+    property alias motion: data.motion
 
     FileView {
         id: file
@@ -50,6 +55,9 @@ Singleton {
             property bool monitorsOpen: false
             property string darkMode: "system"
             property string colorTheme: "blossom"
+            property bool glass: true
+            property bool backdrop: true
+            property bool motion: true
         }
     }
 }

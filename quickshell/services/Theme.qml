@@ -44,7 +44,15 @@ Singleton {
 
     // ease-bounce (globals.css): cubic-bezier(0.34, 1.56, 0.64, 1).
     readonly property var bounce: [0.34, 1.56, 0.64, 1, 1, 1]
-    readonly property int duration: 300
+    /// Animations on (Settings → Performance): off, things change at once.
+    readonly property bool motion: Prefs.motion
+    readonly property int duration: ms(300)
+
+    /// `n` ms, or none with animations off. (Not for looping animations: the
+    /// spinner and the placeholders' pulse keep theirs.)
+    function ms(n) {
+        return motion ? n : 0;
+    }
 
     function token(role, tint, fallback) {
         const hex = roles[role];

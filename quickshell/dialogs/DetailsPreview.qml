@@ -42,7 +42,7 @@ ClippingRectangle {
         opacity: status === Image.Ready ? 1 : 0
         Behavior on opacity {
             NumberAnimation {
-                duration: 300
+                duration: Theme.ms(300)
             }
         }
     }

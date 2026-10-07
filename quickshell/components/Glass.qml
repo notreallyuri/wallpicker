@@ -20,7 +20,10 @@ ClippingRectangle {
     /// Anything whose change moves the glass relative to them (it's
     /// measured again then): positions in other items don't notify.
     property var follow
-    property color tint: Theme.a(Theme.background, 0.7)
+    /// Frosted (Settings → Performance): off, a solid tint and no blur,
+    /// which is most of the CPU while scrolling.
+    readonly property bool frosted: Prefs.glass
+    property color tint: Theme.a(Theme.background, frosted ? 0.7 : 0.94)
     property real blurMax: 64
 
     readonly property real pad: blurMax
@@ -50,7 +53,7 @@ ClippingRectangle {
         y: -glass.pad
         width: glass.width + 2 * glass.pad
         height: glass.height + 2 * glass.pad
-        layer.enabled: true
+        layer.enabled: glass.frosted
         visible: false
         Rectangle {
             anchors.fill: parent
@@ -58,17 +61,20 @@ ClippingRectangle {
         }
         ShaderEffectSource {
             visible: glass.backdrop !== null
+            live: glass.frosted
             anchors.fill: parent
             sourceItem: glass.backdrop
             sourceRect: Qt.rect(glass.backdropCorner.x, glass.backdropCorner.y, behind.width, behind.height)
         }
         ShaderEffectSource {
+            live: glass.frosted
             anchors.fill: parent
             sourceItem: glass.source
             sourceRect: Qt.rect(glass.sourceCorner.x, glass.sourceCorner.y, behind.width, behind.height)
         }
     }
     MultiEffect {
+        visible: glass.frosted
         x: behind.x
         y: behind.y
         width: behind.width

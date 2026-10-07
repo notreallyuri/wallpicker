@@ -64,7 +64,7 @@ RowLayout {
             scale: slider.pressed ? 1.15 : 1
             Behavior on scale {
                 NumberAnimation {
-                    duration: 120
+                    duration: Theme.ms(120)
                 }
             }
         }
