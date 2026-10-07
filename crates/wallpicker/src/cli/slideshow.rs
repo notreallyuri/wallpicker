@@ -2,8 +2,9 @@
 //! Settings → Slideshow (or `wallpicker settings set slideshow.*`).
 //!
 //! `tick` changes it if it's due and does nothing otherwise, so calling it
-//! often is harmless: the Noctalia plugin calls it every minute. `run` does
-//! the same in a loop, for setups without Noctalia (a Hyprland autostart).
+//! often is harmless: the Noctalia plugin calls it every minute. `run` (and
+//! `wallpicker daemon`) does the same in a loop. Ticks take turns (a lock
+//! file), so two timers at once never both change it.
 
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -55,6 +56,9 @@ fn tick(force: bool) -> i32 {
 /// Change the wallpaper if the slideshow is on and it's time (or `force`).
 /// Ok(false) when some monitor failed. Shared with the app's "Change now".
 pub fn tick_with(store: &Store, force: bool) -> Result<bool, String> {
+    // One tick at a time: the next one reads the state this one saved, and
+    // finds nothing due.
+    let _turn = take_turn(store);
     let settings = store.load_settings().map_err(|e| e.to_string())?;
     let show = &settings.slideshow;
     if !show.enabled && !force {
@@ -99,6 +103,16 @@ pub fn tick_with(store: &Store, force: bool) -> Result<bool, String> {
     state.slideshow_period = period.to_string();
     store.save_state(&state).map_err(|e| e.to_string())?;
     result
+}
+
+/// The slideshow's lock, held until dropped (None if it can't be had: the
+/// tick goes ahead unguarded rather than not at all).
+fn take_turn(store: &Store) -> Option<std::fs::File> {
+    let dir = &store.dirs().state;
+    std::fs::create_dir_all(dir).ok()?;
+    let file = std::fs::OpenOptions::new().create(true).truncate(false).write(true).open(dir.join("slideshow.lock")).ok()?;
+    file.lock().ok()?;
+    Some(file)
 }
 
 fn run() -> i32 {

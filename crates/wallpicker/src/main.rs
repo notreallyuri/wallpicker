@@ -27,6 +27,7 @@ fn main() {
         Some("duplicates") => std::process::exit(wallpicker::cli::duplicates(&args[1..])),
         Some("ui") => std::process::exit(wallpicker::cli::ui(&args[1..])),
         Some("serve") => std::process::exit(wallpicker::serve()),
+        Some("daemon") => std::process::exit(wallpicker::cli::daemon(&args[1..])),
         Some("workspaces") => std::process::exit(wallpicker::cli::workspaces(&args[1..])),
         Some("adjust") => std::process::exit(wallpicker::cli::adjust(&args[1..])),
         Some("show-in-folder") => std::process::exit(wallpicker::cli::show_in_folder(&args[1..])),
@@ -73,6 +74,8 @@ fn main() {
              wallpicker workspaces [list | on | off | remember on|off | set WS IMAGE | clear WS | run]\n                                     \
              a wallpaper per Hyprland workspace\n  \
              wallpicker ui [--toggle]           the new interface (Quickshell; in progress)\n  \
+             wallpicker daemon                  follow workspaces and keep the slideshow on time\n                                     \
+             (for an autostart; one at a time)\n  \
              wallpicker duplicates [--json] | duplicates keep <image> <other>...\n                                     \
              find copies and resized versions; keep one, trash the rest\n  \
              wallpicker backup export [FILE] | import FILE [--replace] | snapshots | restore ID\n                                     \

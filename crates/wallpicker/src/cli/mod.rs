@@ -14,6 +14,7 @@ use wallpicker_core::store::{Dirs, Store};
 use wallpicker_core::thumbs;
 
 mod config;
+mod daemon;
 mod library_edits;
 pub mod online;
 mod random;
@@ -23,6 +24,7 @@ mod backup;
 pub mod slideshow;
 
 pub use config::{filters, settings};
+pub use daemon::daemon;
 pub use library_edits::{adjust, colors, duplicates, favorite, show_in_folder, tag, trash};
 pub use online::{apply_online, collection, collections, details, preview, search, tags};
 pub use backup::backup;
