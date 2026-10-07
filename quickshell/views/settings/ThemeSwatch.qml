@@ -18,12 +18,16 @@ Rectangle {
     color: picked ? Theme.a(Theme.primary, 0.1) : "transparent"
     border.width: 2
     border.color: picked ? Theme.primary : mouse.containsMouse ? Theme.a(Theme.primary, 0.4) : Theme.border
-    y: mouse.containsMouse ? -2 : 0
-    Behavior on y {
-        NumberAnimation {
-            duration: Theme.ms(200)
-            easing.type: Easing.BezierSpline
-            easing.bezierCurve: Theme.bounce
+    // A lift drawn, not moved: in a grid its position is the grid's (setting
+    // y put a hovered swatch over the first row, where it stayed).
+    transform: Translate {
+        y: mouse.containsMouse ? -2 : 0
+        Behavior on y {
+            NumberAnimation {
+                duration: Theme.ms(200)
+                easing.type: Easing.BezierSpline
+                easing.bezierCurve: Theme.bounce
+            }
         }
     }
 

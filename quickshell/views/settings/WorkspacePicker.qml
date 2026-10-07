@@ -74,7 +74,10 @@ ColumnLayout {
                 LibraryThumb {
                     anchors.fill: parent
                     path: cell.modelData.path
-                    y: mouse.containsMouse ? -2 : 0
+                    // Drawn lifted (anchored, its y isn't its own).
+                    transform: Translate {
+                        y: mouse.containsMouse ? -2 : 0
+                    }
                 }
                 Rectangle {
                     anchors.fill: parent
