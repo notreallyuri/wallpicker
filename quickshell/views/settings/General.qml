@@ -115,16 +115,6 @@ ColumnLayout {
         }
     }
     Field {
-        visible: Monitors.list.length > 1
-        label: "Bezel gap when spanning (px)"
-        description: "A wallpaper spanned across the monitors (a tile's menu → Span across monitors) leaves out this much of the picture between neighbours, for the frames: lines carry on straight. 0: none."
-        NumberField {
-            to: 400
-            value: section.d.span_gap || 0
-            onEdited: v => section.form.set("span_gap", v)
-        }
-    }
-    Field {
         label: "Thumbnail width (px)"
         description: "The size thumbnails are made at (120 to 1024)."
         NumberField {

@@ -125,9 +125,33 @@ pub struct Settings {
     pub noctalia_previous_scheme: Option<String>,
     /// Width in pixels of generated thumbnails.
     pub thumb_width: u32,
-    /// Spanning a picture across the monitors: the logical pixels behind the
-    /// frames between neighbours, left out so lines carry on straight.
-    pub span_gap: u32,
+    /// Spanning: each monitor's place on wallpicker's own canvas (its top
+    /// left, mm), as arranged in the Span dialog; missing ones come from
+    /// Hyprland's layout (`span::arrangement`).
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    pub span_layout: BTreeMap<String, SpanPoint>,
+    /// The monitors spanned last, spanned again by default (empty: all).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub span_monitors: Vec<String>,
+    /// The frames between neighbouring monitors (mm): monitors snap this
+    /// far apart on the canvas, and the picture behind them is left out.
+    pub span_bezel: u32,
+}
+
+/// A monitor's top left on the span canvas, in millimetres.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
+pub struct SpanPoint {
+    pub x: f64,
+    pub y: f64,
+}
+
+/// A monitor's place and physical size on the span canvas (mm).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
+pub struct SpanRect {
+    pub x: f64,
+    pub y: f64,
+    pub w: f64,
+    pub h: f64,
 }
 
 impl Default for Settings {
@@ -156,7 +180,9 @@ impl Default for Settings {
             full_previews: false,
             noctalia_previous_scheme: None,
             thumb_width: 360,
-            span_gap: 0,
+            span_layout: BTreeMap::new(),
+            span_monitors: Vec::new(),
+            span_bezel: 0,
         }
     }
 }
@@ -202,7 +228,9 @@ impl Settings {
             .map(|p| expand_tilde(&p, home))
             .filter(|p| !p.as_os_str().is_empty());
         self.thumb_width = self.thumb_width.clamp(120, 1024);
-        self.span_gap = self.span_gap.min(400);
+        self.span_bezel = self.span_bezel.min(100);
+        self.span_layout.retain(|m, p| !m.is_empty() && p.x.is_finite() && p.y.is_finite() && p.x.abs() < 1e5 && p.y.abs() < 1e5);
+        self.span_monitors.retain(|m| !m.is_empty());
         self.wallhaven_api_key = self
             .wallhaven_api_key
             .map(|k| k.trim().to_string())
@@ -309,17 +337,32 @@ pub struct State {
     pub span: Option<Spanned>,
 }
 
-/// A picture spanned across the monitors, with its look.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+/// A picture spanned across some monitors, with its look.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Spanned {
     pub path: PathBuf,
     #[serde(default)]
     pub look: SpanLook,
+    /// The monitors it's across (empty: every one, from before spans
+    /// chose).
+    #[serde(default)]
+    pub monitors: Vec<String>,
+    /// Their places on the canvas when it was spanned (what the picker
+    /// draws).
+    #[serde(default)]
+    pub places: BTreeMap<String, SpanRect>,
+}
+
+impl Spanned {
+    /// Whether `monitor` is part of it.
+    pub fn covers(&self, monitor: &str) -> bool {
+        self.monitors.is_empty() || self.monitors.iter().any(|m| m == monitor)
+    }
 }
 
 /// How a span shows its picture: zoomed and centered like a monitor's
 /// [`Frame`] (zoom 100 to 400; center in thousandths of the picture),
-/// over the whole layout, and mirrored as a whole.
+/// over the whole arrangement, and mirrored as a whole.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct SpanLook {

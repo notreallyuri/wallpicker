@@ -1,10 +1,15 @@
-//! wallpapers.*: monitors, apply, span (one picture across the monitors,
-//! with its look) and separate, previous, adjust (announcing
+//! wallpapers.*: monitors, apply, span (one picture across some monitors,
+//! with its look and arrangement), span_layout and separate, previous,
+//! adjust (announcing
 //! `state-changed`: what the monitors show), the Adjust dialog's
 //! framing_image and fit_modes, and the files: trash (announcing
 //! `library-changed` too), show_in_folder.
 
+use std::collections::BTreeMap;
+
 use serde_json::{Value, json as value};
+use wallpicker_core::hyprpaper::SpanAsk;
+use wallpicker_core::settings::{SpanLook, SpanPoint};
 
 use super::super::Out;
 use super::{json, param};
@@ -19,17 +24,14 @@ pub(super) async fn call(state: &AppState, out: &Out, name: &str, params: &Value
             (Err(e), _) | (_, Err(e)) => Err(e),
         },
         "span" => match param::<String>(params, "path") {
-            // No look: as it comes (Cover over the layout, not mirrored).
-            Ok(path) => match params.get("look").filter(|v| !v.is_null()) {
-                None => json(wallpapers::span(state, path, Default::default()).await),
-                Some(_) => match param(params, "look") {
-                    Ok(look) => json(wallpapers::span(state, path, look).await),
-                    Err(e) => Err(e),
-                },
+            Ok(path) => match span_ask(params) {
+                Ok((look, ask)) => json(wallpapers::span(state, path, look, ask).await),
+                Err(e) => Err(e),
             },
             Err(e) => Err(e),
         },
         "separate" => json(wallpapers::separate(state).await),
+        "span_layout" => return Some(json(wallpapers::span_layout(state).await)),
         "previous" => match param(params, "monitors") {
             Ok(monitors) => json(wallpapers::previous(state, monitors).await),
             Err(e) => Err(e),
@@ -67,4 +69,21 @@ pub(super) async fn call(state: &AppState, out: &Out, name: &str, params: &Value
         out.event("state-changed", value!(null));
     }
     Some(result)
+}
+
+/// A span's optional parts: `look` (none: Cover, not mirrored),
+/// `monitors` (none: the ones spanned last), `layout` ({places: {name: {x,
+/// y}}, bezel}: an arrangement from the Span dialog, kept).
+fn span_ask(params: &Value) -> CmdResult<(SpanLook, SpanAsk)> {
+    let given = |key: &str| params.get(key).is_some_and(|v| !v.is_null());
+    let look = if given("look") { param(params, "look")? } else { SpanLook::default() };
+    let monitors = if given("monitors") { Some(param(params, "monitors")?) } else { None };
+    let layout = if given("layout") {
+        let places: BTreeMap<String, SpanPoint> = param(&params["layout"], "places")?;
+        let bezel: u32 = param(&params["layout"], "bezel")?;
+        Some((places, bezel))
+    } else {
+        None
+    };
+    Ok((look, SpanAsk { monitors, layout }))
 }

@@ -243,13 +243,14 @@ pub fn apply(args: &[String]) -> i32 {
     }
 }
 
-/// `wallpicker span <image> [--frame ZOOM,X,Y] [--flip h|v|both]`: one
-/// picture across every monitor, each showing its part of it (Settings →
-/// General's bezel gap between them), zoomed and moved like a monitor's
-/// frame (X and Y in percent) and mirrored as a whole. `wallpicker span
-/// --separate`: the monitors act on their own again, keeping their parts.
+/// `wallpicker span <image> [--monitors A,B] [--frame ZOOM,X,Y] [--flip
+/// h|v|both]`: one picture across some monitors (default: the ones spanned
+/// last, else all), arranged as the picker's Span dialog has them, each
+/// showing its part, zoomed and moved like a monitor's frame (X and Y in
+/// percent) and mirrored as a whole. `wallpicker span --separate`: the
+/// monitors act on their own again, keeping their parts.
 pub fn span(args: &[String]) -> i32 {
-    let usage_text = "usage: wallpicker span <image> [--frame ZOOM,X,Y] [--flip h|v|both]\n       wallpicker span --separate";
+    let usage_text = "usage: wallpicker span <image> [--monitors A,B] [--frame ZOOM,X,Y] [--flip h|v|both]\n       wallpicker span --separate";
     let store = Store::new(Dirs::from_env());
     if args == ["--separate"] {
         return match store.separate() {
@@ -258,6 +259,7 @@ pub fn span(args: &[String]) -> i32 {
         };
     }
     let mut look = wallpicker_core::settings::SpanLook::default();
+    let mut ask = hyprpaper::SpanAsk::default();
     let mut path = None;
     let mut rest = args.iter();
     while let Some(a) = rest.next() {
@@ -270,6 +272,13 @@ pub fn span(args: &[String]) -> i32 {
                 look.zoom = zoom.clamp(100.0, 400.0) as u16;
                 look.x = (x.clamp(0.0, 100.0) * 10.0) as u16;
                 look.y = (y.clamp(0.0, 100.0) * 10.0) as u16;
+            }
+            "--monitors" => {
+                let names: Vec<String> = rest.next().map(|v| v.split(',').map(|n| n.trim().to_string()).filter(|n| !n.is_empty()).collect()).unwrap_or_default();
+                if names.len() < 2 {
+                    return usage_for("span", "--monitors needs two or more, comma-separated (DP-1,DP-2)", usage_text);
+                }
+                ask.monitors = Some(names);
             }
             "--flip" => {
                 (look.flip.h, look.flip.v) = match rest.next().map(String::as_str) {
@@ -293,7 +302,7 @@ pub fn span(args: &[String]) -> i32 {
         Ok(s) => s.wallpaper_backend,
         Err(e) => return fail(&e),
     };
-    match hyprpaper::span_and_remember(&SystemRunner, &store, backend, &path, look) {
+    match hyprpaper::span_and_remember(&SystemRunner, &store, backend, &path, look, ask) {
         Ok(report) => {
             wallpicker_core::workspaces::remember_shown(&SystemRunner, &store, &report.applied);
             let _ = store.write_hyprpaper_conf();

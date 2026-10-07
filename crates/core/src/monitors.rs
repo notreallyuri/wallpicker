@@ -28,6 +28,11 @@ pub struct Monitor {
     /// height swap on screen).
     #[serde(default)]
     pub transform: i32,
+    /// Its panel's size in millimetres, as it reports (0: unknown).
+    #[serde(default, rename = "physicalWidth")]
+    pub physical_width: u32,
+    #[serde(default, rename = "physicalHeight")]
+    pub physical_height: u32,
     /// The workspace it shows ("2"), when Hyprland says.
     #[serde(default, rename = "activeWorkspace", skip_serializing_if = "Option::is_none")]
     pub active_workspace: Option<WorkspaceRef>,

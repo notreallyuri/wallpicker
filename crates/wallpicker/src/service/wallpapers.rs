@@ -31,9 +31,10 @@ pub async fn apply(state: &AppState, monitors: Vec<String>, path: String) -> Cmd
     .await
 }
 
-/// `path` across every monitor, each showing its part (`span.rs`), as
-/// `look` says (the same picture again: only its look changes).
-pub async fn span(state: &AppState, path: String, look: SpanLook) -> CmdResult<ApplyReport> {
+/// `path` across some monitors, each showing its part (`span.rs`), as
+/// `look` says (the same picture again: only its look changes); `ask`, which
+/// monitors and a new arrangement.
+pub async fn span(state: &AppState, path: String, look: SpanLook, ask: hyprpaper::SpanAsk) -> CmdResult<ApplyReport> {
     let path = wallpaper_path(&path)?;
     let store = state.store.clone();
     let lock = state.adjust_lock.clone();
@@ -41,12 +42,19 @@ pub async fn span(state: &AppState, path: String, look: SpanLook) -> CmdResult<A
         // Like an adjust: it makes copies and prunes the unused ones.
         let _guard = lock.lock().unwrap_or_else(|p| p.into_inner());
         let backend = store.load_settings()?.wallpaper_backend;
-        let report = hyprpaper::span_and_remember(&SystemRunner, &store, backend, &path, look)?;
+        let report = hyprpaper::span_and_remember(&SystemRunner, &store, backend, &path, look, ask)?;
         wallpicker_core::workspaces::remember_shown(&SystemRunner, &store, &report.applied);
         let _ = store.write_hyprpaper_conf();
         Ok(report)
     })
     .await
+}
+
+/// The Span dialog's canvas: every monitor's place and size (mm), the
+/// monitors spanned by default, the bezel.
+pub async fn span_layout(state: &AppState) -> CmdResult<hyprpaper::SpanLayout> {
+    let store = state.store.clone();
+    blocking(move || hyprpaper::span_layout(&SystemRunner, &store)).await
 }
 
 /// The monitors act on their own again, each keeping its part.

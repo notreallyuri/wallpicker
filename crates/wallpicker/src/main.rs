@@ -47,8 +47,8 @@ fn main() {
              wallpicker apply <image> [--monitor NAME]...\n                                     \
              apply through the configured backend (default:\n                                     \
              every connected monitor)\n  \
-             wallpicker span <image> [--frame ZOOM,X,Y] [--flip h|v|both]\n                                     \
-             one picture across every monitor, each showing its part\n  \
+             wallpicker span <image> [--monitors A,B] [--frame ZOOM,X,Y] [--flip h|v|both]\n                                     \
+             one picture across some monitors, each showing its part\n  \
              wallpicker span --separate         the monitors on their own again, each keeping\n                                     \
              its part\n  \
              wallpicker search <provider> [query...] [--page N] [--sort S] [--json] [--thumbs]\n                                     \

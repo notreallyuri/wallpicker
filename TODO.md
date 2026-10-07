@@ -69,6 +69,30 @@ Anything else put on a monitor ends the span. Each step checked headless and com
 3. [x] **The span's Adjust dialog**: the layout as it is (positions, sizes, the bezel gap),
    the picture over it, drag, scroll, sliders, mirroring, Reset.
 
+## Spanning: chosen monitors, a physical canvas (2026-10-07)
+
+Decided with the user: span across the monitors you choose (M3 above M1 can stay out while M1
+and M2 span), arranged on wallpicker's own canvas (spanning only; Hyprland's config never
+touched), each monitor at its physical size (Hyprland's `physicalWidth`/`physicalHeight` in
+mm), so lines carry on straight in the real world across different sizes and densities. Each
+step checked headless and committed:
+
+1. [x] **Core and backend**: monitors carry their physical size (96 dpi when unknown); the
+   arrangement in mm (saved in the settings per monitor; the first one from Hyprland's layout,
+   neighbours touching, offsets kept), the bezel width (mm, what monitors snap apart at,
+   replacing the pixel `span_gap`) and the monitors last spanned; `span.rs` cuts from the
+   arrangement for the chosen monitors; the span in the state keeps its monitors and their
+   places; `serve`'s `wallpapers.span` takes the monitors and the arrangement,
+   `wallpapers.span_layout` gives it; `wallpicker span --monitors A,B`.
+2. [ ] **Picker**: spanned is the span's monitors showing its picture; the drawer has the
+   Spanned card (the monitors in their arrangement, one continuous picture) plus a card per
+   monitor outside it, and All; the pills likewise; selecting the span is a target like a
+   monitor; Alt+N on a spanned monitor picks the span.
+3. [ ] **The Span dialog**: "Span across…" in the tile menus (Online downloads first) and the
+   Spanned card's Adjust; Arrange (click a monitor in or out, drag with snapping to edges at the
+   bezel width and to aligned edges and centres, the bezel width) and Frame (zoom, move,
+   mirror); bezels inside each monitor, names on chips; Settings → General's gap goes.
+
 ## Going public (if ever)
 
 - [ ] **AUR package** (`wallpicker-git`): a plain cargo build; installs the binary, the picker

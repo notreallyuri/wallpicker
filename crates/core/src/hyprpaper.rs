@@ -18,6 +18,7 @@
 //! If neither works the error carries hyprpaper's own reply, which is usually
 //! enough to tell whether hyprpaper isn't running or doesn't know the command.
 
+use std::collections::BTreeMap;
 use std::os::unix::net::UnixStream;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -27,7 +28,7 @@ use serde::Serialize;
 use crate::cmd::Runner;
 use crate::error::{Error, Result};
 use crate::monitors::{Monitor, parse_monitors};
-use crate::settings::{FitMode, Settings, SpanLook, WallpaperBackend};
+use crate::settings::{FitMode, Settings, SpanLook, SpanPoint, WallpaperBackend};
 use crate::store::Store;
 
 /// hyprpaper answers "ok" on success; some versions print nothing.
@@ -374,28 +375,54 @@ pub fn apply_and_remember_with(
     Ok(report)
 }
 
-/// Span `path` across every connected monitor (`span.rs`): each records it
-/// (its history keeps what it showed) with its part as a cut, then shows
-/// that part, zoomed, moved and mirrored by `look`. The same picture again
-/// only cuts it anew (the history stays). Temporary like any adjustment:
-/// another wallpaper on a monitor ends the span.
-pub fn span_and_remember(runner: &dyn Runner, store: &Store, backend: WallpaperBackend, path: &Path, look: SpanLook) -> Result<ApplyReport> {
+/// What a span asks beyond the picture and its look: the monitors (None:
+/// the ones spanned last, else all) and, from the Span dialog, a new
+/// arrangement to keep (each monitor's top left in mm, and the bezel).
+#[derive(Debug, Clone, Default)]
+pub struct SpanAsk {
+    pub monitors: Option<Vec<String>>,
+    pub layout: Option<(BTreeMap<String, SpanPoint>, u32)>,
+}
+
+/// Span `path` across some connected monitors (`span.rs`, on wallpicker's
+/// canvas): each records it (its history keeps what it showed) with its
+/// part as a cut, then shows that part, zoomed, moved and mirrored by
+/// `look`. The same picture again only cuts it anew (the history stays).
+/// The monitors chosen and the arrangement are kept for next time.
+/// Temporary like any adjustment: another wallpaper on one of them ends the
+/// span.
+pub fn span_and_remember(runner: &dyn Runner, store: &Store, backend: WallpaperBackend, path: &Path, look: SpanLook, ask: SpanAsk) -> Result<ApplyReport> {
     if !crate::library::is_supported_image(path) {
         return Err(Error::Invalid(format!("unsupported image type: {}", path.display())));
     }
-    let monitors = list_monitors(runner)?;
-    if monitors.len() < 2 {
+    let connected = list_monitors(runner)?;
+    let mut settings = store.load_settings()?;
+    let wanted = ask.monitors.unwrap_or_else(|| settings.span_monitors.clone());
+    let mut chosen: Vec<String> = connected.iter().map(|m| m.name.clone()).filter(|n| wanted.is_empty() || wanted.contains(n)).collect();
+    // The last ones are gone (unplugged): every monitor.
+    if chosen.len() < 2 && ask_was_default(&wanted, &settings) {
+        chosen = connected.iter().map(|m| m.name.clone()).collect();
+    }
+    if chosen.len() < 2 {
         return Err(Error::Invalid("spanning needs two monitors or more".into()));
     }
     let (width, height) = image::image_dimensions(path).map_err(|e| Error::Image(format!("{}: {e}", path.display())))?;
-    let gap = store.load_settings()?.span_gap;
+    if let Some((layout, bezel)) = ask.layout {
+        settings.span_layout.extend(layout);
+        settings.span_bezel = bezel;
+    }
+    settings.span_monitors = chosen.clone();
+    store.save_settings(&settings)?;
+    let settings = store.load_settings()?;
+    let placed: Vec<crate::span::Placed> = crate::span::arrangement(&connected, &settings.span_layout, settings.span_bezel).into_iter().filter(|p| chosen.contains(&p.name)).collect();
     let look = look.sanitized();
-    let cuts = crate::span::cuts(&monitors, width, height, gap, &look);
+    let cuts = crate::span::cuts(&placed, width, height, &look);
     // The same picture again (a new look): no new history.
     for (m, _) in &cuts {
         store.set_current(m, path)?;
     }
-    store.set_span(path, look, &cuts)?;
+    let places = placed.iter().map(|p| (p.name.clone(), p.rect)).collect();
+    store.set_span(path, look, &cuts, places)?;
     // Read after the cuts are saved: each monitor is shown its part.
     let backend = Backend::new(backend, store);
     let fits = Fits::load(store);
@@ -407,6 +434,44 @@ pub fn span_and_remember(runner: &dyn Runner, store: &Store, backend: WallpaperB
         }
     }
     Ok(report)
+}
+
+/// Whether the monitors asked were the remembered ones (not a choice made
+/// now), so a choice gone stale can fall back to every monitor.
+fn ask_was_default(wanted: &[String], settings: &Settings) -> bool {
+    wanted == settings.span_monitors.as_slice()
+}
+
+/// What the Span dialog shows: every connected monitor on the canvas,
+/// which ones are spanned by default, and the bezel.
+#[derive(Debug, Clone, Serialize)]
+pub struct SpanLayout {
+    pub monitors: Vec<SpanMonitor>,
+    pub chosen: Vec<String>,
+    pub bezel: u32,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct SpanMonitor {
+    pub name: String,
+    #[serde(flatten)]
+    pub rect: crate::settings::SpanRect,
+    pub out_width: u32,
+    pub out_height: u32,
+}
+
+pub fn span_layout(runner: &dyn Runner, store: &Store) -> Result<SpanLayout> {
+    let connected = list_monitors(runner)?;
+    let settings = store.load_settings()?;
+    let monitors: Vec<SpanMonitor> = crate::span::arrangement(&connected, &settings.span_layout, settings.span_bezel)
+        .into_iter()
+        .map(|p| SpanMonitor { name: p.name, rect: p.rect, out_width: p.out_width, out_height: p.out_height })
+        .collect();
+    let mut chosen: Vec<String> = monitors.iter().map(|m| m.name.clone()).filter(|n| settings.span_monitors.contains(n)).collect();
+    if chosen.len() < 2 {
+        chosen = monitors.iter().map(|m| m.name.clone()).collect();
+    }
+    Ok(SpanLayout { monitors, chosen, bezel: settings.span_bezel })
 }
 
 /// Put back what each of `monitors` showed before ([`Store::previous`]),

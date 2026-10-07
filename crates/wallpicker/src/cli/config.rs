@@ -249,8 +249,8 @@ struct SettingsOutput {
     other_wallpaper_programs: Vec<String>,
     close_to_tray: bool,
     thumb_width: u32,
-    /// Spanning: the picture left out between neighbouring monitors (px).
-    span_gap: u32,
+    /// Spanning: the frames between neighbouring monitors (mm).
+    span_bezel: u32,
     konachan_site: &'static str,
     /// The key itself is never printed; it's set in the app.
     api_key_set: bool,
@@ -269,7 +269,7 @@ struct SettingsOptions {
 
 const SETTINGS_USAGE: &str = "usage: wallpicker settings [--json]\n       \
      wallpicker settings set KEY=VALUE...\n\
-     keys: folders (one per line) download_dir recursive backend fit_mode thumb_width span_gap konachan_site close_to_tray\n\
+     keys: folders (one per line) download_dir recursive backend fit_mode thumb_width span_bezel konachan_site close_to_tray\n\
      snapshot_dir (where the daily library snapshots go; empty: the default)\n\
      monitor_fit.NAME (a monitor's own fit; empty to use fit_mode)\n\
      slideshow.enabled slideshow.minutes slideshow.favorites slideshow.tags (comma-separated)\n\
@@ -333,7 +333,7 @@ fn print_settings(s: &Settings) -> i32 {
         other_wallpaper_programs: hyprpaper::conflicts(&wallpicker_core::cmd::SystemRunner, s.wallpaper_backend),
         close_to_tray: s.close_to_tray,
         thumb_width: s.thumb_width,
-        span_gap: s.span_gap,
+        span_bezel: s.span_bezel,
         konachan_site: s.konachan_site.as_str(),
         api_key_set: s.wallhaven_api_key.is_some(),
         noctalia_wallpaper_enabled,
@@ -386,12 +386,12 @@ fn set_settings(s: &mut Settings, pairs: &[String]) -> Result<(), String> {
                     .filter(|w| (120..=1024).contains(w))
                     .ok_or_else(|| format!("thumb_width: a number from 120 to 1024, not {value:?}"))?;
             }
-            "span_gap" => {
-                next.span_gap = value
+            "span_bezel" => {
+                next.span_bezel = value
                     .parse::<u32>()
                     .ok()
-                    .filter(|g| *g <= 400)
-                    .ok_or_else(|| format!("span_gap: a number from 0 to 400, not {value:?}"))?;
+                    .filter(|g| *g <= 100)
+                    .ok_or_else(|| format!("span_bezel: millimetres from 0 to 100, not {value:?}"))?;
             }
             "konachan_site" => next.konachan_site = enum_value(key, value)?,
             "transition.kind" => {

@@ -182,7 +182,7 @@ impl Store {
         // Adjustments were for what it showed; a span ends.
         if state.current.get(monitor).is_some_and(|p| p != path) {
             state.adjust.remove(monitor);
-            state.span = None;
+            end_span_on(&mut state, monitor);
         }
         state
             .current
@@ -199,7 +199,7 @@ impl Store {
         let mut state = self.load_state()?;
         if state.current.get(monitor).is_some_and(|p| p != path) {
             state.adjust.remove(monitor);
-            state.span = None;
+            end_span_on(&mut state, monitor);
         }
         state.current.insert(monitor.to_string(), path.to_path_buf());
         self.save_state(&state)?;
@@ -217,7 +217,7 @@ impl Store {
         }
         // Out of the span: adjusted on its own.
         if adjust.span.is_none() {
-            state.span = None;
+            end_span_on(&mut state, monitor);
         }
         if adjust.is_none() {
             state.adjust.remove(monitor);
@@ -229,15 +229,23 @@ impl Store {
     }
 
     /// `path` spanned with `look`: each monitor in `cuts` its part, mirrored
-    /// like the span. They must show `path` already ([`Store::set_current`]).
-    pub fn set_span(&self, path: &Path, look: crate::settings::SpanLook, cuts: &[(String, crate::settings::Cut)]) -> Result<State> {
+    /// like the span; `places`, where they are on the canvas. They must show
+    /// `path` already ([`Store::set_current`]).
+    pub fn set_span(
+        &self,
+        path: &Path,
+        look: crate::settings::SpanLook,
+        cuts: &[(String, crate::settings::Cut)],
+        places: std::collections::BTreeMap<String, crate::settings::SpanRect>,
+    ) -> Result<State> {
         let mut state = self.load_state()?;
         for (m, cut) in cuts {
             if state.current.get(m).is_some_and(|p| p == path) {
                 state.adjust.insert(m.clone(), crate::settings::Adjust { span: Some(*cut), flip: look.flip, ..Default::default() });
             }
         }
-        state.span = Some(crate::settings::Spanned { path: path.to_path_buf(), look });
+        let monitors = cuts.iter().map(|(m, _)| m.clone()).collect();
+        state.span = Some(crate::settings::Spanned { path: path.to_path_buf(), look, monitors, places });
         self.save_state(&state)?;
         crate::transform::prune(&self.dirs.cache, &state);
         Ok(state)
@@ -272,7 +280,7 @@ impl Store {
         }
         if state.current.get(monitor).is_some_and(|p| p != path) {
             state.adjust.remove(monitor);
-            state.span = None;
+            end_span_on(&mut state, monitor);
         }
         state.current.insert(monitor.to_string(), path.to_path_buf());
         self.save_state(&state)?;
@@ -513,6 +521,14 @@ fn atomic_write(path: &Path, bytes: &[u8], private: bool) -> Result<()> {
     Ok(())
 }
 
+/// `monitor` shows something else: the span it was part of ends (the
+/// others keep their parts).
+fn end_span_on(state: &mut State, monitor: &str) {
+    if state.span.as_ref().is_some_and(|s| s.covers(monitor)) {
+        state.span = None;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -549,7 +565,11 @@ mod tests {
             store.set_current(m, wide).unwrap();
         }
         let look = SpanLook { zoom: 150, ..SpanLook::default() };
-        let state = store.set_span(wide, look, &cuts).unwrap();
+        let state = store.set_span(wide, look, &cuts, Default::default()).unwrap();
+        assert_eq!(state.span.as_ref().unwrap().monitors, ["DP-1", "DP-2"]);
+        // A monitor outside it changes freely.
+        store.set_current("DP-3", other).unwrap();
+        assert!(store.load_state().unwrap().span.is_some());
         assert_eq!(state.span.as_ref().unwrap().look, look);
         assert_eq!(state.adjust["DP-2"].span, Some(cut(1920)));
 
@@ -564,7 +584,7 @@ mod tests {
 
         // Separating keeps every part.
         store.set_current("DP-1", wide).unwrap();
-        store.set_span(wide, look, &cuts).unwrap();
+        store.set_span(wide, look, &cuts, Default::default()).unwrap();
         let state = store.separate().unwrap();
         assert!(state.span.is_none() && state.adjust.len() == 2);
     }
