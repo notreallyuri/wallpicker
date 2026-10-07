@@ -3,6 +3,7 @@
 
 mod app;
 mod library;
+mod online;
 mod wallpapers;
 
 use serde::de::DeserializeOwned;
@@ -16,6 +17,7 @@ pub(super) async fn call(state: &AppState, out: &Out, method: &str, params: Valu
     let result = match area {
         "app" => app::call(state, name, &params).await,
         "library" => library::call(state, out, name, &params).await,
+        "online" => online::call(state, out, name, &params).await,
         "wallpapers" => wallpapers::call(state, out, name, &params).await,
         _ => None,
     };

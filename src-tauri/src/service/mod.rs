@@ -5,4 +5,5 @@
 
 pub(crate) mod app;
 pub(crate) mod library;
+pub(crate) mod online;
 pub(crate) mod wallpapers;
