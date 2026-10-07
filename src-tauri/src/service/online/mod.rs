@@ -120,6 +120,19 @@ pub(crate) async fn tag_suggestions(
     Ok(out)
 }
 
+/// [`tag_suggestions`] for the search box: none once the last tag typed is
+/// a real one (nothing left to fix).
+pub(crate) async fn suggestions(
+    state: &AppState,
+    provider: Provider,
+    text: &str,
+) -> CmdResult<Vec<moebooru::TagSuggestion>> {
+    let got = tag_suggestions(state, provider, text).await?;
+    let last = moebooru::plain_words(text).pop();
+    let exact = got.iter().any(|s| !s.replaces_all && Some(&s.name) == last.as_ref());
+    Ok(if exact { Vec::new() } else { got })
+}
+
 /// The filters from last session (without search text), for every provider.
 pub(crate) async fn filters(state: &AppState) -> CmdResult<OnlineFilters> {
     let store = state.store.clone();

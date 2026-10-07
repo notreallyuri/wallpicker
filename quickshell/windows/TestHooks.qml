@@ -203,6 +203,68 @@ QtObject {
             });
         }
 
+        /// The Online search and the downloads.
+        function online(): string {
+            return JSON.stringify({
+                provider: Online.provider,
+                restored: Online.restored,
+                options: !!Online.options,
+                loading: Online.loading,
+                results: Online.results.length,
+                page: Online.page,
+                active: Online.activeFilters,
+                suggestions: Online.suggestions.map(s => s.name),
+                working: Downloads.working,
+                saved: Object.keys(Downloads.saved).length
+            });
+        }
+
+        /// Drive the Online search without its view: activate, provider P,
+        /// text T, search, page N, filter NAME=VALUE (JSON, else a string),
+        /// reset, suggest I (pick
+        /// the I-th suggestion), download I (the I-th result).
+        function onlineDo(what: string, arg: string): string {
+            const n = parseInt(arg);
+            switch (what) {
+            case "activate":
+                Online.activate();
+                break;
+            case "provider":
+                Online.setProvider(arg);
+                break;
+            case "text":
+                Online.text = arg;
+                break;
+            case "search":
+                Online.search();
+                break;
+            case "page":
+                Online.goTo(n);
+                break;
+            case "filter":
+                const name = arg.split("=")[0];
+                const raw = arg.slice(name.length + 1);
+                let value = raw;
+                try {
+                    value = JSON.parse(raw);
+                } catch (e) {}
+                Online.setFilter(name, value);
+                break;
+            case "reset":
+                Online.resetFilters();
+                break;
+            case "suggest":
+                Online.pickSuggestion(Online.suggestions[n]);
+                break;
+            case "download":
+                Downloads.fetch(Online.results[n], null);
+                break;
+            default:
+                return "no " + what;
+            }
+            return "ok";
+        }
+
         /// Every item the search looks into at (x, y), for debugging hits.
         function trace(x: real, y: real): string {
             const seen = [];
