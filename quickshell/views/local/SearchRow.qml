@@ -12,9 +12,12 @@ RowLayout {
 
     spacing: 8
 
-    // Takes what the row has left, within 160-320 px (as in the app).
+    // Takes what the row has left, within 160-320 px (as in the app); the
+    // spacer before ⋯ gets the rest.
     TextField {
-        Layout.preferredWidth: Math.min(320, Math.max(160, row.width - 760))
+        Layout.fillWidth: true
+        Layout.minimumWidth: 160
+        Layout.maximumWidth: 320
         icon: "search"
         placeholder: "Filter by name or tag"
         onTextChanged: row.local.query = text
@@ -50,9 +53,12 @@ RowLayout {
             }
         }
     }
+    // Everything at once, or folder by folder (remembered).
     Btn {
-        icon: "grid"
-        text: "Flat"
+        minWidth: 104
+        icon: row.local.folders ? "folder" : "grid"
+        text: row.local.folders ? "Folders" : "Flat"
+        onClicked: row.local.layout = row.local.folders ? "flat" : "folders"
     }
     Btn {
         icon: "shuffle"
@@ -61,7 +67,7 @@ RowLayout {
     }
     Text {
         Layout.minimumWidth: 80
-        text: row.local.shown.length + " images"
+        text: Library.loading ? "Scanning…" : row.local.shown.length + " images"
         color: Theme.mutedForeground
         font.family: Theme.font
         font.pixelSize: 14

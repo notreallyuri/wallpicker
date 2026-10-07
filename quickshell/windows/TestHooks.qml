@@ -11,21 +11,37 @@ QtObject {
     /// The window's content.
     required property Item root
 
-    /// The deepest visible item at (x, y), and the MouseArea over it.
+    /// What a pointer at (x, y) would reach: the deepest MouseArea under
+    /// it, searching every item there from the top down (not only the
+    /// topmost, as childAt does: an empty item over a cell would stop it),
+    /// with the way down for probe.
     function hit(x, y) {
-        let item = root, area = null;
-        for (;;) {
-            if (item instanceof MouseArea && item.enabled)
-                area = item;
-            const p = root.mapToItem(item, x, y);
-            const next = item.childAt(p.x, p.y);
-            if (!next)
-                return {
-                    item: item,
-                    area: area
-                };
-            item = next;
+        function search(item, chain) {
+            chain = chain.concat([String(item).split("(")[0]]);
+            const kids = item.children;
+            for (let i = kids.length - 1; i >= 0; i--) {
+                const c = kids[i];
+                if (!c.visible || !c.enabled)
+                    continue;
+                const p = root.mapToItem(c, x, y);
+                if (p.x < 0 || p.y < 0 || p.x > c.width || p.y > c.height) {
+                    // A child of zero size can still hold children outside it.
+                    if (c.width > 0 && c.height > 0 && c.clip)
+                        continue;
+                    if (c.width > 0 && c.height > 0)
+                        continue;
+                }
+                const found = search(c, chain);
+                if (found.area)
+                    return found;
+            }
+            return {
+                item: item,
+                area: item instanceof MouseArea && item.enabled ? item : null,
+                chain: chain
+            };
         }
+        return search(root, []);
     }
 
     // Only what's here crosses IPC (plain types).
@@ -64,10 +80,25 @@ QtObject {
             return item ? String(Math.round(item.contentY)) : "no scrolling view";
         }
 
+        /// The scrolling view at (x, y): its content's children, briefly.
+        function contents(x: real, y: real): string {
+            let item = hooks.hit(x, y).item;
+            while (item && !(item instanceof Flickable))
+                item = item.parent;
+            if (!item)
+                return "no scrolling view";
+            const kids = item.contentItem.children;
+            const out = [];
+            for (let i = 0; i < Math.min(kids.length, 6); i++) {
+                const c = kids[i];
+                out.push(String(c).split("(")[0] + "[" + Math.round(c.x) + "," + Math.round(c.y) + " " + Math.round(c.width) + "x" + Math.round(c.height) + "] kids " + c.children.length);
+            }
+            return kids.length + ": " + out.join(", ");
+        }
+
         /// What's at (x, y).
         function probe(x: real, y: real): string {
-            const h = hooks.hit(x, y);
-            return String(h.item) + (h.area ? " in " + h.area.parent : "");
+            return hooks.hit(x, y).chain.join(" > ");
         }
     }
 }

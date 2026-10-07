@@ -31,26 +31,57 @@ GridView {
 
     // The space at the top changed: keep the content where it was relative
     // to it (so it visibly moves), like a scroll area's padding.
-    property real lastSpace: 0
-    onHeaderSpaceChanged: {
-        const delta = headerSpace - lastSpace;
-        lastSpace = headerSpace;
-        contentY -= delta;
+    // The same when the header (the breadcrumb) comes or goes: the view
+    // keeps its position, which would leave it behind the card.
+    readonly property real headerHeight: headerItem ? headerItem.height : 0
+    property real lastTop: 0
+    function keepPlace() {
+        const top = headerSpace + headerHeight;
+        contentY -= top - lastTop;
+        lastTop = top;
     }
+    onHeaderSpaceChanged: keepPlace()
+    onHeaderHeightChanged: keepPlace()
 
     function toTop() {
         positionViewAtBeginning();
     }
 
+    // In the Folders layout: where we are, above the grid.
+    header: Item {
+        width: grid.width - 16
+        height: grid.local.folders ? crumbs.implicitHeight + 16 : 0
+        visible: grid.local.folders
+        Breadcrumb {
+            id: crumbs
+            local: grid.local
+        }
+    }
+
+    // A folder card or a wallpaper tile.
     delegate: Item {
         id: cell
         required property var modelData
         width: grid.cellWidth
         height: grid.cellHeight
-        Tile {
+        Loader {
             y: 4
             width: parent.width - 16
-            img: cell.modelData
+            height: item ? item.implicitHeight : 0
+            sourceComponent: cell.modelData.kind === "folder" ? folderCard : tile
+        }
+        Component {
+            id: tile
+            Tile {
+                img: cell.modelData.img
+            }
+        }
+        Component {
+            id: folderCard
+            FolderCard {
+                folder: cell.modelData.folder
+                onOpened: grid.local.openFolder(folder.place)
+            }
         }
     }
 
