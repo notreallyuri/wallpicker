@@ -7,7 +7,7 @@
 //! and, unasked, `{"event": "...", "data": ...}`.
 //!
 //! It ends when stdin closes (the UI went away). Methods are in `methods/`,
-//! by area; they call `service/`, like the Tauri window's commands do.
+//! by area; they call `service/`, like the command line does.
 
 mod methods;
 mod watch;

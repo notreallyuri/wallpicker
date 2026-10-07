@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/core", "crates/wallpicker", "src-tauri", "ui"]
+members = ["crates/core", "crates/wallpicker"]
 
 [workspace.package]
 version = "0.1.0"

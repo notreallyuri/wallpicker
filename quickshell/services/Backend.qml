@@ -1,5 +1,5 @@
 // The connection to Rust: one `wallpicker serve` for as long as the UI runs,
-// JSON lines both ways (src-tauri/src/serve). `request` sends a method and
+// JSON lines both ways (crates/wallpicker/src/serve). `request` sends a method and
 // calls back with its result; unasked events come through `event`.
 // WALLPICKER_BIN picks the binary (development); else `wallpicker` on PATH.
 pragma Singleton

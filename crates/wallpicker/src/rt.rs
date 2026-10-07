@@ -1,6 +1,6 @@
-//! The async runtime (tokio), in place of Tauri's: `block_on` for the
+//! The async runtime (tokio): `block_on` for the
 //! command line, `spawn` for `serve`'s requests. `spawn_blocking` runs on
-//! the runtime it's called from (the Tauri app's, inside its commands), else
+//! the runtime it's called from, if any, else
 //! on this one.
 
 use std::future::Future;

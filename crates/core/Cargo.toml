@@ -7,8 +7,8 @@ license.workspace = true
 
 [features]
 # `native` pulls in everything that touches the OS (processes, files, images).
-# The wasm UI depends on this crate with default-features = false and only
-# gets the plain data types.
+# Without it (default-features = false) only the plain data types are built:
+# the old wasm UI needed that; nothing does now.
 default = ["native"]
 native = ["dep:image"]
 

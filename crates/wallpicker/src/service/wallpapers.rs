@@ -90,7 +90,7 @@ pub async fn show_in_folder(state: &AppState, path: String) -> CmdResult<()> {
     crate::rt::spawn_blocking(move || show_in_folder_blocking(&store, &path)).await.map_err(err)?
 }
 
-/// [`trash_wallpaper`] without Tauri (the app and `wallpicker trash`).
+/// Move a wallpaper to the trash (the picker and `wallpicker trash`).
 pub async fn trash_path(state: &AppState, path: &str) -> CmdResult<()> {
     let given = wallpaper_path(path)?;
     let store = state.store.clone();

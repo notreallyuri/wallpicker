@@ -1,8 +1,7 @@
 //! wallpicker without a window: the command line (`cli/`), `wallpicker
 //! serve` for the Quickshell interface (`serve/`), and what both do
 //! (`service/`: plain functions over the shared `AppState`, one file per
-//! area). The old Tauri window (`wallpicker-app`, src-tauri) uses this crate
-//! too. Every decision that can be tested without a desktop session lives
+//! area), and the daemon (`cli/daemon.rs`). Every decision that can be tested without a desktop session lives
 //! in `wallpicker-core`.
 
 pub mod backup;
@@ -43,7 +42,7 @@ pub struct AppState {
 }
 
 impl AppState {
-    /// Shared by the command line, `serve` and the Tauri window.
+    /// Shared by the command line, `serve` and the daemon.
     pub fn new(store: Store) -> AppState {
         let http = reqwest::Client::builder()
             .user_agent(concat!("wallpicker/", env!("CARGO_PKG_VERSION")))

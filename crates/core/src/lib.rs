@@ -1,8 +1,8 @@
 //! Shared logic for wallpicker.
 //!
 //! Everything in here is plain Rust so it can be unit-tested without a
-//! desktop session. The Tauri backend is a thin layer over this crate, and the
-//! Leptos UI reuses the data types (built with `default-features = false`).
+//! desktop session. `wallpicker` (crates/wallpicker: the picker's backend,
+//! the daemon, the command line) is a thin layer over this crate.
 
 pub mod backup;
 pub mod catalog;

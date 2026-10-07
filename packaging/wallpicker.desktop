@@ -8,8 +8,6 @@ Icon=wallpicker
 Terminal=false
 Categories=Utility;
 Keywords=wallpaper;background;hyprpaper;noctalia;wallhaven;konachan;yandere;
-StartupWMClass=wallpicker
-SingleMainWindow=true
 Actions=random;previous;
 
 [Desktop Action random]

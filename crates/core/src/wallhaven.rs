@@ -1,6 +1,6 @@
 //! Wallhaven API v1 types and query building.
 //!
-//! No networking happens here (that lives in the Tauri backend), so everything
+//! No networking happens here (that lives in `wallpicker`'s service layer), so everything
 //! is testable offline. API reference: <https://wallhaven.cc/help/api>.
 //!
 //! Notes baked into the code below:

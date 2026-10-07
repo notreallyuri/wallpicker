@@ -23,7 +23,7 @@ pub async fn palette(state: &AppState) -> CmdResult<Option<theme::Palette>> {
 }
 
 /// Put `text` on the Wayland clipboard (`wl-copy`, which stays to serve it:
-/// it outlives the interface, which exits on close; WebKitGTK's clipboard
+/// it outlives the interface, which exits on close; the old WebKit window's clipboard
 /// API wasn't reliable either).
 pub async fn copy_text(text: String) -> CmdResult<()> {
     if text.len() > 64 * 1024 {
