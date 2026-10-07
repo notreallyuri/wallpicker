@@ -132,12 +132,10 @@ and feels like the app (real transitions and easing, glass, shadows); the scroll
 
 ### Left over from the phases
 
-- [ ] **Tooltips**: a Tooltip component like the app's Tip (nocomponents' tooltip, a popover
-  after a short hover; never the plain system kind), then the app's tips: the monitor pills
-  (name · size, "Showing" the file) and All ("Every monitor"), the drawer's chevron ("Show the
-  monitors, bigger" / "Hide the monitors"), a drawer card's Adjust and ↶ (with the monitor's
-  name), Previous, Settings, ⋯ ("More"), Random (Ctrl+R), Flat/Folders, Color, Up a folder
-  (Alt+Up), the tag row's, a tile's, and Online's when phase 3 brings them.
+- [x] **Tooltips** (done 2026-10-07): `Tip` (components/Tip.qml; Btn's `tip`), the app's tips
+  on the monitor pills, All, the drawer's chevron and cards, Previous, Settings, ⋯, Random,
+  Flat/Folders, Color, Up a folder, All/Any, and a tile's size when it's smaller than a chosen
+  monitor (amber). Online's come with phase 3.
 
 ### To decide on the way
 

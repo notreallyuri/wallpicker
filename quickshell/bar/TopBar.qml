@@ -47,6 +47,7 @@ Rectangle {
             variant: "ghost"
             implicitHeight: 32
             onClicked: Monitors.toggleDrawer()
+            tip: Monitors.drawerOpen ? "Hide the monitors" : "Show the monitors, bigger"
             Icon {
                 name: "chevron-down"
                 rotation: Monitors.drawerOpen ? 180 : 0
@@ -63,11 +64,13 @@ Rectangle {
         Btn {
             variant: "ghost"
             icon: "history"
+            tip: "Back to the wallpaper before, on the selected monitors"
             onClicked: Monitors.previous()
         }
         Btn {
             variant: "ghost"
             icon: "settings"
+            tip: "Settings"
         }
     }
 }

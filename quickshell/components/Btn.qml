@@ -13,6 +13,8 @@ Item {
     property string variant: "outline"
     property real minWidth: 0
     property bool active: false
+    /// A tooltip (an icon-only button's explanation).
+    property string tip
     /// Text at the left and the extras (an icon) at the right, instead of
     /// all centered (Select).
     property bool spread: false
@@ -96,5 +98,8 @@ Item {
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
         onClicked: btn.clicked()
+    }
+    Tip {
+        text: btn.tip
     }
 }

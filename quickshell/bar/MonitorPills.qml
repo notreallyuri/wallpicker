@@ -21,6 +21,11 @@ RowLayout {
         MonitorPill {
             required property var modelData
             label: modelData.name
+            // The name, its size, and the file it's showing.
+            tip: {
+                const shown = Monitors.current[modelData.name];
+                return modelData.name + " · " + modelData.width + "×" + modelData.height + "\nShowing " + (shown ? shown.split("/").pop() : "nothing set");
+            }
             on: Monitors.selection === modelData.name
             onPicked: Monitors.select(modelData.name)
             // Right-click: adjust what it shows.
@@ -33,6 +38,7 @@ RowLayout {
     MonitorPill {
         visible: Monitors.list.length > 1
         label: "All"
+        tip: "Every monitor"
         on: Monitors.selection === Monitors.all
         onPicked: Monitors.select(Monitors.all)
         Repeater {

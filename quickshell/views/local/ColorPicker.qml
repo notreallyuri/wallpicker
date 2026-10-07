@@ -26,6 +26,7 @@ Btn {
     // One width whatever is chosen.
     minWidth: 112
     text: chosen ? chosen[1] : "Color"
+    tip: "Show the wallpapers with a color"
     onClicked: swatches.open()
 
     // Before the label: three dots, or the chosen color.

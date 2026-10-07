@@ -60,6 +60,9 @@ RowLayout {
         Layout.alignment: Qt.AlignTop
         onRight: !row.local.tagsMatchAll
         onToggled: row.local.tagsMatchAll = !row.local.tagsMatchAll
+        Tip {
+            text: row.local.tagsMatchAll ? "Wallpapers with every selected tag" : "Wallpapers with any selected tag"
+        }
     }
     Btn {
         visible: row.local.tagFilter.length > 0

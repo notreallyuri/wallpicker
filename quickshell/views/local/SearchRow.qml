@@ -48,15 +48,17 @@ RowLayout {
         icon: row.local.folders ? "folder" : "grid"
         text: row.local.folders ? "Folders" : "Flat"
         onClicked: row.local.layout = row.local.folders ? "flat" : "folders"
+        tip: "Show everything at once, or browse folder by folder"
     }
     Btn {
         icon: "shuffle"
         text: "Random"
+        tip: "Apply a random one of those shown (Ctrl+R)"
         onClicked: row.local.applyRandom()
     }
     Text {
         Layout.minimumWidth: 80
-        text: Library.loading ? "Scanning…" : row.local.shown.length + " images"
+        text: Library.loading ? "Scanning…" : row.local.shown.length + (row.local.shown.length === 1 ? " image" : " images")
         color: Theme.mutedForeground
         font.family: Theme.font
         font.pixelSize: 14

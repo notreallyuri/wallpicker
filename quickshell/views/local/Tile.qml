@@ -28,6 +28,10 @@ Item {
     readonly property bool favorite: Library.favorite(img.path)
     readonly property var tags: Library.tags(img.path)
     readonly property bool busy: !!Monitors.applying[img.path]
+    /// The pointer is on its size (for the tip there).
+    readonly property bool overSize: mouse.containsMouse && sizeText.contains(mouse.mapToItem(sizeText, mouse.mouseX, mouse.mouseY))
+    /// The chosen monitors it's smaller than ("DP-1's 1920×1080").
+    readonly property var tooSmallFor: img.width > 0 && img.height > 0 ? Monitors.list.filter(m => Monitors.targets.includes(m.name) && (img.width < m.width || img.height < m.height)).map(m => m.name + "'s " + m.width + "×" + m.height) : []
     /// The thumbnail: from the scan, or made on demand.
     property string thumb: img.thumb || ""
 
@@ -155,12 +159,25 @@ Item {
                         font.family: Theme.font
                         font.pixelSize: 12
                     }
+                    // Its size; amber when it's smaller than a monitor it
+                    // would go on (scaled up), which the tip says.
                     Text {
+                        id: sizeText
                         visible: tile.img.width > 0
                         text: tile.img.width + "×" + tile.img.height
-                        color: Theme.a(Theme.mutedForeground, 0.7)
+                        color: tile.tooSmallFor.length > 0 ? "#f59e0b" : Theme.a(Theme.mutedForeground, 0.7)
                         font.family: Theme.font
                         font.pixelSize: 10
+                        // Only there: a tip in every tile would be dozens.
+                        Loader {
+                            anchors.fill: parent
+                            active: tile.tooSmallFor.length > 0
+                            sourceComponent: Tip {
+                                // The tile's MouseArea covers it: it says.
+                                over: tile.overSize
+                                text: "Smaller than " + tile.tooSmallFor.join(", ") + " (it would be scaled up)"
+                            }
+                        }
                     }
                 }
                 Row {

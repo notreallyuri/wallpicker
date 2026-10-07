@@ -11,6 +11,8 @@ Rectangle {
     property string label
     property bool on: false
     default property alias screens: screens.data
+    /// A tooltip.
+    property string tip
     signal picked
     /// A right-click (a monitor's pill: Adjust).
     signal rightClicked
@@ -68,5 +70,8 @@ Rectangle {
             else
                 pill.picked();
         }
+    }
+    Tip {
+        text: pill.tip
     }
 }

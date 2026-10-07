@@ -62,11 +62,13 @@ DrawerCard {
             variant: "ghost"
             icon: "sliders-horizontal"
             implicitHeight: 32
+            tip: "Adjust what " + card.name + " shows: mirror, fit, frame"
             onClicked: Dialogs.adjust(card.name)
         }
         Btn {
             variant: "ghost"
             icon: "rotate-ccw"
+            tip: "Back to the wallpaper before, on " + card.name
             implicitHeight: 32
             onClicked: Monitors.previousOn([card.name], applied => applied.length > 0 ? "Back on " + card.name : "Nothing earlier on " + card.name)
         }

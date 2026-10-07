@@ -9,6 +9,7 @@ Btn {
 
     variant: "ghost"
     icon: "ellipsis"
+    tip: "More"
     onClicked: menu.openAt(more, more.width - 300, more.height + 6)
 
     Menu {

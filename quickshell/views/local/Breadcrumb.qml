@@ -19,6 +19,7 @@ RowLayout {
     Btn {
         variant: "ghost"
         icon: "folder-up"
+        tip: "Up a folder (Alt+Up)"
         opacity: crumbs.local.canGoUp ? 1 : 0.4
         onClicked: crumbs.local.up()
     }
