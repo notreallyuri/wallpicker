@@ -3,7 +3,7 @@
 -- tree for the nested view, and the panel's remembered preferences.
 --
 -- Images come from `wallpicker list --json`: { path, name, modified,
--- favorite, tags, thumb, root, folder }, where `root` indexes `roots` (from
+-- favorite, tags, artists, thumb, root, folder }, where `root` indexes `roots` (from
 -- 0) and `folder` is the folder inside that root ("" at its top, "a/b").
 
 local M = {}

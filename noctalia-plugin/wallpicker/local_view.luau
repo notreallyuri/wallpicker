@@ -27,6 +27,11 @@ return function(app)
         return true
       end
     end
+    for _, artist in ipairs(image.artists or {}) do
+      if string.find(string.lower(artist), f, 1, true) then
+        return true
+      end
+    end
     return false
   end
 

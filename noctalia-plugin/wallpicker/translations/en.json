@@ -119,5 +119,7 @@
   "settings_in_app": "Settings (in the wallpicker app)",
   "dups_in_app": "Find duplicates (in the wallpicker app)",
   "edit_tags_in_app": "Edit in wallpicker",
-  "tag_filter_hint": "Show the wallpapers with this tag"
+  "tag_filter_hint": "Show the wallpapers with this tag",
+  "by_artists": "By",
+  "artist_filter_hint": "Show this artist's wallpapers"
 }

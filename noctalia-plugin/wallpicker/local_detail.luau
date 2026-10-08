@@ -1,6 +1,6 @@
 --!nonstrict
 -- A local wallpaper's own view, in place of the grid: preview, favorite,
--- its tags (edited in the app) and trash, which asks first. (Fit and mirroring
+-- its artists and tags (edited in the app) and trash, which asks first. (Fit and mirroring
 -- are per monitor now, in the app's Adjust dialog.)
 
 return function(app)
@@ -43,6 +43,31 @@ return function(app)
     return app.flow(chips, texts)
   end
 
+  -- Its artists (none: nothing); one searches the grid for them.
+  function app.artistRow(image)
+    local artists = image.artists or {}
+    if #artists == 0 then
+      return nil
+    end
+    local chips = {}
+    for _, name in ipairs(artists) do
+      table.insert(chips, ui.button({
+        key = "artist_" .. name,
+        text = name,
+        variant = "secondary",
+        controlSize = "sm",
+        fontSize = app.CHIP_FONT,
+        tooltip = app.tr("artist_filter_hint"),
+        onClick = function()
+          S.filterText = name
+          app.closeDetail()
+        end,
+      }))
+    end
+    table.insert(chips, 1, ui.label({ text = app.tr("by_artists"), fontSize = 12, color = "on_surface_variant" }))
+    return ui.row({ gap = 6, align = "center" }, chips)
+  end
+
   function app.detailView()
     local image = app.findImage(S.detail.path)
     if image == nil then
@@ -73,7 +98,7 @@ return function(app)
       })
     end
     local width = app.CONTENT_WIDTH
-    return ui.column({ gap = 14, align = "stretch" }, {
+    local children = {
       ui.row({ gap = 8, align = "center" }, {
         ui.button({ glyph = "chevron-left", text = app.tr("back"), variant = "ghost", onClick = app.closeDetail }),
         ui.label({ text = image.name or "", fontWeight = "semibold", color = "on_surface", flexGrow = 1, maxLines = 1 }),
@@ -101,6 +126,13 @@ return function(app)
       app.tagChips(image),
       ui.separator({}),
       trashRow,
-    })
+    }
+    -- Under the picture, only when it has some (a nil in the list above
+    -- would end it there).
+    local artists = app.artistRow(image)
+    if artists then
+      table.insert(children, 3, artists)
+    end
+    return ui.column({ gap = 14, align = "stretch" }, children)
   end
 end

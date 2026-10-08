@@ -77,6 +77,8 @@ struct ImageOut {
     modified: u64,
     favorite: bool,
     tags: Vec<String>,
+    /// Its artists' names (the metadata's).
+    artists: Vec<String>,
     /// A small JPEG for grids, with `--thumbs` (made on first use, cached).
     thumb: Option<PathBuf>,
     /// Index into `roots` of the folder that holds it.
@@ -123,6 +125,7 @@ pub fn list(args: &[String]) -> i32 {
                 folder,
                 favorite: catalog.is_favorite(&i.path),
                 tags: catalog.tags(&i.path).to_vec(),
+                artists: catalog.metadata(&i.path).map_or_else(Vec::new, |m| m.artists.iter().map(|a| a.name.clone()).collect()),
                 thumb: want_thumbs
                     .then(|| thumbs::ensure_thumb(&store.dirs().cache, &i.path, settings.thumb_width).ok())
                     .flatten(),

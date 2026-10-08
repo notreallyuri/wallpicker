@@ -150,8 +150,10 @@ Each step checked headless and committed:
    provider, the stored query), the uploader (**More from**), **Open source**, **Open on
    Wallhaven** (from the origin: `serve`'s `library.origin_page`), the tags as today; artists
    can be added or removed by hand. `--open details <image>` (`tags` still works).
-6. [ ] **Noctalia plugin** (by the app-and-plugin decision): the artist in its details, the
-   name filter matching it. No artist filter there.
+6. [x] **Noctalia plugin** (by the app-and-plugin decision): the artist in its details, the
+   name filter matching it. No artist filter there. `wallpicker list --json` gives each
+   image's `artists`. The smoke test (`tests/run.py`) not run: no `luau` here; the mock
+   library has no artists, so its snapshot is unchanged by this.
 
 Moebooru (2 Konachan files today): the script handles Wallhaven only; Konachan and yande.re
 can follow (`post.json?tags=id:N`, then the tag kinds from `tag.json`) once the Wallhaven

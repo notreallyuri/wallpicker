@@ -5,7 +5,7 @@ are the picker's (wallpicker's own floating panel), and the plugin hands them ov
 (`wallpicker --open …`, which opens it there): **Settings** (the cog), **Duplicates** (the copy icon), **Collections** (header)
 and **editing tags** (a wallpaper's view, or right-click → Edit tags in wallpicker…).
 
-- **Local**: your library, favorites first; filter by name or tag. The wallpaper on the chosen
+- **Local**: your library, favorites first; filter by name, tag or artist. The wallpaper on the chosen
   monitor is outlined, and tiles say which monitors show them and the image's size (amber,
   "low-res for DP-1", when it's smaller than the target monitor).
   - **Sort**: Newest, Oldest, Name or Random order (favorites stay first).
@@ -27,8 +27,9 @@ and **editing tags** (a wallpaper's view, or right-click → Edit tags in wallpi
   Apply, Details…, Download only, Open the provider's page (online). Clicking an online caption
   opens its details: a big preview, stats, "More by" the artist, "More from" the uploader, the
   source link, and its tags; click a tag to search for it. Clicking a local caption opens the
-  wallpaper's view: favorite, fit, its tags (click one to show that tag's wallpapers; "Edit in
-  wallpicker" to change them) and trash, which asks first. Menus need Noctalia's plugin API 28.
+  wallpaper's view: favorite, fit, its artists (click one to show their wallpapers), its tags
+  (click one to show that tag's wallpapers; "Edit in wallpicker" opens its details there, to
+  change them and the artists) and trash, which asks first. Menus need Noctalia's plugin API 28.
 - **Filters** (next to the search box, with a count when any are on): the provider's filters,
   the same ones as the picker's Filters dialog. Saved as you change them; Done searches again.
 - **Fit and mirroring** are per monitor, in the picker (the monitor drawer's Adjust); the fits in
