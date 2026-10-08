@@ -266,7 +266,11 @@ def change(entry, meta, artist_names, overwrite):
     for field, value in meta.items():
         have = entry.get(field)
         if overwrite or have is None or have == []:
-            entry[field] = value
+            # As wallpicker writes it: what a wallpaper doesn't have, left out.
+            if value is None or value == []:
+                entry.pop(field, None)
+            else:
+                entry[field] = value
     return entry, dropped
 
 
