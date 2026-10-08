@@ -22,7 +22,8 @@ Rectangle {
         Backend.request("settings.conflicts", {
             backend: asked
         }, list => {
-            if (conflicts.backend === asked)
+            // The section may be gone by the answer (Settings closed).
+            if (conflicts && conflicts.backend === asked)
                 conflicts.found = list || [];
         }, () => {});
     }

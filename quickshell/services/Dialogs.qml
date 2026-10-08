@@ -29,14 +29,21 @@ Singleton {
     readonly property int popups: open.length
     readonly property bool calm: popups === 0
 
+    /// Still there: a popup destroyed without closing (while open or
+    /// closing) is left in the list as a dead reference, and calling it
+    /// throws: the picker couldn't close (Esc closed "it", then nothing).
+    function alive(p) {
+        return !!p && typeof p.close === "function";
+    }
     function opened(popup) {
-        open = open.filter(p => p !== popup).concat([popup]);
+        open = open.filter(p => p !== popup && alive(p)).concat([popup]);
     }
     function closed(popup) {
-        open = open.filter(p => p !== popup);
+        open = open.filter(p => p !== popup && alive(p));
     }
     /// Close the top popup; false if there was none.
     function closeTop() {
+        open = open.filter(alive);
         if (open.length === 0)
             return false;
         open[open.length - 1].close();

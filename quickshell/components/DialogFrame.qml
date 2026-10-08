@@ -27,6 +27,8 @@ Popup {
     focus: true
     onOpened: Dialogs.opened(this)
     onClosed: Dialogs.closed(this)
+    // Gone while open or closing: `closed` never comes.
+    Component.onDestruction: Dialogs.closed(frame)
 
     Overlay.modal: Rectangle {
         color: Qt.rgba(0, 0, 0, 0.45)

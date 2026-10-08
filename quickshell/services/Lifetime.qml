@@ -20,8 +20,9 @@ Singleton {
         // told once: one leaves the open list only when its closing
         // animation ends, so looping until the list is empty never ended
         // (the picker froze).
-        for (const popup of Dialogs.open.slice())
+        for (const popup of Dialogs.open.filter(Dialogs.alive))
             popup.close();
+        Dialogs.open = Dialogs.open.filter(Dialogs.alive);
         if (Prefs.keepOpen <= 0) {
             Qt.quit();
             return;

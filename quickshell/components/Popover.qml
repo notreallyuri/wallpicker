@@ -17,6 +17,9 @@ Popup {
     focus: true
     onOpened: Dialogs.opened(this)
     onClosed: Dialogs.closed(this)
+    // Gone while open or closing (a tile's menu when the grid re-sorts):
+    // `closed` never comes, and the picker couldn't close past it.
+    Component.onDestruction: Dialogs.closed(popover)
 
     background: Item {
         RectangularShadow {

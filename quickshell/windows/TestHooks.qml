@@ -193,6 +193,7 @@ QtObject {
         function state(): string {
             return JSON.stringify({
                 popups: Dialogs.popups,
+                shown: Lifetime.shown,
                 trashFor: Dialogs.trashFor,
                 tagsFor: Dialogs.tagsFor,
                 adjusting: Dialogs.adjusting,
