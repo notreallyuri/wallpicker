@@ -14,6 +14,8 @@ Singleton {
     property alias localLayout: data.localLayout
     property alias tagsExpanded: data.tagsExpanded
     property alias artistsExpanded: data.artistsExpanded
+    /// The tags' and artists' order above the grid: "name" or "count".
+    property alias tagOrder: data.tagOrder
     property alias tagsMatchAll: data.tagsMatchAll
     property alias monitorsOpen: data.monitorsOpen
     /// "system", "light" or "dark".
@@ -58,6 +60,7 @@ Singleton {
             property string localLayout: "flat"
             property bool tagsExpanded: false
             property bool artistsExpanded: false
+            property string tagOrder: "name"
             property bool tagsMatchAll: true
             property bool monitorsOpen: false
             property string darkMode: "system"

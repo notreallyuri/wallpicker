@@ -1,6 +1,7 @@
 // Settings → General: the wallpaper folders, subfolders, the backend (what
 // else draws wallpapers, awww's transition, Noctalia's note), the fit for
-// every monitor and each one's own, the thumbnails' width.
+// every monitor and each one's own, the thumbnails' width, the order of the
+// tags and artists above the grid.
 import QtQuick
 import QtQuick.Layouts
 import qs.components
@@ -121,6 +122,17 @@ ColumnLayout {
             to: 1024
             value: section.d.thumb_width || 0
             onEdited: v => section.form.set("thumb_width", v)
+        }
+    }
+    // The interface's own choice (ui.json), not the settings: at once.
+    Field {
+        label: "Tag order"
+        description: "How the tags and artists above the grid are ordered, the ones picked first. Applies right away."
+        Select {
+            minWidth: 200
+            options: [["name", "By name (A to Z)"], ["count", "Most used first"]]
+            value: Prefs.tagOrder === "count" ? "count" : "name"
+            onPicked: v => Prefs.tagOrder = v
         }
     }
 }

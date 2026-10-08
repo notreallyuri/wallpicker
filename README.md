@@ -20,7 +20,8 @@ or **Noctalia**'s wallpaper manager (Settings → General → Wallpaper backend)
   - Sort and layout are remembered.
 - **Favorites, tags and artists**: star a local wallpaper to pin it to the top of every view.
   Give it tags with right-click → **Details…**, then filter by one or more tags above the grid
-  (one line, selected tags first; **Expand** shows them all), matching **All** or **Any** of
+  (one line, selected tags first, then by name or the most used first as set in Settings →
+  General; **Expand** shows them all), matching **All** or **Any** of
   them. Downloads keep where they came from, their artists, uploader and source link (as the
   provider lists them) apart from the tags, and arrive tagged only with the tags you keep in
   **Details**. The artists have a row of their own under the tags (any of those picked, with

@@ -61,6 +61,7 @@ Item {
             Layout.fillWidth: true
             labelWidth: artistRow.visible ? Math.max(labelImplicitWidth, artistRow.labelImplicitWidth) : -1
             label: "Tags"
+            order: Prefs.tagOrder
             counts: Library.tagCounts
             chosen: card.local.tagFilter
             matchAll: card.local.tagsMatchAll
@@ -76,6 +77,7 @@ Item {
             Layout.fillWidth: true
             labelWidth: tagRow.visible ? Math.max(labelImplicitWidth, tagRow.labelImplicitWidth) : -1
             label: "Artists"
+            order: Prefs.tagOrder
             counts: Library.artistCounts
             chosen: card.local.artistFilter
             expanded: Prefs.artistsExpanded
