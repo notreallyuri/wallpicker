@@ -1,5 +1,5 @@
-//! The local library: the scan, thumbnails, favorites and tags, colors,
-//! duplicates.
+//! The local library: the scan, thumbnails, favorites, tags and artists,
+//! colors, duplicates.
 
 use std::path::PathBuf;
 
@@ -127,6 +127,19 @@ pub async fn remove_tag(state: &AppState, path: String, tag: String) -> CmdResul
     update_catalog(state, move |c| c.remove_tag(&path, &tag)).await
 }
 
+/// Make `path`'s artists `artists` (cleaned like tags, each once).
+pub async fn set_artists(state: &AppState, path: String, artists: Vec<catalog::Person>) -> CmdResult<Catalog> {
+    let path = wallpaper_path(&path)?;
+    if let Some(bad) = artists.iter().find(|a| catalog::normalize_tag(&a.name).is_none()) {
+        return Err(format!(
+            "{:?}: names must be 1 to {} characters, without control characters.",
+            bad.name,
+            catalog::MAX_TAG_LEN
+        ));
+    }
+    update_catalog(state, move |c| c.set_artists(&path, &artists)).await
+}
+
 /// The wallpapers with `color` (a hue, or dark / light / warm / muted), the
 /// most of it first: (path, score).
 pub async fn with_color(state: &AppState, color: String) -> CmdResult<Vec<(PathBuf, f32)>> {
@@ -191,7 +204,7 @@ pub fn color_profiles(
 }
 
 /// Keep `keep`, move `others` to the trash. The kept one gets their
-/// favorite, tags and fit (when it has none), and goes on any monitor that
+/// favorite, tags, metadata and fit (when it has none), and goes on any monitor that
 /// showed one of them. Each copy is trashed with the usual checks; one that
 /// fails doesn't stop the rest.
 pub async fn resolve_duplicates_with(
@@ -221,11 +234,15 @@ pub async fn resolve_duplicates_with(
     update_catalog(state, move |c| {
         let favorite = o.iter().any(|p| c.is_favorite(p));
         let tags: Vec<String> = o.iter().flat_map(|p| c.tags(p).to_vec()).collect();
+        let metas: Vec<_> = o.iter().filter_map(|p| c.metadata(p).cloned()).collect();
         if favorite {
             c.set_favorite(&k, true);
         }
         for t in &tags {
             c.add_tag(&k, t);
+        }
+        for m in &metas {
+            c.fill_metadata(&k, m);
         }
     })
     .await?;

@@ -1,4 +1,4 @@
-//! Backups of the library (favorites and tags): one file to export and
+//! Backups of the library (favorites, tags and metadata): one file to export and
 //! import, and the daily snapshots kept automatically (see `Store`).
 //!
 //! A backup outlives the paths in it: on import each wallpaper is looked for
@@ -106,7 +106,7 @@ pub fn import(
         }
     }
     // An entry with nothing left in it isn't kept (like the catalog's own edits).
-    catalog.items.retain(|_, e| e.favorite || !e.tags.is_empty());
+    catalog.items.retain(|_, e| !e.is_empty());
     report
 }
 
@@ -137,9 +137,11 @@ fn locate(
     }
 }
 
-/// Favorite if either is, every tag of both (theirs after).
+/// Favorite if either is, every tag of both (theirs after), their metadata
+/// where there's none.
 fn merge(into: &mut Entry, from: &Entry) {
     into.favorite |= from.favorite;
+    into.meta.fill_from(&from.meta);
     for t in &from.tags {
         if !into.has_tag(t) {
             into.tags.push(t.clone());
@@ -175,7 +177,7 @@ mod tests {
     use super::*;
 
     fn entry(favorite: bool, tags: &[&str]) -> Entry {
-        Entry { favorite, tags: tags.iter().map(|t| t.to_string()).collect() }
+        Entry { favorite, tags: tags.iter().map(|t| t.to_string()).collect(), ..Entry::default() }
     }
 
     #[test]
@@ -214,6 +216,34 @@ mod tests {
         assert_eq!(now.items[Path::new("/home/b/Pictures/two.png")], entry(false, &["Dark", "night"]));
         // By name, told apart by size.
         assert!(now.items[Path::new("/home/b/Pictures/elsewhere/three.jpg")].favorite);
+    }
+
+    #[test]
+    fn metadata_goes_through_a_backup() {
+        use crate::catalog::{Metadata, Origin, Person};
+        let meta = Metadata {
+            origin: Some(Origin { provider: "wallhaven".into(), id: "abc123".into() }),
+            artists: vec![Person { name: "Mitsu".into(), query: Some("id:1".into()) }],
+            ..Metadata::default()
+        };
+        let mut old = Catalog::default();
+        old.fill_metadata(Path::new("/w/a.jpg"), &meta);
+        old.fill_metadata(Path::new("/w/b.jpg"), &meta);
+        let backup = export(&old, &[], String::new(), &|_| None);
+        // As a file, and read back by the format before metadata (no fields
+        // for it): still a backup.
+        let text = serde_json::to_string(&backup).unwrap();
+        assert_eq!(serde_json::from_str::<Backup>(&text).unwrap(), backup);
+
+        let mut now = Catalog::default();
+        // b.jpg has an artist of its own already: kept, the backup's added.
+        now.set_artists(Path::new("/w/b.jpg"), &[Person::named("Other")]);
+        let library = vec![("/w/a.jpg".into(), 1), ("/w/b.jpg".into(), 1)];
+        import(&mut now, &backup, &[], &library, false);
+        assert_eq!(now.metadata(Path::new("/w/a.jpg")), Some(&meta));
+        let b = now.metadata(Path::new("/w/b.jpg")).unwrap();
+        assert_eq!(b.artists.iter().map(|a| a.name.as_str()).collect::<Vec<_>>(), ["Other", "Mitsu"]);
+        assert_eq!(b.origin, meta.origin);
     }
 
     #[test]

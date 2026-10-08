@@ -25,7 +25,7 @@ pub mod slideshow;
 
 pub use config::{filters, settings};
 pub use daemon::daemon;
-pub use library_edits::{adjust, colors, duplicates, favorite, show_in_folder, tag, trash};
+pub use library_edits::{adjust, artist, colors, duplicates, favorite, show_in_folder, tag, trash};
 pub use online::{apply_online, collection, collections, details, preview, search, tags};
 pub use backup::backup;
 pub use random::random;

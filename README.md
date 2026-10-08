@@ -230,6 +230,7 @@ Library edits, the same as the picker's:
 ```bash
 wallpicker favorite ~/Pictures/wpp/a.jpg [--off]
 wallpicker tag ~/Pictures/wpp/a.jpg add "dark mode"     # or remove
+wallpicker artist ~/Pictures/wpp/a.jpg add Mitsu        # or remove
 wallpicker trash ~/Pictures/wpp/a.jpg                   # desktop trash; wallpaper/download folders only
 wallpicker show-in-folder ~/Pictures/wpp/a.jpg          # file manager, with it selected
 wallpicker duplicates                                   # copies and resized versions, best first

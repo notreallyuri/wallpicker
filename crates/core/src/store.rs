@@ -325,6 +325,17 @@ impl Store {
         }
     }
 
+    /// Save a `library.json` from an older version in today's format (a
+    /// snapshot of it taken first). Where a migration of its contents would
+    /// go; version 2 only adds fields. Callers that can run concurrently
+    /// must serialize calls themselves, as for [`Store::update_catalog`].
+    pub fn upgrade_catalog(&self) -> Result<()> {
+        if !self.catalog_path().is_file() || self.load_catalog()?.version >= crate::catalog::VERSION {
+            return Ok(());
+        }
+        self.update_catalog(|_| {}).map(|_| ())
+    }
+
     /// Load, change and save the catalog, returning the saved version. Callers
     /// that can run concurrently must serialize calls themselves.
     pub fn update_catalog(&self, change: impl FnOnce(&mut Catalog)) -> Result<Catalog> {
@@ -332,6 +343,7 @@ impl Store {
         // Best effort: an edit isn't refused over its safety copy.
         let _ = self.snapshot_catalog();
         change(&mut catalog);
+        catalog.version = crate::catalog::VERSION;
         let text = serde_json::to_string_pretty(&catalog)?;
         atomic_write(&self.catalog_path(), text.as_bytes(), false)?;
         // A wallpaper's own fit is part of the hyprpaper config. Best effort:
@@ -464,7 +476,8 @@ impl Store {
             return Err(crate::error::Error::Invalid(format!("no such snapshot: {id}")));
         }
         let text = fs::read_to_string(self.snapshots_dir().join(format!("{id}.json")))?;
-        let snapshot: Catalog = serde_json::from_str(&text)?;
+        let mut snapshot: Catalog = serde_json::from_str(&text)?;
+        snapshot.version = crate::catalog::VERSION;
         let src = self.catalog_path();
         if src.is_file() {
             let secs = now_secs();
@@ -637,6 +650,30 @@ mod tests {
 
         assert!(store.restore_snapshot("../config").is_err());
         assert!(store.restore_snapshot("library-2026-1x-06").is_err());
+    }
+
+    #[test]
+    fn an_old_library_is_saved_as_the_current_version() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = Store::new(Dirs::under(tmp.path()));
+        // Nothing there: nothing written.
+        store.upgrade_catalog().unwrap();
+        assert!(!store.catalog_path().exists());
+
+        fs::create_dir_all(store.catalog_path().parent().unwrap()).unwrap();
+        fs::write(store.catalog_path(), r#"{"items": {"/w/a.jpg": {"favorite": true, "tags": ["x"]}}}"#).unwrap();
+        assert_eq!(store.load_catalog().unwrap().version, 1);
+        store.upgrade_catalog().unwrap();
+        let c = store.load_catalog().unwrap();
+        assert_eq!(c.version, crate::catalog::VERSION);
+        assert_eq!(c.tags(Path::new("/w/a.jpg")), ["x"]);
+        // Written first in the file, where a script reading it looks.
+        assert!(fs::read_to_string(store.catalog_path()).unwrap().starts_with("{\n  \"version\": 2,"));
+        // A version-1 snapshot restored comes back as the current one.
+        fs::create_dir_all(store.snapshots_dir()).unwrap();
+        fs::write(store.snapshots_dir().join("library-2026-01-01.json"), r#"{"items": {}}"#).unwrap();
+        assert_eq!(store.restore_snapshot("library-2026-01-01").unwrap().version, crate::catalog::VERSION);
+        assert_eq!(store.load_catalog().unwrap().version, crate::catalog::VERSION);
     }
 
     #[test]

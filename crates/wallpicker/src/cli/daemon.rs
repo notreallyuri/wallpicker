@@ -27,6 +27,9 @@ pub fn daemon(args: &[String]) -> i32 {
         return 0;
     };
     let store = Store::new(Dirs::from_env());
+    if let Err(e) = store.upgrade_catalog() {
+        eprintln!("wallpicker: could not update library.json's format: {e}");
+    }
     // hyprpaper.conf sources this file: make sure it exists (and matches).
     if let Err(e) = store.write_hyprpaper_conf() {
         eprintln!("wallpicker: could not write the hyprpaper config: {e}");

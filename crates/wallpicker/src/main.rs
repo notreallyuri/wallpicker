@@ -17,6 +17,7 @@ fn main() {
         Some("random") => std::process::exit(wallpicker::cli::random(&args[1..])),
         Some("favorite") => std::process::exit(wallpicker::cli::favorite(&args[1..])),
         Some("tag") => std::process::exit(wallpicker::cli::tag(&args[1..])),
+        Some("artist") => std::process::exit(wallpicker::cli::artist(&args[1..])),
         Some("colors") => std::process::exit(wallpicker::cli::colors(&args[1..])),
         Some("backup") => std::process::exit(wallpicker::cli::backup(&args[1..])),
         Some("duplicates") => std::process::exit(wallpicker::cli::duplicates(&args[1..])),
@@ -68,6 +69,7 @@ fn main() {
              wallpicker slideshow tick|run|status  change it every few minutes (Settings → Slideshow)\n  \
              wallpicker favorite <image> [--off]  pin to the top, or unpin\n  \
              wallpicker tag <image> add|remove <tag>\n  \
+             wallpicker artist <image> add|remove <name>\n  \
              wallpicker adjust <monitor> [--flip h|v|both|none] [--fit F] [--frame Z,X,Y] [--reset]\n                                     \
              adjust what a monitor shows, until another wallpaper goes there\n  \
              wallpicker workspaces [list | on | off | remember on|off | set WS IMAGE | clear WS | run]\n                                     \

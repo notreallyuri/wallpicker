@@ -1,5 +1,5 @@
 //! library.*: the library (scan with places), thumbnails, the catalog
-//! (favorites, tags), colors, duplicates.
+//! (favorites, tags, metadata; set_artists), colors, duplicates.
 
 use serde_json::{Value, json as value};
 
@@ -24,6 +24,11 @@ pub(super) async fn call(state: &AppState, out: &Out, name: &str, params: &Value
         "add_tag" | "remove_tag" => match (p("path"), p("tag")) {
             (Ok(path), Ok(tag)) if name == "add_tag" => json(library::add_tag(state, path, tag).await),
             (Ok(path), Ok(tag)) => json(library::remove_tag(state, path, tag).await),
+            (Err(e), _) | (_, Err(e)) => Err(e),
+        },
+        // `artists`: [{name, query?}], all of them, in order.
+        "set_artists" => match (p("path"), param(params, "artists")) {
+            (Ok(path), Ok(artists)) => json(library::set_artists(state, path, artists).await),
             (Err(e), _) | (_, Err(e)) => Err(e),
         },
         // [[path, score], ...], the most of the color first.

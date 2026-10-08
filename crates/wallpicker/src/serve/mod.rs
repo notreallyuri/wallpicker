@@ -41,6 +41,11 @@ impl Out {
 pub fn run() -> i32 {
     let dirs = Dirs::from_env();
     let state = Arc::new(AppState::new(Store::new(dirs.clone())));
+    // Before anything reads or changes it (and before the watch, which
+    // would announce it).
+    if let Err(e) = state.store.upgrade_catalog() {
+        eprintln!("wallpicker: could not update library.json's format: {e}");
+    }
     let out = Out(Arc::new(Mutex::new(std::io::stdout())));
     out.event("ready", json!({ "version": env!("CARGO_PKG_VERSION") }));
     watch::start(&dirs, out.clone());

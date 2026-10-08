@@ -1,4 +1,4 @@
-//! `wallpicker favorite`, `tag` and `trash`: the app's library edits.
+//! `wallpicker favorite`, `tag`, `artist` and `trash`: the app's library edits.
 
 use std::path::PathBuf;
 
@@ -78,6 +78,46 @@ pub fn tag(args: &[String]) -> i32 {
             Ok(())
         },
         format!("{} {tag:?} {} {}", if add { "added" } else { "removed" }, if add { "to" } else { "from" }, path.display()),
+    )
+}
+
+/// `wallpicker artist <path> add|remove <name>`: artists by hand (no search
+/// on a provider, only the filter).
+pub fn artist(args: &[String]) -> i32 {
+    let usage_text = "usage: wallpicker artist <image> add|remove <name>";
+    let [path, action, name @ ..] = args else {
+        return usage_for("artist", "need an image, add or remove, and a name", usage_text);
+    };
+    let Some(name) = catalog::normalize_tag(&name.join(" ")) else {
+        return usage_for(
+            "artist",
+            &format!("names are 1 to {} characters, without control characters", catalog::MAX_TAG_LEN),
+            usage_text,
+        );
+    };
+    let add = match action.as_str() {
+        "add" => true,
+        "remove" | "rm" => false,
+        other => return usage_for("artist", &format!("{other}: use add or remove"), usage_text),
+    };
+    let path = absolute(path);
+    let state = AppState::new(Store::new(Dirs::from_env()));
+    let (p, n) = (path.clone(), name.clone());
+    run_edit(
+        async move {
+            crate::service::library::update_catalog(&state, move |c| {
+                let mut artists = c.metadata(&p).map(|m| m.artists.clone()).unwrap_or_default();
+                if add {
+                    artists.push(catalog::Person::named(&n));
+                } else {
+                    artists.retain(|a| a.name.to_lowercase() != n.to_lowercase());
+                }
+                c.set_artists(&p, &artists);
+            })
+            .await?;
+            Ok(())
+        },
+        format!("{} artist {name:?} {} {}", if add { "added" } else { "removed" }, if add { "to" } else { "from" }, path.display()),
     )
 }
 

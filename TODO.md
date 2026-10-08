@@ -127,12 +127,12 @@ In `library.json`, an entry (all optional, an entry with only metadata is kept):
 
 Each step checked headless and committed:
 
-1. [ ] **Core**: `Entry` gets `origin`, `source`, `uploader`, `artists` (`Person {name,
-   query}`), `is_empty` counts them; the catalog's `version`, saved as 2 on first load;
-   setting and clearing artists (names cleaned like tags, compared ignoring case);
-   duplicates move the metadata to the kept copy (where it has none); backup exports and
-   imports it (an old backup still imports); `serve`'s `library.catalog` carries it,
-   `library.set_artists` edits it.
+1. [x] **Core**: `Entry` gets `origin`, `source`, `uploader`, `artists` (`Person {name,
+   query}`), `is_empty` counts them; the catalog's `version`, saved as 2 when `serve` or the
+   daemon starts; setting and clearing artists (names cleaned like tags, compared ignoring
+   case); duplicates move the metadata to the kept copy (where it has none); backup exports
+   and imports it (an old backup still imports); `serve`'s `library.catalog` carries it,
+   `library.set_artists` edits it; `wallpicker artist <image> add|remove <name>`.
 2. [ ] **Downloads write metadata**: `download_and_tag` fills origin, source, uploader and
    artists from the details instead of adding artist tags (the tags picked in Details stay
    tags); a downloaded file without metadata gets it on the next download or apply.
