@@ -145,10 +145,11 @@ Each step checked headless and committed:
    filter also matches artists and uploaders; tiles show the artists (a brush) before the
    tags. `ui-check.sh` takes `CHECK_LIBRARY=FILE`.
    - [ ] Later: the slideshow (and `wallpicker random --artist`) picking from some artists.
-5. [ ] **A local wallpaper's details**: right-click → **Details…** (today's Edit tags…
+5. [x] **A local wallpaper's details**: right-click → **Details…** (today's Edit tags…
    grows into it): the artists (**More by <artist> on Wallhaven**: the Online tab, its
    provider, the stored query), the uploader (**More from**), **Open source**, **Open on
-   Wallhaven** (from the origin), the tags as today; artists can be added or removed by hand.
+   Wallhaven** (from the origin: `serve`'s `library.origin_page`), the tags as today; artists
+   can be added or removed by hand. `--open details <image>` (`tags` still works).
 6. [ ] **Noctalia plugin** (by the app-and-plugin decision): the artist in its details, the
    name filter matching it. No artist filter there.
 

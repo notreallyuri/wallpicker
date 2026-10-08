@@ -124,12 +124,13 @@ pub fn ui(args: &[String]) -> i32 {
 }
 
 /// Where `--open` can go.
-const PLACES: [&str; 6] = ["local", "online", "collections", "settings", "duplicates", "tags"];
+const PLACES: [&str; 7] = ["local", "online", "collections", "settings", "duplicates", "details", "tags"];
 
 #[derive(Debug, PartialEq, Eq)]
 struct Place {
     view: String,
-    /// The image, for "tags" (absolute).
+    /// The image, for "details" (absolute). "tags", what it was called,
+    /// opens the details too.
     path: Option<String>,
 }
 
@@ -140,13 +141,13 @@ fn parse_open(args: &[String], cwd: &Path) -> Result<Option<Place>, String> {
         return Ok(None);
     };
     let Some(view) = args.get(i + 1) else {
-        return Err("--open needs a place: local, online, collections, settings, duplicates or tags <image>".into());
+        return Err("--open needs a place: local, online, collections, settings, duplicates or details <image>".into());
     };
     if !PLACES.contains(&view.as_str()) {
-        return Err(format!("--open {view}? use local, online, collections, settings, duplicates or tags <image>"));
+        return Err(format!("--open {view}? use local, online, collections, settings, duplicates or details <image>"));
     }
-    let path = if view == "tags" {
-        let image = args.get(i + 2).ok_or("--open tags needs the image")?;
+    let path = if view == "details" || view == "tags" {
+        let image = args.get(i + 2).ok_or(format!("--open {view} needs the image"))?;
         Some(cwd.join(image).to_string_lossy().into_owned())
     } else {
         None
@@ -175,5 +176,7 @@ mod tests {
         assert!(parse_open(&args(&["--open"]), cwd).is_err());
         assert!(parse_open(&args(&["--open", "nowhere"]), cwd).is_err());
         assert!(parse_open(&args(&["--open", "tags"]), cwd).is_err());
+        assert_eq!(parse_open(&args(&["--open", "details", "/w/b.jpg"]), cwd).unwrap().unwrap().path.as_deref(), Some("/w/b.jpg"));
+        assert!(parse_open(&args(&["--open", "details"]), cwd).is_err());
     }
 }

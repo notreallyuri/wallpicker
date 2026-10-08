@@ -19,12 +19,15 @@ or **Noctalia**'s wallpaper manager (Settings → General → Wallpaper backend)
     to (it would be scaled up there). Only a hint: nothing is hidden.
   - Sort and layout are remembered.
 - **Favorites, tags and artists**: star a local wallpaper to pin it to the top of every view.
-  Give it tags with right-click → **Edit tags…**, then filter by one or more tags above the grid
+  Give it tags with right-click → **Details…**, then filter by one or more tags above the grid
   (one line, selected tags first; **Expand** shows them all), matching **All** or **Any** of
   them. Downloads keep where they came from, their artists, uploader and source link (as the
   provider lists them) apart from the tags, and arrive tagged only with the tags you keep in
   **Details**. The artists have a row of their own under the tags (any of those picked, with
-  the tags picked) and show on the tiles (a brush). The name filter also matches tags, artists
+  the tags picked) and show on the tiles (a brush). Right-click → **Details…** shows where a
+  wallpaper came from: its artists (**More by <artist>** searches the provider it came from
+  for exactly them), uploader (**More from**), **Open source**, **Open on Wallhaven**; and
+  edits its artists (add one by hand, or remove one) and tags. The name filter also matches tags, artists
   and uploaders. `scripts/wallhaven-metadata.py` gives Wallhaven wallpapers downloaded before
   this their metadata, and takes their artist names out of the tags.
 - **Online**: search a provider, picked with the select next to the search box:
@@ -173,7 +176,7 @@ checkout (a binary built inside it finds its `quickshell/`; `WALLPICKER_UI` poin
 - **The picker**: a keybind on `wallpicker --toggle` (in the Lua config:
   `hl.bind("SUPER + SHIFT + W", hl.dsp.exec_cmd("/home/you/.local/bin/wallpicker --toggle"))`),
   the launcher, or the Noctalia plugin. `wallpicker --open local|online|collections|settings|
-  duplicates` and `--open tags <image>` open it there (the plugin hands bigger jobs over that way).
+  duplicates` and `--open details <image>` (a wallpaper's details: its tags and artists) open it there (the plugin hands bigger jobs over that way).
 - **The daemon**, in Hyprland's autostart: `wallpicker daemon`. It puts the saved wallpapers back
   through the chosen backend (starting awww's daemon if needed; with hyprpaper, start hyprpaper
   in the autostart too), then follows workspaces, keeps the slideshow's time and Noctalia's colors

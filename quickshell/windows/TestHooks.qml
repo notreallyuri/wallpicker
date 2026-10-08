@@ -195,7 +195,7 @@ QtObject {
                 popups: Dialogs.popups,
                 shown: Lifetime.shown,
                 trashFor: Dialogs.trashFor,
-                tagsFor: Dialogs.tagsFor,
+                localDetailsFor: Dialogs.localDetailsFor,
                 adjusting: Dialogs.adjusting,
                 adjust: Monitors.adjust,
                 current: Monitors.current,
@@ -226,7 +226,7 @@ QtObject {
 
         /// Open a dialog: settings (at section `arg`), span (the span's
         /// Adjust), across (the Span dialog for picture `arg`), adjust
-        /// (monitor `arg`), filters (Online's).
+        /// (monitor `arg`), filters (Online's), details (picture `arg`'s).
         function dialog(name: string, arg: string): string {
             switch (name) {
             case "settings":
@@ -244,6 +244,9 @@ QtObject {
             case "filters":
                 Dialogs.onlineFilters = true;
                 break;
+            case "details":
+                Dialogs.localDetails(arg);
+                break;
             default:
                 return "no " + name;
             }
@@ -259,6 +262,7 @@ QtObject {
         function online(): string {
             return JSON.stringify({
                 provider: Online.provider,
+                text: Online.text,
                 restored: Online.restored,
                 options: !!Online.options,
                 loading: Online.loading,

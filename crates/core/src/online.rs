@@ -276,6 +276,22 @@ pub fn is_valid_id(id: &str) -> bool {
     !id.is_empty() && id.len() <= 32 && id.bytes().all(|b| b.is_ascii_alphanumeric())
 }
 
+/// The page of a downloaded wallpaper on its provider's site, from its
+/// [`Origin`](crate::catalog::Origin): Konachan's on the site chosen. None
+/// for an unknown provider or an id that isn't one.
+pub fn origin_page(origin: &crate::catalog::Origin, konachan: crate::settings::KonachanSite) -> Option<String> {
+    use crate::moebooru::Site;
+    if !is_valid_id(&origin.id) {
+        return None;
+    }
+    let post = || origin.id.parse::<u64>().ok();
+    match Provider::from_str(&origin.provider)? {
+        Provider::Wallhaven => Some(format!("https://wallhaven.cc/w/{}", origin.id)),
+        Provider::Konachan => Some(Site::from(konachan).post_page(post()?)),
+        Provider::Yandere => Some(Site::Yandere.post_page(post()?)),
+    }
+}
+
 /// The [`OnlineWallpaper::key`] of a downloaded file, from its name, so the
 /// download folder tells which results are already on disk.
 pub fn key_from_file_name(name: &str) -> Option<String> {
@@ -390,6 +406,19 @@ mod tests {
             full: full.into(),
             extension: "png".into(),
             ..OnlineWallpaper::default()
+        }
+    }
+
+    #[test]
+    fn origins_link_back_to_their_page() {
+        use crate::catalog::Origin;
+        use crate::settings::KonachanSite;
+        let o = |p: &str, id: &str| Origin { provider: p.into(), id: id.into() };
+        assert_eq!(origin_page(&o("wallhaven", "mlom5m"), KonachanSite::Net).as_deref(), Some("https://wallhaven.cc/w/mlom5m"));
+        assert_eq!(origin_page(&o("konachan", "409210"), KonachanSite::Com).as_deref(), Some("https://konachan.com/post/show/409210"));
+        assert_eq!(origin_page(&o("yandere", "1"), KonachanSite::Net).as_deref(), Some("https://yande.re/post/show/1"));
+        for bad in [o("konachan", "abc"), o("wallhaven", "../x"), o("unsplash", "abc"), o("wallhaven", "")] {
+            assert_eq!(origin_page(&bad, KonachanSite::Net), None, "{bad:?}");
         }
     }
 

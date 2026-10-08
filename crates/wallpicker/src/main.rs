@@ -90,7 +90,7 @@ fn main() {
              wallpicker --toggle                open or close the picker (for a keybind)\n  \
              wallpicker --open local|online|collections|settings|duplicates\n                                     \
              open the picker at that tab or dialog\n  \
-             wallpicker --open tags <image>     edit an image's tags in the picker\n\n\
+             wallpicker --open details <image>  an image's details in the picker (its tags, artists)\n\n\
              The picker (Quickshell) frees all its memory when closed; `wallpicker daemon` is\n\
              what keeps running (workspaces, the slideshow, Noctalia's colors)."
         );

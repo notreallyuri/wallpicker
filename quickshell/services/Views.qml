@@ -29,10 +29,12 @@ Singleton {
             current = local;
             Dialogs.findDuplicates();
             break;
+        // "tags": what the details were before (the plugin's Edit tags).
+        case "details":
         case "tags":
             current = local;
             if (path)
-                Dialogs.editTags(path);
+                Dialogs.localDetails(path);
             break;
         default:
             current = local;

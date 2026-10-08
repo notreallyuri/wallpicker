@@ -5,8 +5,8 @@ import QtQuick
 import Quickshell
 
 Singleton {
-    /// The wallpaper whose tags are being edited ("" none).
-    property string tagsFor: ""
+    /// The local wallpaper whose details (artists, tags...) are shown ("" none).
+    property string localDetailsFor: ""
     /// The wallpaper asked to be moved to the trash ("" none).
     property string trashFor: ""
     property bool duplicates: false
@@ -50,8 +50,8 @@ Singleton {
         return true;
     }
 
-    function editTags(path) {
-        tagsFor = path;
+    function localDetails(path) {
+        localDetailsFor = path;
     }
     function confirmTrash(path) {
         trashFor = path;

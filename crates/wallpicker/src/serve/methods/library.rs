@@ -1,5 +1,5 @@
 //! library.*: the library (scan with places), thumbnails, the catalog
-//! (favorites, tags, metadata; set_artists), colors, duplicates.
+//! (favorites, tags, metadata; set_artists, origin_page), colors, duplicates.
 
 use serde_json::{Value, json as value};
 
@@ -25,6 +25,11 @@ pub(super) async fn call(state: &AppState, out: &Out, name: &str, params: &Value
             (Ok(path), Ok(tag)) if name == "add_tag" => json(library::add_tag(state, path, tag).await),
             (Ok(path), Ok(tag)) => json(library::remove_tag(state, path, tag).await),
             (Err(e), _) | (_, Err(e)) => Err(e),
+        },
+        // Its page on the provider it came from, or null.
+        "origin_page" => match p("path") {
+            Ok(path) => json(library::origin_page(state, path).await),
+            Err(e) => Err(e),
         },
         // `artists`: [{name, query?}], all of them, in order.
         "set_artists" => match (p("path"), param(params, "artists")) {

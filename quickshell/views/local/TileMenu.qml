@@ -82,9 +82,9 @@ Menu {
         onTriggered: Library.setFavorite(menu.path, !menu.favorite)
     }
     MenuItem {
-        icon: "tag"
-        text: "Edit tags…"
-        onTriggered: Dialogs.editTags(menu.path)
+        icon: "info"
+        text: "Details…"
+        onTriggered: Dialogs.localDetails(menu.path)
     }
     MenuItem {
         icon: "folder"

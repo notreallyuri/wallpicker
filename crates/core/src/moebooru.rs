@@ -71,7 +71,7 @@ impl Site {
         format!("{}/post.xml", self.base())
     }
 
-    fn post_page(self, id: u64) -> String {
+    pub fn post_page(self, id: u64) -> String {
         format!("{}/post/show/{id}", self.base())
     }
 }

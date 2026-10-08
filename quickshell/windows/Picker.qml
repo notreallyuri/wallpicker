@@ -142,7 +142,7 @@ Item {
     }
 
     // The dialogs, once for everything (services/Dialogs opens them).
-    TagsDialog {}
+    LocalDetailsDialog {}
     TrashDialog {}
     DuplicatesDialog {}
     AdjustDialog {}

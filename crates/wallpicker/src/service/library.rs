@@ -127,6 +127,19 @@ pub async fn remove_tag(state: &AppState, path: String, tag: String) -> CmdResul
     update_catalog(state, move |c| c.remove_tag(&path, &tag)).await
 }
 
+/// The page `path` was downloaded from, on its provider's site (None when
+/// it wasn't, or that isn't known).
+pub async fn origin_page(state: &AppState, path: String) -> CmdResult<Option<String>> {
+    let path = wallpaper_path(&path)?;
+    let store = state.store.clone();
+    blocking(move || {
+        let site = store.load_settings()?.konachan_site;
+        let catalog = store.load_catalog()?;
+        Ok(catalog.metadata(&path).and_then(|m| m.origin.as_ref()).and_then(|o| wallpicker_core::online::origin_page(o, site)))
+    })
+    .await
+}
+
 /// Make `path`'s artists `artists` (cleaned like tags, each once).
 pub async fn set_artists(state: &AppState, path: String, artists: Vec<catalog::Person>) -> CmdResult<Catalog> {
     let path = wallpaper_path(&path)?;
