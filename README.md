@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.png" alt="wallpicker's logo: a sleepy cat curled along the bottom of a picture frame" width="180">
+</p>
+
 # wallpicker
 
 A visual wallpaper picker for Hyprland, drawing through **hyprpaper**, **awww** (formerly swww)
