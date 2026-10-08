@@ -617,12 +617,14 @@ pub fn details(args: &[String]) -> i32 {
     print_json(&out)
 }
 
-/// `wallpicker apply-online <handle> [--monitor NAME]... [--download-only]`.
-/// The handle is a result's `handle` from `wallpicker search --json`.
+/// `wallpicker apply-online <handle> [--monitor NAME]... [--tag NAME]... [--download-only]`.
+/// The handle is a result's `handle` from `wallpicker search --json`; the
+/// tags (some of its own, say) are added in the library with its artists.
 pub fn apply_online(args: &[String]) -> i32 {
-    let usage_text = "usage: wallpicker apply-online <handle> [--monitor NAME]... [--download-only]";
+    let usage_text = "usage: wallpicker apply-online <handle> [--monitor NAME]... [--tag NAME]... [--download-only]";
     let mut handle = None;
     let mut monitors = Vec::new();
+    let mut tags = Vec::new();
     let mut download_only = false;
     let mut rest = args.iter();
     while let Some(a) = rest.next() {
@@ -630,6 +632,10 @@ pub fn apply_online(args: &[String]) -> i32 {
             "--monitor" | "-m" => match rest.next() {
                 Some(m) => monitors.push(m.clone()),
                 None => return usage_for("apply-online", "--monitor needs a monitor name", usage_text),
+            },
+            "--tag" | "-t" => match rest.next() {
+                Some(t) => tags.push(t.clone()),
+                None => return usage_for("apply-online", "--tag needs a tag", usage_text),
             },
             "--download-only" => download_only = true,
             flag if flag.starts_with('-') && !flag.starts_with("-{") => {
@@ -655,7 +661,7 @@ pub fn apply_online(args: &[String]) -> i32 {
         Err(e) => return fail(&e),
     };
     let state = AppState::new(store.clone());
-    let path = match crate::rt::block_on(crate::service::online::download_and_tag(&state, &wallpaper, |_, _| {})) {
+    let path = match crate::rt::block_on(crate::service::online::download_and_tag(&state, &wallpaper, &tags, |_, _| {})) {
         Ok(p) => PathBuf::from(p),
         Err(e) => return fail(&e),
     };

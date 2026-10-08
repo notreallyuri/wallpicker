@@ -58,8 +58,8 @@ fn main() {
              wallpicker tags <konachan|yandere> <text...> [--json]  the real tag names a search means\n  \
              wallpicker collection <id> [--page N] [--json] [--thumbs]  a page of one\n  \
              wallpicker preview <handle>        just the details image (cached), as JSON\n  \
-             wallpicker apply-online <handle> [--monitor NAME]... [--download-only]\n                                     \
-             download and apply a result from `search --json`\n  \
+             wallpicker apply-online <handle> [--monitor NAME]... [--tag T]... [--download-only]\n                                     \
+             download and apply a result from `search --json` (tags kept in the library)\n  \
              wallpicker random [--favorites] [--tag T]... [--any] [--folder DIR] [--monitor NAME]... [--each]\n                                     \
              apply a random wallpaper (for keybinds)\n  \
              wallpicker previous [--monitor NAME]...  back to the wallpaper before (every monitor by default)\n  \

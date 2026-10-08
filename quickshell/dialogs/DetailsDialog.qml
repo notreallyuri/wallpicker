@@ -1,7 +1,8 @@
 // An online wallpaper's details (ui/src/views/online/details.rs): its size
 // and category, likes, views and file size; a bigger picture; the artists,
-// uploader, source and tags, each of which searches for more; Open on the
-// provider's site, Download, Apply. Opened by services/Dialogs.showDetails.
+// uploader, source and tags, each of which searches for more, and the tags
+// to keep in the library; Open on the provider's site, Download, Apply.
+// Opened by services/Dialogs.showDetails.
 import QtQuick
 import QtQuick.Layouts
 import qs.components
@@ -16,6 +17,9 @@ Dialog {
     readonly property bool working: w !== null && Downloads.isWorking(w)
     /// {key, details} or {key, error}; null while loading.
     property var info: null
+    /// The tag names to add to the library with Download or Apply (the
+    /// artists are anyway). To start with, the ones the library already uses.
+    property var chosen: []
 
     title: w ? w.width + "×" + w.height + (w.category ? " · " + w.category : "") : ""
     description: {
@@ -45,6 +49,8 @@ Dialog {
         const k = Downloads.key(w);
         // Moebooru results carry theirs.
         if (w.details) {
+            if (!info || info.key !== k)
+                chosen = suggested(w.details);
             info = {
                 key: k,
                 details: w.details
@@ -52,18 +58,21 @@ Dialog {
             return;
         }
         // Reopening the same one reuses them (Wallhaven allows 45 requests
-        // a minute).
+        // a minute), and what was kept.
         if (info && info.key === k && info.details)
             return;
         info = null;
+        chosen = [];
         Backend.request("online.details", {
             wallpaper: w
         }, d => {
-            if (dialog.key === k)
+            if (dialog.key === k) {
+                dialog.chosen = dialog.suggested(d);
                 dialog.info = {
                     key: k,
                     details: d
                 };
+            }
         }, e => {
             if (dialog.key === k)
                 dialog.info = {
@@ -71,6 +80,18 @@ Dialog {
                     error: e
                 };
         });
+    }
+
+    /// Its tags (not the artists) that are already in the library, any case.
+    function suggested(d) {
+        const used = {};
+        for (const p in Library.entries)
+            for (const t of (Library.entries[p].tags || []))
+                used[t.toLowerCase()] = true;
+        return d.tags.filter(t => !t.is_artist && used[t.name.toLowerCase()]).map(t => t.name);
+    }
+    function toggle(name) {
+        chosen = chosen.includes(name) ? chosen.filter(n => n !== name) : chosen.concat([name]);
     }
 
     /// More like this (a tag, an artist, an uploader): searched on the
@@ -97,8 +118,11 @@ Dialog {
     DetailsAbout {
         Layout.fillWidth: true
         info: dialog.info && dialog.info.key === dialog.key ? dialog.info : null
+        chosen: dialog.chosen
         onSearch: q => dialog.searchFor(q)
         onOpenUrl: url => dialog.openUrl(url)
+        onToggle: name => dialog.toggle(name)
+        onClearChosen: dialog.chosen = []
     }
 
     footerLeft: Btn {
@@ -115,14 +139,14 @@ Dialog {
             text: "Download"
             opacity: dialog.working ? 0.5 : 1
             onClicked: if (!dialog.working)
-                Downloads.fetch(dialog.w, null)
+                Downloads.fetch(dialog.w, null, dialog.chosen)
         },
         Btn {
             variant: "primary"
             text: "Apply"
             opacity: dialog.working ? 0.5 : 1
             onClicked: if (!dialog.working) {
-                Downloads.fetch(dialog.w, Monitors.targets);
+                Downloads.fetch(dialog.w, Monitors.targets, dialog.chosen);
                 dialog.close();
             }
         }

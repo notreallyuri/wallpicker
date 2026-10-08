@@ -22,7 +22,8 @@ or **Noctalia**'s wallpaper manager (Settings → General → Wallpaper backend)
   tags with right-click → **Edit tags…**, then filter by one or more tags above the grid (one
   line, selected tags first; **Expand** shows them all),
   matching **All** or **Any** of them. Downloads arrive tagged with their artist, when the
-  provider lists one. The name filter also matches tags.
+  provider lists one, and with any of their own tags you keep in **Details**. The name filter
+  also matches tags.
 - **Online**: search a provider, picked with the select next to the search box:
   - **Wallhaven** (wallhaven.cc): sorting, top range, minimum size, exact resolutions and
     aspect ratios (any number of each; your monitors' sizes are listed first, never picked for
@@ -36,6 +37,9 @@ or **Noctalia**'s wallpaper manager (Settings → General → Wallpaper backend)
   from the defaults). The picture's border shows the rating: green SFW, yellow sketchy, red NSFW. Then **Apply** (download + set) or just **Download**. Results already in the download folder
   are marked **Downloaded** and only offer Apply. **Details** (or a click on the picture) shows
   the uploader, source link and tags; click a tag or "More from <uploader>" to search for it.
+  The **+** on a tag keeps it: Download or Apply from Details adds the kept ones to your library
+  (with the artist), even when it's downloaded already. Tags your library already uses start
+  kept.
   Artists (Wallhaven's "Artists" category, Konachan's and yande.re's artist tags) are shown
   first, with a **More by <artist>** button.
 - **Collections**: your Wallhaven collections (private ones too), shown like search results:
@@ -260,11 +264,12 @@ wallpicker collections                             # your Wallhaven collections 
 wallpicker collection 2117134 --page 2 --json      # a page of one (needs your username in Settings)
 wallpicker preview '<handle>'                     # its sharpest image, cached (JSON)
 wallpicker apply-online '<handle>' --monitor DP-1  # a result's "handle" from search --json
-wallpicker apply-online '<handle>' --download-only
+wallpicker apply-online '<handle>' --download-only --tag landscape --tag "digital art"
 ```
 
 `apply` and `apply-online` go through the configured backend and are recorded like an apply from
-the picker; `apply-online` downloads (or reuses) the file first, with the same host and id checks.
+the picker; `apply-online` downloads (or reuses) the file first, with the same host and id checks,
+tagging it with its artists and any `--tag`s.
 `--thumbs` caches result thumbnails in `~/.cache/wallpicker/online/` (and `details --preview`
 a bigger image in `preview/` there); cached images unused for 14 days are removed. Exit codes: 0 on success,
 1 if anything failed, 2 for usage mistakes.

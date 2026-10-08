@@ -1,6 +1,7 @@
 //! online.*: options (what the search form offers), search, details, preview, tag_suggestions (for the search box)
 //! and apply_suggestion (the search text with one picked), the saved filters
-//! (filters, save_filters), downloaded and download (pushing
+//! (filters, save_filters), downloaded and download (with some of its tags to
+//! keep; pushing
 //! `download-progress {key, done, total}` while it runs, then announcing
 //! `library-changed`), open_url, and Wallhaven's collections (collections,
 //! collection).
@@ -60,9 +61,11 @@ pub(super) async fn call(state: &AppState, out: &Out, name: &str, params: &Value
             Err(e) => Err(e),
         },
         "downloaded" => json(online::downloaded(state).await),
-        "download" => match wallpaper() {
-            Ok(w) => download(state, out, &w).await,
-            Err(e) => Err(e),
+        // `tags`: some of its own, to keep in the library (the artists come
+        // anyway).
+        "download" => match (wallpaper(), param::<Option<Vec<String>>>(params, "tags")) {
+            (Ok(w), Ok(tags)) => download(state, out, &w, &tags.unwrap_or_default()).await,
+            (Err(e), _) | (_, Err(e)) => Err(e),
         },
         "open_url" => match param::<String>(params, "url") {
             Ok(url) => json(online::open_url(&url)),
@@ -103,7 +106,7 @@ fn options() -> Value {
 
 /// Where it was saved. Its progress goes out as events, keyed like
 /// `online.downloaded`'s list ("provider:id").
-async fn download(state: &AppState, out: &Out, w: &OnlineWallpaper) -> CmdResult<Value> {
+async fn download(state: &AppState, out: &Out, w: &OnlineWallpaper, tags: &[String]) -> CmdResult<Value> {
     let key = w.key();
     let last = Mutex::new(None::<Instant>);
     let progress = |done: usize, total: Option<usize>| {
@@ -115,7 +118,7 @@ async fn download(state: &AppState, out: &Out, w: &OnlineWallpaper) -> CmdResult
         *last = Some(Instant::now());
         out.event("download-progress", value!({ "key": key, "done": done, "total": total }));
     };
-    let result = json(online::download_and_tag(state, w, progress).await);
+    let result = json(online::download_and_tag(state, w, tags, progress).await);
     if result.is_ok() {
         out.event("library-changed", value!(null));
     }

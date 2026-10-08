@@ -1,6 +1,7 @@
 // The details' text: the artists ("More by"), the uploader ("More from"),
-// the source, and the tags (their category on hover), each a search; or
-// that they're loading, or why they couldn't be. Dozens of tags scroll.
+// the source, and the tags (their category on hover), each a search, each
+// with a + to keep it in the library; or that they're loading, or why they
+// couldn't be. Dozens of tags scroll.
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -12,8 +13,12 @@ ColumnLayout {
 
     /// {details} or {error}; null while loading.
     property var info: null
+    /// The tag names kept: added to the library with Download or Apply.
+    property var chosen: []
     signal search(string query)
     signal openUrl(string url)
+    signal toggle(string name)
+    signal clearChosen
 
     readonly property var d: info && info.details ? info.details : null
     readonly property var artists: d ? d.tags.filter(t => t.is_artist) : []
@@ -92,6 +97,32 @@ ColumnLayout {
         }
     }
 
+    RowLayout {
+        visible: about.d !== null && about.tags.length > 0
+        Layout.fillWidth: true
+        spacing: 8
+        Text {
+            Layout.fillWidth: true
+            wrapMode: Text.Wrap
+            text: {
+                const n = about.chosen.length;
+                if (n === 0)
+                    return "+ on a tag adds it to your library too, with Download or Apply.";
+                return n + (n === 1 ? " tag" : " tags") + " will be added to your library.";
+            }
+            color: Theme.mutedForeground
+            font.family: Theme.font
+            font.pixelSize: 13
+        }
+        Btn {
+            visible: about.chosen.length > 0
+            small: true
+            variant: "ghost"
+            text: "Clear"
+            onClicked: about.clearChosen()
+        }
+    }
+
     // The tags, scrolling past a few rows.
     Flickable {
         visible: about.d !== null
@@ -112,11 +143,13 @@ ColumnLayout {
             }
             Repeater {
                 model: about.tags
-                Chip {
+                DetailsTag {
                     required property var modelData
                     text: modelData.name
                     tip: modelData.category
-                    onClicked: about.search(modelData.query)
+                    kept: about.chosen.includes(modelData.name)
+                    onSearch: about.search(modelData.query)
+                    onToggled: about.toggle(modelData.name)
                 }
             }
         }

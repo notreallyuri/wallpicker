@@ -31,8 +31,9 @@ Singleton {
 
     /// Download `w`, then apply it on `monitors` (names; "span": open the
     /// Span dialog for it), or just say where it was saved when that's null. Once at a
-    /// time per wallpaper.
-    function fetch(w, monitors) {
+    /// time per wallpaper. `tags` (some of its own, optional) are added to
+    /// the library with its artists, downloaded already or not.
+    function fetch(w, monitors, tags) {
         const k = key(w);
         if (working[k])
             return;
@@ -41,7 +42,8 @@ Singleton {
             total: 0
         });
         Backend.request("online.download", {
-            wallpaper: w
+            wallpaper: w,
+            tags: tags || []
         }, path => {
             setWorking(k, null);
             const next = Object.assign({}, downloads.saved);

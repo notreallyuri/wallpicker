@@ -274,7 +274,8 @@ QtObject {
         /// Drive the Online search without its view: activate, provider P,
         /// text T, search, page N, filter NAME=VALUE (JSON, else a string),
         /// reset, suggest I (pick
-        /// the I-th suggestion), download I (the I-th result).
+        /// the I-th suggestion), download I (the I-th result), details I
+        /// (its details dialog).
         function onlineDo(what: string, arg: string): string {
             const n = parseInt(arg);
             switch (what) {
@@ -310,6 +311,9 @@ QtObject {
                 break;
             case "download":
                 Downloads.fetch(Online.results[n], null);
+                break;
+            case "details":
+                Dialogs.showDetails(Online.results[n]);
                 break;
             default:
                 return "no " + what;
