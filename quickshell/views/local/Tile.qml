@@ -1,6 +1,6 @@
 // A Local tile (ui/src/views/local/tile.rs): a rounded card holding the
 // picture (16:10, its own rounded corners) with the monitors showing it, the
-// name and size, the tags; the star in the corner. Hover: lifts with the
+// name and size, the artists (a brush) then the tags; the star in the corner. Hover: lifts with the
 // bouncy ease, a primary ring and glow, the picture zooms 3%. A click
 // applies it.
 import QtQuick
@@ -27,6 +27,7 @@ Item {
     onHoveredChanged: hoverChanged(hovered)
     readonly property bool favorite: Library.favorite(img.path)
     readonly property var tags: Library.tags(img.path)
+    readonly property var artists: Library.artists(img.path)
     readonly property bool busy: !!Monitors.applying[img.path]
     /// The pointer is on its size (for the tip there).
     readonly property bool overSize: mouse.containsMouse && sizeText.contains(mouse.mapToItem(sizeText, mouse.mouseX, mouse.mouseY))
@@ -184,10 +185,19 @@ Item {
                     }
                 }
                 Row {
-                    visible: tile.tags.length > 0
+                    visible: tile.tags.length > 0 || tile.artists.length > 0
                     Layout.fillWidth: true
                     spacing: 4
                     clip: true
+                    Repeater {
+                        model: tile.artists
+                        Badge {
+                            required property string modelData
+                            soft: true
+                            icon: "brush"
+                            text: modelData
+                        }
+                    }
                     Repeater {
                         model: tile.tags
                         Badge {

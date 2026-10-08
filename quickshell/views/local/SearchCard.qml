@@ -1,5 +1,5 @@
 // The card floating over the top of the grid (rounded-2xl, frosted glass
-// over the grid, a soft shadow): the search row and the tag row.
+// over the grid, a soft shadow): the search row, the tags and the artists.
 import QtQuick
 import QtQuick.Effects
 import QtQuick.Layouts
@@ -55,9 +55,33 @@ Item {
             Layout.fillWidth: true
             local: card.local
         }
-        TagRow {
+        // The two rows' chips start at one place.
+        ChipRow {
+            id: tagRow
             Layout.fillWidth: true
-            local: card.local
+            labelWidth: artistRow.visible ? Math.max(labelImplicitWidth, artistRow.labelImplicitWidth) : -1
+            label: "Tags"
+            counts: Library.tagCounts
+            chosen: card.local.tagFilter
+            matchAll: card.local.tagsMatchAll
+            expanded: Prefs.tagsExpanded
+            onExpandedChanged: Prefs.tagsExpanded = expanded
+            onToggled: name => card.local.toggleTag(name)
+            onCleared: card.local.tagFilter = []
+            onMatchToggled: card.local.tagsMatchAll = !card.local.tagsMatchAll
+        }
+        // Any of the artists picked (a wallpaper rarely has two).
+        ChipRow {
+            id: artistRow
+            Layout.fillWidth: true
+            labelWidth: tagRow.visible ? Math.max(labelImplicitWidth, tagRow.labelImplicitWidth) : -1
+            label: "Artists"
+            counts: Library.artistCounts
+            chosen: card.local.artistFilter
+            expanded: Prefs.artistsExpanded
+            onExpandedChanged: Prefs.artistsExpanded = expanded
+            onToggled: name => card.local.toggleArtist(name)
+            onCleared: card.local.artistFilter = []
         }
     }
 }

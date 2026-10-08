@@ -13,6 +13,7 @@ Singleton {
     property alias localSort: data.localSort
     property alias localLayout: data.localLayout
     property alias tagsExpanded: data.tagsExpanded
+    property alias artistsExpanded: data.artistsExpanded
     property alias tagsMatchAll: data.tagsMatchAll
     property alias monitorsOpen: data.monitorsOpen
     /// "system", "light" or "dark".
@@ -56,6 +57,7 @@ Singleton {
             property string localSort: "newest"
             property string localLayout: "flat"
             property bool tagsExpanded: false
+            property bool artistsExpanded: false
             property bool tagsMatchAll: true
             property bool monitorsOpen: false
             property string darkMode: "system"

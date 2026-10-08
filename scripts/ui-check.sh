@@ -6,7 +6,8 @@
 # with two 1920x1080 monitors),
 # then the given test-hook calls, a screenshot, and the log's warnings.
 # Fails if QML reported errors or warnings. CHECK_FOLDERS=a:b uses those
-# wallpaper folders instead of yours; CHECK_PREFS='{...}' sets interface
+# wallpaper folders instead of yours, CHECK_LIBRARY=FILE that library.json;
+# CHECK_PREFS='{...}' sets interface
 # choices (services/Prefs.qml) to start with. CHECK_SIZE=WxH sizes the
 # session (the panel is 1560x980 on a 1080p screen).
 #
@@ -52,6 +53,10 @@ json.dump(s, open(f'{tmp}/config/wallpicker/config.json', 'w'))
 PY
 cp -r ~/.local/state/wallpicker "$tmp/state/" 2>/dev/null || true
 cp -r ~/.local/share/wallpicker "$tmp/data/" 2>/dev/null || true
+# CHECK_LIBRARY=FILE: that library.json instead of yours.
+if [ -n "$CHECK_LIBRARY" ]; then
+    mkdir -p "$tmp/data/wallpicker" && cp "$CHECK_LIBRARY" "$tmp/data/wallpicker/library.json"
+fi
 # CHECK_PREFS='{"localLayout":"folders"}': interface choices to start with.
 if [ -n "$CHECK_PREFS" ]; then
     python3 - "$tmp/state/wallpicker/ui.json" <<'PY'

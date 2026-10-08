@@ -1,6 +1,6 @@
 // What the Local tab shows (ui/src/views/local/mod.rs): the library
-// filtered (search by name or tag, favorites, tags with All or Any, a
-// color), favorites first then the chosen order (with a color: the most of
+// filtered (search by name, tag, artist or uploader, favorites, tags with
+// All or Any, any of some artists, a color), favorites first then the chosen order (with a color: the most of
 // it first), in pages of 60. In the Folders layout with no filter on, the
 // current folder's subfolders lead the first page, then its own images. A
 // new filter, sort, layout or folder starts from the first page.
@@ -17,6 +17,7 @@ QtObject {
     property string query: ""
     property bool favoritesOnly: false
     property var tagFilter: []
+    property var artistFilter: []
     // Remembered between opens.
     property string sort: Prefs.localSort
     property string layout: Prefs.localLayout
@@ -34,10 +35,10 @@ QtObject {
     property var shuffle: ({})
     /// What's being looked at: the same key with a new list (a favorite
     /// moved, a tag changed) keeps the grid's scroll position.
-    readonly property string viewKey: [currentPage, query, favoritesOnly, JSON.stringify(tagFilter), sort, layout, tagsMatchAll, color, JSON.stringify(place)].join("|")
+    readonly property string viewKey: [currentPage, query, favoritesOnly, JSON.stringify(tagFilter), JSON.stringify(artistFilter), sort, layout, tagsMatchAll, color, JSON.stringify(place)].join("|")
 
     readonly property bool folders: layout === "folders"
-    readonly property bool filtering: favoritesOnly || query.trim() !== "" || tagFilter.length > 0 || color !== ""
+    readonly property bool filtering: favoritesOnly || query.trim() !== "" || tagFilter.length > 0 || artistFilter.length > 0 || color !== ""
     readonly property var rootNames: Library.roots.map(r => r.name)
 
     // The library in order: favorites first, then the sort.
@@ -59,6 +60,7 @@ QtObject {
             return browsed.direct;
         const q = query.trim().toLowerCase();
         const want = tagFilter.map(t => t.toLowerCase());
+        const by = artistFilter.map(a => a.toLowerCase());
         const ranked = {};
         colorOrder.forEach((p, i) => ranked[p] = i);
         const list = sorted.filter(i => {
@@ -69,7 +71,11 @@ QtObject {
             const tags = Library.tags(i.path).map(t => t.toLowerCase());
             if (want.length > 0 && !(tagsMatchAll ? want.every(t => tags.includes(t)) : want.some(t => tags.includes(t))))
                 return false;
-            if (q !== "" && !i.name.toLowerCase().includes(q) && !tags.some(t => t.includes(q)))
+            const meta = Library.metadata(i.path);
+            const artists = meta.artists.map(a => a.name.toLowerCase());
+            if (by.length > 0 && !by.some(a => artists.includes(a)))
+                return false;
+            if (q !== "" && !i.name.toLowerCase().includes(q) && !tags.some(t => t.includes(q)) && !artists.some(a => a.includes(q)) && !(meta.uploader && meta.uploader.name.toLowerCase().includes(q)))
                 return false;
             // Until the colors are read, nothing matches one.
             return color === "" || ranked[i.path] !== undefined;
@@ -100,6 +106,7 @@ QtObject {
     onQueryChanged: page = 1
     onFavoritesOnlyChanged: page = 1
     onTagFilterChanged: page = 1
+    onArtistFilterChanged: page = 1
     onTagsMatchAllChanged: {
         page = 1;
         Prefs.tagsMatchAll = tagsMatchAll;
@@ -130,13 +137,19 @@ QtObject {
         });
     }
 
-    // A tag no longer in use (its last one removed) would filter everything
-    // out while no longer shown: dropped.
+    // A tag (or artist) no longer in use (its last one removed) would filter
+    // everything out while no longer shown: dropped.
     readonly property var liveTags: Library.tagCounts.map(t => t.name)
     onLiveTagsChanged: {
         const kept = tagFilter.filter(t => liveTags.includes(t));
         if (kept.length !== tagFilter.length)
             tagFilter = kept;
+    }
+    readonly property var liveArtists: Library.artistCounts.map(a => a.name)
+    onLiveArtistsChanged: {
+        const kept = artistFilter.filter(a => liveArtists.includes(a));
+        if (kept.length !== artistFilter.length)
+            artistFilter = kept;
     }
 
     // The folders changed, or this place is gone: back to the top.
@@ -151,13 +164,13 @@ QtObject {
     }
 
     function toggleTag(name) {
-        const t = tagFilter.slice();
-        const i = t.indexOf(name);
-        if (i >= 0)
-            t.splice(i, 1);
-        else
-            t.push(name);
-        tagFilter = t;
+        tagFilter = toggled(tagFilter, name);
+    }
+    function toggleArtist(name) {
+        artistFilter = toggled(artistFilter, name);
+    }
+    function toggled(list, name) {
+        return list.includes(name) ? list.filter(n => n !== name) : list.concat([name]);
     }
 
     function openFolder(to) {

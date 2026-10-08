@@ -140,10 +140,11 @@ Each step checked headless and committed:
    `wallpicker details` and the CLI unchanged.
 3. [ ] **Migration** (`scripts/wallhaven-metadata.py`, below): run once on the real library
    after step 1 is installed, dry run first.
-4. [ ] **Filter by artist**: an **Artists** filter beside the tags (its own chips with
+4. [x] **Filter by artist**: an **Artists** row under the tags (its own chips with
    counts, Expand like the tags), any of the artists picked AND the tags picked; the name
-   filter also matches artists and uploaders; tiles show the artist under the name, where
-   there's room. The slideshow can pick from some artists too.
+   filter also matches artists and uploaders; tiles show the artists (a brush) before the
+   tags. `ui-check.sh` takes `CHECK_LIBRARY=FILE`.
+   - [ ] Later: the slideshow (and `wallpicker random --artist`) picking from some artists.
 5. [ ] **A local wallpaper's details**: right-click → **Details…** (today's Edit tags…
    grows into it): the artists (**More by <artist> on Wallhaven**: the Online tab, its
    provider, the stored query), the uploader (**More from**), **Open source**, **Open on

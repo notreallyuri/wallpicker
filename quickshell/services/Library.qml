@@ -1,6 +1,7 @@
 // The local library: every image in the wallpaper folders (with its cached
 // thumbnail when there is one, and its place: `root` and `folder`), the
-// wallpaper folders, favorites and tags, and the tags' counts. Rescans when
+// wallpaper folders, favorites, tags and metadata (artists, uploader,
+// source, origin), and the tags' and artists' counts. Rescans when
 // the backend says the library changed (a trash, duplicates resolved).
 pragma Singleton
 import QtQuick
@@ -12,16 +13,22 @@ Singleton {
     property var images: []
     /// The wallpaper folders: [{path, name}].
     property var roots: []
-    /// path -> {favorite, tags}
+    /// path -> {favorite, tags, origin?, source?, uploader?, artists?}
+    /// (a person: {name, query?}).
     property var entries: ({})
     property bool loading: true
 
     /// [{name, count}], by name (counted over the images on disk).
-    readonly property var tagCounts: {
+    readonly property var tagCounts: counted(tags)
+    readonly property var artistCounts: counted(artists)
+
+    /// What `namesOf(path)` gives, counted over the images (ignoring case,
+    /// the first spelling shown), by name.
+    function counted(namesOf) {
         const counts = {};
         const names = {};
         for (const img of images)
-            for (const t of tags(img.path)) {
+            for (const t of namesOf(img.path)) {
                 const key = t.toLowerCase();
                 counts[key] = (counts[key] || 0) + 1;
                 names[key] = names[key] || t;
@@ -41,6 +48,21 @@ Singleton {
     function tags(path) {
         const e = entries[path];
         return e && e.tags ? e.tags : [];
+    }
+    /// Its artists' names.
+    function artists(path) {
+        const e = entries[path];
+        return e && e.artists ? e.artists.map(a => a.name) : [];
+    }
+    /// {origin, source, uploader, artists}: what's known, each null or [] when not.
+    function metadata(path) {
+        const e = entries[path] || {};
+        return {
+            origin: e.origin || null,
+            source: e.source || null,
+            uploader: e.uploader || null,
+            artists: e.artists || []
+        };
     }
 
     function reload() {
@@ -93,6 +115,14 @@ Singleton {
             path: path,
             tag: tag
         }, c => library.entries = c.items || {}, e => Toasts.error("Could not remove the tag", e));
+    }
+
+    /// Make `path`'s artists `list` ([{name, query?}], in order).
+    function setArtists(path, list) {
+        Backend.request("library.set_artists", {
+            path: path,
+            artists: list
+        }, c => library.entries = c.items || {}, e => Toasts.error("Could not change the artists", e));
     }
 
     /// To the trash (restorable from the file manager); the backend says the

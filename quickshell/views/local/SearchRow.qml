@@ -24,7 +24,7 @@ RowLayout {
         Layout.minimumWidth: 160
         Layout.maximumWidth: 320
         icon: "search"
-        placeholder: "Filter by name or tag"
+        placeholder: "Filter by name, tag or artist"
         // Back from another tab: the filter is still on.
         text: row.local.query
         onTextChanged: row.local.query = text

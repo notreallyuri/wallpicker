@@ -18,12 +18,15 @@ or **Noctalia**'s wallpaper manager (Settings → General → Wallpaper backend)
   - Each tile shows the image's size, in amber when it's smaller than a monitor you're applying
     to (it would be scaled up there). Only a hint: nothing is hidden.
   - Sort and layout are remembered.
-- **Favorites and tags**: star a local wallpaper to pin it to the top of every view. Give it
-  tags with right-click → **Edit tags…**, then filter by one or more tags above the grid (one
-  line, selected tags first; **Expand** shows them all),
-  matching **All** or **Any** of them. Downloads keep where they came from, their artists,
-  uploader and source link (as the provider lists them) apart from the tags, and arrive tagged
-  only with the tags you keep in **Details**. The name filter also matches tags.
+- **Favorites, tags and artists**: star a local wallpaper to pin it to the top of every view.
+  Give it tags with right-click → **Edit tags…**, then filter by one or more tags above the grid
+  (one line, selected tags first; **Expand** shows them all), matching **All** or **Any** of
+  them. Downloads keep where they came from, their artists, uploader and source link (as the
+  provider lists them) apart from the tags, and arrive tagged only with the tags you keep in
+  **Details**. The artists have a row of their own under the tags (any of those picked, with
+  the tags picked) and show on the tiles (a brush). The name filter also matches tags, artists
+  and uploaders. `scripts/wallhaven-metadata.py` gives Wallhaven wallpapers downloaded before
+  this their metadata, and takes their artist names out of the tags.
 - **Online**: search a provider, picked with the select next to the search box:
   - **Wallhaven** (wallhaven.cc): sorting, top range, minimum size, exact resolutions and
     aspect ratios (any number of each; your monitors' sizes are listed first, never picked for

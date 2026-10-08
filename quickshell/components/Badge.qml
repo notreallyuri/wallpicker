@@ -1,4 +1,5 @@
-// A small pill: filled (a monitor on a tile) or soft (a tag on a tile).
+// A small pill: filled (a monitor on a tile) or soft (a tag on a tile),
+// with an icon before the text if given (an artist's brush).
 import QtQuick
 import qs.services
 
@@ -7,19 +8,31 @@ Rectangle {
 
     property string text
     property bool soft: false
+    property string icon
 
-    implicitWidth: label.implicitWidth + 16
+    implicitWidth: content.implicitWidth + 16
     implicitHeight: soft ? label.implicitHeight + 4 : 20
     radius: height / 2
     color: soft ? Theme.a(Theme.primary, 0.15) : Theme.primary
 
-    Text {
-        id: label
+    Row {
+        id: content
         anchors.centerIn: parent
-        text: badge.text
-        color: badge.soft ? Theme.primary : Theme.primaryForeground
-        font.family: Theme.font
-        font.pixelSize: badge.soft ? 10 : 12
-        font.weight: badge.soft ? Font.Medium : Font.Bold
+        spacing: 3
+        Icon {
+            visible: badge.icon !== ""
+            anchors.verticalCenter: parent.verticalCenter
+            name: badge.icon
+            size: label.font.pixelSize
+            color: label.color
+        }
+        Text {
+            id: label
+            text: badge.text
+            color: badge.soft ? Theme.primary : Theme.primaryForeground
+            font.family: Theme.font
+            font.pixelSize: badge.soft ? 10 : 12
+            font.weight: badge.soft ? Font.Medium : Font.Bold
+        }
     }
 }
