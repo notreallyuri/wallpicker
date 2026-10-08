@@ -4,14 +4,23 @@ origin, source, uploader and artists, from Wallhaven's API, and take the
 artist names out of their tags.
 
 Finds wallhaven-<id>.{jpg,png,webp} under the wallpaper folders and the
-download folder, asks /api/v1/w/<id> for each (cached, at most 40 a minute),
-and shows what would change. Nothing is written without --write.
+download folder, and wallhaven_<id> ones (saved from the site by hand), which
+it renames to wallhaven-<id> as wallpicker names its downloads (so they count
+as downloaded), unless that name is taken. Asks /api/v1/w/<id> for each
+(cached, at most 40 a minute) and shows what would change. Nothing is
+written or renamed without --write.
 
     scripts/wallhaven-metadata.py              # dry run: what would change
-    scripts/wallhaven-metadata.py --write      # do it (library.json copied first)
+    scripts/wallhaven-metadata.py --write      # do it (the files it changes copied first)
     --refresh    ask Wallhaven again instead of using the cached answers
     --overwrite  replace metadata a wallpaper already has (else only fill in)
+    --no-rename  leave wallhaven_<id> files named as they are
     --force      write even a library.json from before metadata (version 1)
+
+A renamed file is renamed everywhere wallpicker remembers it too: the
+library, what each monitor shows and the history (state.json), the
+wallpapers per workspace (config.json) and hyprpaper's config. Reopen the
+picker afterwards (a picker kept ready still lists the old names).
 
 Exit codes: 0 done, 1 something failed, 2 usage.
 """
@@ -30,7 +39,8 @@ import urllib.request
 API = "https://wallhaven.cc/api/v1/w/"
 # Wallhaven allows 45 requests a minute; stay under it.
 GAP = 60 / 40
-FILE = re.compile(r"^wallhaven-([A-Za-z0-9]{1,32})\.(jpg|png|webp)$")
+# wallhaven-<id> as wallpicker downloads it; wallhaven_<id> saved by hand.
+FILE = re.compile(r"^wallhaven([-_])([A-Za-z0-9]{1,32})\.(jpg|png|webp)$")
 # As core's uploader_query: what can follow "@" without reading as other syntax.
 USERNAME = re.compile(r"^[A-Za-z0-9_.-]{1,64}$")
 
@@ -42,6 +52,8 @@ def xdg(var, fallback):
 CONFIG = os.path.join(xdg("XDG_CONFIG_HOME", "~/.config"), "wallpicker", "config.json")
 LIBRARY = os.path.join(xdg("XDG_DATA_HOME", "~/.local/share"), "wallpicker", "library.json")
 CACHE = os.path.join(xdg("XDG_CACHE_HOME", "~/.cache"), "wallpicker", "metadata", "wallhaven")
+STATE = os.path.join(xdg("XDG_STATE_HOME", "~/.local/state"), "wallpicker", "state.json")
+HYPRPAPER = os.path.join(xdg("XDG_STATE_HOME", "~/.local/state"), "wallpicker", "hyprpaper.conf")
 
 
 def load_json(path, missing):
@@ -53,7 +65,8 @@ def load_json(path, missing):
 
 
 def find_files(settings):
-    """id -> [paths], as the library's scan names them (the folder as set, joined)."""
+    """id -> [paths], as the library's scan names them (the folder as set,
+    joined), and the wallhaven_<id> ones among them."""
     roots = list(settings.get("folders") or [])
     download = settings.get("download_dir")
     if download and download not in roots:
@@ -61,6 +74,7 @@ def find_files(settings):
     recursive = settings.get("recursive", True)
     found = {}
     seen = set()
+    by_hand = set()
     for root in roots:
         root = os.path.expanduser(root)
         for folder, dirs, names in os.walk(root):
@@ -72,8 +86,93 @@ def find_files(settings):
                 path = os.path.join(folder, name)
                 if m and path not in seen and os.path.isfile(path):
                     seen.add(path)
-                    found.setdefault(m.group(1), []).append(path)
-    return found
+                    found.setdefault(m.group(2), []).append(path)
+                    if m.group(1) == "_":
+                        by_hand.add(path)
+    return found, by_hand
+
+
+def plan_renames(by_hand):
+    """old -> new (wallhaven_<id> to wallhaven-<id>, beside it), and the ones
+    left as they are because that name is taken."""
+    renames, taken = {}, []
+    for old in sorted(by_hand):
+        folder, name = os.path.split(old)
+        new = os.path.join(folder, "wallhaven-" + name[len("wallhaven_"):])
+        if os.path.lexists(new) or new in renames.values():
+            taken.append(old)
+        else:
+            renames[old] = new
+    return renames, taken
+
+
+def rename_files(renames):
+    """The renames that were done: one whose new name turned up meanwhile, or
+    that fails, is left (and said)."""
+    done = {}
+    for old, new in renames.items():
+        # os.rename would replace a file that appeared since the plan.
+        if os.path.lexists(new):
+            print(f"not renamed, {os.path.basename(new)} exists now: {old}", file=sys.stderr)
+            continue
+        try:
+            os.rename(old, new)
+            done[old] = new
+        except OSError as e:
+            print(f"could not rename {old}: {e}", file=sys.stderr)
+    return done
+
+
+def renamed_in(value, done):
+    """`value` (parsed JSON) with every string that's a renamed path, as a
+    key or a value, renamed."""
+    if isinstance(value, dict):
+        return {done.get(k, k): renamed_in(v, done) for k, v in value.items()}
+    if isinstance(value, list):
+        return [renamed_in(v, done) for v in value]
+    if isinstance(value, str):
+        return done.get(value, value)
+    return value
+
+
+def write_atomic(path, text):
+    folder = os.path.dirname(path)
+    os.makedirs(folder, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=folder, prefix="." + os.path.basename(path) + ".")
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        f.write(text)
+    os.replace(tmp, path)
+
+
+def write_json(path, value):
+    write_atomic(path, json.dumps(value, indent=2, ensure_ascii=False) + "\n")
+
+
+def rename_references(done):
+    """What each monitor shows, the history, the wallpapers per workspace and
+    hyprpaper's config: the renamed files' new paths. Returns the files changed."""
+    changed = []
+    for path in (STATE, CONFIG):
+        before = load_json(path, None)
+        if before is None:
+            continue
+        after = renamed_in(before, done)
+        if after != before:
+            write_json(path, after)
+            changed.append(path)
+    try:
+        with open(HYPRPAPER, encoding="utf-8") as f:
+            text = f.read()
+    except FileNotFoundError:
+        return changed
+    # Longest first: a path that's the start of another can't eat it.
+    new_text = text
+    for old in sorted(done, key=len, reverse=True):
+        new_text = new_text.replace(old, done[old])
+    if new_text != text:
+        write_atomic(HYPRPAPER, new_text)
+        changed.append(HYPRPAPER)
+    return changed
 
 
 class Wallhaven:
@@ -175,20 +274,35 @@ def distinct_tags(items):
     return {t.lower() for e in items.values() for t in e.get("tags") or []}
 
 
-def write_library(plans, overwrite):
-    """Apply `plans` (path -> (meta, artist names)) to library.json as it is
-    now (a tag edited meanwhile is kept), atomically."""
+def merged(a, b):
+    """Two entries for one file (an old name's and the new one's): favorite
+    if either is, every tag once, the metadata of the one that has it."""
+    out = dict(b)
+    for k, v in a.items():
+        if out.get(k) in (None, [], "") and v not in (None, []):
+            out[k] = v
+    out["favorite"] = bool(a.get("favorite")) or bool(b.get("favorite"))
+    tags = list(b.get("tags") or [])
+    for t in a.get("tags") or []:
+        if clean(t).lower() not in {clean(x).lower() for x in tags}:
+            tags.append(t)
+    out["tags"] = tags
+    return out
+
+
+def write_library(plans, done, overwrite):
+    """library.json as it is now (a tag edited meanwhile is kept), with the
+    renamed files' entries under their new names and `plans` (path ->
+    (meta, artist names)) applied, atomically."""
     library = load_json(LIBRARY, {"items": {}})
     items = library.setdefault("items", {})
+    for old, new in done.items():
+        if old in items:
+            entry = items.pop(old)
+            items[new] = merged(entry, items[new]) if new in items else entry
     for path, (meta, names) in plans.items():
         items[path], _ = change(items.get(path, {}), meta, names, overwrite)
-    folder = os.path.dirname(LIBRARY)
-    os.makedirs(folder, exist_ok=True)
-    fd, tmp = tempfile.mkstemp(dir=folder, prefix=".library.", suffix=".json")
-    with os.fdopen(fd, "w", encoding="utf-8") as f:
-        json.dump(library, f, indent=2, ensure_ascii=False)
-        f.write("\n")
-    os.replace(tmp, LIBRARY)
+    write_json(LIBRARY, library)
 
 
 def main():
@@ -196,6 +310,7 @@ def main():
     p.add_argument("--write", action="store_true", help="save the changes (else a dry run)")
     p.add_argument("--refresh", action="store_true", help="ask Wallhaven again, not the cache")
     p.add_argument("--overwrite", action="store_true", help="replace metadata already there")
+    p.add_argument("--no-rename", action="store_true", help="leave wallhaven_<id> files as they are")
     p.add_argument("--force", action="store_true", help="write a version-1 library.json anyway")
     args = p.parse_args()
 
@@ -211,8 +326,9 @@ def main():
         )
         return 1
 
-    files = find_files(settings)
-    print(f"{sum(map(len, files.values()))} Wallhaven files ({len(files)} wallpapers)")
+    files, by_hand = find_files(settings)
+    renames, taken = ({}, []) if args.no_rename else plan_renames(by_hand)
+    print(f"{sum(map(len, files.values()))} Wallhaven files ({len(files)} wallpapers, {len(by_hand)} named wallhaven_<id>)")
     api = Wallhaven(settings.get("wallhaven_api_key"), args.refresh)
 
     changed = {}
@@ -230,22 +346,27 @@ def main():
             continue
         meta, names = metadata(wid, data)
         for path in paths:
+            # Planned under its new name, if it gets one.
+            new = renames.get(path, path)
             before = items.get(path, {})
             after, dropped = change(before, meta, names, args.overwrite)
-            if after == before:
+            if after == before and new == path:
                 continue
-            changed[path] = after
-            plans[path] = (meta, names)
+            changed[new] = after
+            plans[new] = (meta, names)
             who = ", ".join(a["name"] for a in meta["artists"]) or "-"
             up = meta["uploader"]["name"] if meta["uploader"] else "-"
-            line = f"[{i}/{len(files)}] {os.path.basename(path)}  artists: {who}  uploader: {up}"
+            name = os.path.basename(path)
+            if new != path:
+                name += " → " + os.path.basename(new)
+            line = f"[{i}/{len(files)}] {name}  artists: {who}  uploader: {up}"
             if meta["source"]:
                 line += "  source: yes"
             if dropped:
                 line += "  drops tags: " + ", ".join(dropped)
             print(line)
 
-    after = dict(items)
+    after = {k: v for k, v in items.items() if k not in renames}
     after.update(changed)
     print()
     print(f"{len(changed)} entries change; asked Wallhaven {api.asked} times (the rest cached)")
@@ -254,16 +375,33 @@ def main():
         print(f"no longer on Wallhaven ({len(gone)}): " + ", ".join(gone))
     if failed:
         print(f"could not ask ({len(failed)}, run again): " + ", ".join(failed))
+    if renames:
+        print(f"{len(renames)} file{'s' if len(renames) != 1 else ''} renamed wallhaven_<id> → wallhaven-<id>")
+    if taken:
+        print(f"left as they are, the wallhaven-<id> name is taken ({len(taken)}; Find duplicates?): "
+              + ", ".join(os.path.basename(t) for t in taken))
 
     if not args.write:
-        print("\ndry run: nothing written (--write saves it)")
+        print("\ndry run: nothing written or renamed (--write does it)")
     elif changed:
-        if os.path.exists(LIBRARY):
-            copy = LIBRARY + time.strftime(".before-metadata-%Y%m%d-%H%M%S")
-            shutil.copy2(LIBRARY, copy)
-            print(f"\nthe old library.json is at {copy}")
-        write_library(plans, args.overwrite)
-        print("written")
+        # A copy of each file this can change, beside it.
+        stamp = time.strftime(".before-metadata-%Y%m%d-%H%M%S")
+        print()
+        for path in (LIBRARY, STATE, CONFIG, HYPRPAPER) if renames else (LIBRARY,):
+            if os.path.exists(path):
+                shutil.copy2(path, path + stamp)
+                print(f"copied {path} to {os.path.basename(path) + stamp}")
+        done = rename_files(renames)
+        # A rename that didn't happen: its metadata under the name it kept.
+        for old, new in renames.items():
+            if old not in done and new in plans:
+                plans[old] = plans.pop(new)
+        for path in rename_references(done) if done else []:
+            print(f"renamed paths in {path}")
+        write_library(plans, done, args.overwrite)
+        print(f"written ({len(done)} renamed)" if renames else "written")
+        if done:
+            print("reopen the picker: one kept ready still lists the old names")
     return 1 if failed else 0
 
 
