@@ -93,6 +93,86 @@ step checked headless and committed:
    bezel width and to aligned edges and centres, the bezel width) and Frame (zoom, move,
    mirror); bezels inside each monitor, names on chips; Settings → General's gap goes.
 
+## Metadata: artists, uploader, source (planned 2026-10-08)
+
+Downloads are tagged with their artists today, so the tag row is mostly artist names used once
+(47 tags in the library, nearly all artists). Instead each wallpaper gets **metadata** beside
+its tags: where it came from, who drew it, who uploaded it. Tags go back to describing the
+picture, and the artists get a filter of their own and a way back to more of their work.
+
+In `library.json`, an entry (all optional, an entry with only metadata is kept):
+
+```json
+{
+  "favorite": false,
+  "tags": ["surreal", "architecture"],
+  "origin": { "provider": "wallhaven", "id": "mlom5m" },
+  "source": "https://www.artstation.com/artwork/abc",
+  "uploader": { "name": "jrmnt", "query": "@jrmnt" },
+  "artists": [{ "name": "Florent Lebrun", "query": "id:12345" }]
+}
+```
+
+- **origin** (provider + id) is what "search it on its source" needs: which provider to
+  search for the artist, and the "Open on Wallhaven" link. Downloads have it from the file
+  name already; storing it keeps it when a file is renamed or moved.
+- **source** is the provider's source link (often the artist's page; often empty).
+- **artists** is a list: Moebooru posts often have two artist tags, Wallhaven sometimes too.
+- A person is a **name and a query**: Wallhaven's exact artist search is the tag's id
+  (`id:12345`; the name alone searches loosely), its uploader search `@name`, a Moebooru
+  artist's the tag itself. A person added by hand has no query: filtered by, never searched.
+- `"version": 2` at the top of the file. An older file is version 1; the first load saves it
+  as 2 (and is where later migrations go). The script below refuses to write a version-1 file,
+  since the app before step 1 would drop the metadata on its next save.
+
+Each step checked headless and committed:
+
+1. [ ] **Core**: `Entry` gets `origin`, `source`, `uploader`, `artists` (`Person {name,
+   query}`), `is_empty` counts them; the catalog's `version`, saved as 2 on first load;
+   setting and clearing artists (names cleaned like tags, compared ignoring case);
+   duplicates move the metadata to the kept copy (where it has none); backup exports and
+   imports it (an old backup still imports); `serve`'s `library.catalog` carries it,
+   `library.set_artists` edits it.
+2. [ ] **Downloads write metadata**: `download_and_tag` fills origin, source, uploader and
+   artists from the details instead of adding artist tags (the tags picked in Details stay
+   tags); a downloaded file without metadata gets it on the next download or apply.
+   `wallpicker details` and the CLI unchanged.
+3. [ ] **Migration** (`scripts/wallhaven-metadata.py`, below): run once on the real library
+   after step 1 is installed, dry run first.
+4. [ ] **Filter by artist**: an **Artists** filter beside the tags (its own chips with
+   counts, Expand like the tags), any of the artists picked AND the tags picked; the name
+   filter also matches artists and uploaders; tiles show the artist under the name, where
+   there's room. The slideshow can pick from some artists too.
+5. [ ] **A local wallpaper's details**: right-click → **Details…** (today's Edit tags…
+   grows into it): the artists (**More by <artist> on Wallhaven**: the Online tab, its
+   provider, the stored query), the uploader (**More from**), **Open source**, **Open on
+   Wallhaven** (from the origin), the tags as today; artists can be added or removed by hand.
+6. [ ] **Noctalia plugin** (by the app-and-plugin decision): the artist in its details, the
+   name filter matching it. No artist filter there.
+
+Moebooru (2 Konachan files today): the script handles Wallhaven only; Konachan and yande.re
+can follow (`post.json?tags=id:N`, then the tag kinds from `tag.json`) once the Wallhaven
+pass is done.
+
+### The migration script
+
+`scripts/wallhaven-metadata.py [--write] [--refresh] [--overwrite]`, Python's standard library
+only:
+
+- Finds `wallhaven-<id>.{jpg,png,webp}` under the wallpaper folders and the download folder
+  (all of them, not only the files the library has entries for: 122 on disk, 79 entries).
+- Asks `/api/v1/w/<id>` for each (the API key from the settings, as a header, so NSFW ones
+  work), at most 40 a minute (Wallhaven allows 45), backing off on 429. Answers are cached
+  in `~/.cache/wallpicker/metadata/wallhaven/`, so a rerun or an interrupted run doesn't ask
+  again (`--refresh` does). Wallpapers Wallhaven removed (404) are reported and left alone.
+- Builds the metadata above; removes the tags that are one of that wallpaper's artists (by
+  name or Wallhaven alias, ignoring case), keeps every other tag. Fills only what's missing
+  (`--overwrite` replaces what's there).
+- Dry run by default: each file's artists, uploader, source and the tags it drops, then the
+  totals (distinct tags before and after). `--write` saves a copy of `library.json` beside
+  it first, re-reads the file right before writing (so a tag edit made meanwhile isn't
+  lost) and writes atomically; the picker sees the change (it watches the file).
+
 ## Going public (if ever)
 
 - [ ] **AUR package** (`wallpicker-git`): a plain cargo build; installs the binary, the picker
