@@ -107,6 +107,26 @@ pub struct OnlineWallpaper {
     pub details: Option<Details>,
 }
 
+impl OnlineWallpaper {
+    /// What a download of it keeps in the library: where it came from, its
+    /// source link (a web link only), uploader and artists, from `details`.
+    pub fn metadata(&self, details: &Details) -> crate::catalog::Metadata {
+        use crate::catalog::{Metadata, Origin, Person as Named};
+        let named = |name: &str, query: Option<String>| Named { name: name.to_string(), query };
+        Metadata {
+            origin: Some(Origin { provider: self.provider.as_str().to_string(), id: self.id.clone() }),
+            source: Some(details.source.clone()).filter(|s| wallhaven::is_openable_url(s)),
+            uploader: details.uploader.as_ref().map(|u| named(&u.name, u.query.clone())),
+            artists: details
+                .tags
+                .iter()
+                .filter(|t| t.is_artist)
+                .map(|t| named(&t.name, Some(t.query.clone())))
+                .collect(),
+        }
+    }
+}
+
 /// Uploader, source and tags of one wallpaper.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
@@ -312,7 +332,8 @@ impl From<wallhaven::SearchResponse> for Page {
 impl From<wallhaven::WallpaperInfo> for Details {
     fn from(info: wallhaven::WallpaperInfo) -> Details {
         Details {
-            uploader: info.uploader.map(|u| Person {
+            // A removed account has nothing to show or search.
+            uploader: info.uploader.filter(|u| !u.is_deleted()).map(|u| Person {
                 query: wallhaven::uploader_query(&u.username),
                 name: u.username,
             }),
@@ -370,6 +391,34 @@ mod tests {
             extension: "png".into(),
             ..OnlineWallpaper::default()
         }
+    }
+
+    #[test]
+    fn a_download_keeps_its_metadata() {
+        let w = wallpaper(Provider::Wallhaven, "mlom5m", "");
+        let tag = |name: &str, query: &str, is_artist| OnlineTag {
+            name: name.into(),
+            query: query.into(),
+            category: String::new(),
+            is_artist,
+        };
+        let details = Details {
+            uploader: Some(Person { name: "jrmnt".into(), query: Some("@jrmnt".into()) }),
+            source: "https://www.artstation.com/a".into(),
+            tags: vec![tag("surreal", "id:1", false), tag("Florent Lebrun", "id:2", true)],
+        };
+        let m = w.metadata(&details);
+        let origin = m.origin.as_ref().unwrap();
+        assert_eq!((origin.provider.as_str(), origin.id.as_str()), ("wallhaven", "mlom5m"));
+        assert_eq!(m.source.as_deref(), Some("https://www.artstation.com/a"));
+        assert_eq!(m.uploader.as_ref().unwrap().query.as_deref(), Some("@jrmnt"));
+        assert_eq!(m.artists.len(), 1);
+        assert_eq!(m.artists[0].name, "Florent Lebrun");
+        assert_eq!(m.artists[0].query.as_deref(), Some("id:2"));
+        // A source that isn't a web link (Moebooru's are often a name) isn't kept.
+        let m = w.metadata(&Details { source: "pixiv 123".into(), ..Details::default() });
+        assert_eq!(m.source, None);
+        assert!(m.uploader.is_none() && m.artists.is_empty());
     }
 
     #[test]

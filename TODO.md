@@ -133,9 +133,10 @@ Each step checked headless and committed:
    case); duplicates move the metadata to the kept copy (where it has none); backup exports
    and imports it (an old backup still imports); `serve`'s `library.catalog` carries it,
    `library.set_artists` edits it; `wallpicker artist <image> add|remove <name>`.
-2. [ ] **Downloads write metadata**: `download_and_tag` fills origin, source, uploader and
+2. [x] **Downloads write metadata**: `download_and_tag` fills origin, source, uploader and
    artists from the details instead of adding artist tags (the tags picked in Details stay
-   tags); a downloaded file without metadata gets it on the next download or apply.
+   tags); a downloaded file without metadata gets it on the next download or apply, and its
+   old artist tags go. Wallhaven's removed accounts ("deleted") are no uploader.
    `wallpicker details` and the CLI unchanged.
 3. [ ] **Migration** (`scripts/wallhaven-metadata.py`, below): run once on the real library
    after step 1 is installed, dry run first.

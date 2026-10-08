@@ -21,9 +21,9 @@ or **Noctalia**'s wallpaper manager (Settings → General → Wallpaper backend)
 - **Favorites and tags**: star a local wallpaper to pin it to the top of every view. Give it
   tags with right-click → **Edit tags…**, then filter by one or more tags above the grid (one
   line, selected tags first; **Expand** shows them all),
-  matching **All** or **Any** of them. Downloads arrive tagged with their artist, when the
-  provider lists one, and with any of their own tags you keep in **Details**. The name filter
-  also matches tags.
+  matching **All** or **Any** of them. Downloads keep where they came from, their artists,
+  uploader and source link (as the provider lists them) apart from the tags, and arrive tagged
+  only with the tags you keep in **Details**. The name filter also matches tags.
 - **Online**: search a provider, picked with the select next to the search box:
   - **Wallhaven** (wallhaven.cc): sorting, top range, minimum size, exact resolutions and
     aspect ratios (any number of each; your monitors' sizes are listed first, never picked for
@@ -38,8 +38,8 @@ or **Noctalia**'s wallpaper manager (Settings → General → Wallpaper backend)
   are marked **Downloaded** and only offer Apply. **Details** (or a click on the picture) shows
   the uploader, source link and tags; click a tag or "More from <uploader>" to search for it.
   The **+** on a tag keeps it: Download or Apply from Details adds the kept ones to your library
-  (with the artist), even when it's downloaded already. Tags your library already uses start
-  kept.
+  as tags (the artists go in its metadata), even when it's downloaded already. Tags your
+  library already uses start kept.
   Artists (Wallhaven's "Artists" category, Konachan's and yande.re's artist tags) are shown
   first, with a **More by <artist>** button.
 - **Collections**: your Wallhaven collections (private ones too), shown like search results:
@@ -270,7 +270,7 @@ wallpicker apply-online '<handle>' --download-only --tag landscape --tag "digita
 
 `apply` and `apply-online` go through the configured backend and are recorded like an apply from
 the picker; `apply-online` downloads (or reuses) the file first, with the same host and id checks,
-tagging it with its artists and any `--tag`s.
+keeping its metadata (artists, uploader, source) and tagging it with any `--tag`s.
 `--thumbs` caches result thumbnails in `~/.cache/wallpicker/online/` (and `details --preview`
 a bigger image in `preview/` there); cached images unused for 14 days are removed. Exit codes: 0 on success,
 1 if anything failed, 2 for usage mistakes.
@@ -428,7 +428,7 @@ each is its own provider with its own saved filters.
   `flandre_scarlet night`); without commas, spaces separate tags as on the sites.
 - Details come with the search results, so the dialog makes no request. The search asks for
   each tag's kind (API version 2), so artists are marked: they get **More by <artist>** and
-  downloads are tagged with them, as on Wallhaven. Some posts (more on yande.re) name no artist.
+  downloads keep them as their artists, as on Wallhaven. Some posts (more on yande.re) name no artist.
 
 ## Layout
 

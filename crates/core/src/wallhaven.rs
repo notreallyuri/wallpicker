@@ -537,6 +537,14 @@ pub fn page_window(current: u64, last: u64) -> Vec<Option<u64>> {
 #[serde(default)]
 pub struct Uploader {
     pub username: String,
+    /// "User", "Moderator"...; "deleted" (as the name) for a removed account.
+    pub group: String,
+}
+
+impl Uploader {
+    pub fn is_deleted(&self) -> bool {
+        self.group == "deleted"
+    }
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -920,6 +928,10 @@ mod tests {
         assert_eq!(info.tags[1].name, "Ilya Kuvshinov");
         assert!(info.tags[1].is_artist());
         assert!(!info.tags[0].is_artist());
+
+        // A removed account: named "deleted", in the group "deleted".
+        let info = parse_info_response(r#"{"data": {"id": "x", "uploader": {"username": "deleted", "group": "deleted"}}}"#).unwrap();
+        assert!(info.uploader.unwrap().is_deleted());
 
         // Deleted uploader / no tags.
         let info = parse_info_response(r#"{"data": {"id": "x", "uploader": null}}"#).unwrap();

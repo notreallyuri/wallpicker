@@ -619,7 +619,7 @@ pub fn details(args: &[String]) -> i32 {
 
 /// `wallpicker apply-online <handle> [--monitor NAME]... [--tag NAME]... [--download-only]`.
 /// The handle is a result's `handle` from `wallpicker search --json`; the
-/// tags (some of its own, say) are added in the library with its artists.
+/// tags (some of its own, say) are added in the library, its metadata kept.
 pub fn apply_online(args: &[String]) -> i32 {
     let usage_text = "usage: wallpicker apply-online <handle> [--monitor NAME]... [--tag NAME]... [--download-only]";
     let mut handle = None;

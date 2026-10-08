@@ -1,5 +1,5 @@
-//! Downloading online wallpapers into the download folder (with their artist
-//! tags and any others picked), and which ones are there already.
+//! Downloading online wallpapers into the download folder (with their
+//! metadata and any tags picked), and which ones are there already.
 
 use std::path::PathBuf;
 
@@ -36,10 +36,12 @@ pub fn downloaded_keys(store: &Store) -> wallpicker_core::Result<Vec<String>> {
 }
 
 /// Download a wallpaper into the configured download folder and return where
-/// it was saved. Already-downloaded files are reused. New downloads (and
-/// untagged old ones) get their artist tags, where the provider marks them;
-/// `chosen` (some of its other tags, picked in the details) are added either
-/// way. `progress(done, total)` follows the bytes (total when the server says).
+/// it was saved. Already-downloaded files are reused. New downloads (and old
+/// ones without it) get their metadata: where they came from, the source
+/// link, uploader and artists (an old one's artist tags then go: they're
+/// its artists now). `chosen` (some of its tags, picked in the
+/// details) are added as tags either way. `progress(done, total)` follows
+/// the bytes (total when the server says).
 pub async fn download_and_tag(
     state: &AppState,
     wallpaper: &OnlineWallpaper,
@@ -50,44 +52,35 @@ pub async fn download_and_tag(
 
     let store = state.store.clone();
     let check = dest.clone();
-    let untagged = blocking(move || Ok(store.load_catalog()?.tags(&check).is_empty()))
+    let without = blocking(move || Ok(store.load_catalog()?.metadata(&check).is_none_or(|m| m.is_empty())))
         .await
         .unwrap_or(false);
     // Best effort: the file is saved either way.
-    let mut tags = Vec::new();
-    if fresh || untagged {
-        match artists(state, wallpaper).await {
-            Ok(artists) => tags = artists,
-            Err(e) => eprintln!("wallpicker: could not tag {}: {e}", dest.display()),
+    let mut meta = None;
+    if fresh || without {
+        // Wallhaven's need a request; Moebooru results carry theirs.
+        match details(state, wallpaper).await {
+            Ok(d) => meta = Some(wallpaper.metadata(&d)),
+            Err(e) => eprintln!("wallpicker: no metadata for {}: {e}", dest.display()),
         }
     }
-    tags.extend(chosen.iter().cloned());
-    if !tags.is_empty() {
-        let path = dest.clone();
-        let tagged = update_catalog(state, move |c| {
+    if meta.is_some() || !chosen.is_empty() {
+        let (path, tags) = (dest.clone(), chosen.to_vec());
+        let saved = update_catalog(state, move |c| {
+            if let Some(meta) = &meta {
+                c.fill_metadata(&path, meta);
+                c.untag_artists(&path);
+            }
             for name in &tags {
                 c.add_tag(&path, name);
             }
         })
         .await;
-        if let Err(e) = tagged {
+        if let Err(e) = saved {
             eprintln!("wallpicker: could not tag {}: {e}", dest.display());
         }
     }
     Ok(dest.to_string_lossy().into_owned())
-}
-
-/// The wallpaper's artists, as tags.
-async fn artists(state: &AppState, wallpaper: &OnlineWallpaper) -> CmdResult<Vec<String>> {
-    // Wallhaven's need a request; Moebooru results carry theirs (marked from
-    // the search's tag kinds).
-    Ok(details(state, wallpaper)
-        .await?
-        .tags
-        .into_iter()
-        .filter(|t| t.is_artist)
-        .map(|t| t.name)
-        .collect())
 }
 
 /// Returns where the file is, and whether it was downloaded just now.

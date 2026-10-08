@@ -216,6 +216,16 @@ impl Catalog {
         self.drop_if_empty(path);
     }
 
+    /// Drop `path`'s tags that name one of its artists: what downloads were
+    /// tagged with before there were artists.
+    pub fn untag_artists(&mut self, path: &Path) {
+        if let Some(entry) = self.items.get_mut(path) {
+            let meta = &entry.meta;
+            entry.tags.retain(|t| !meta.has_artist(t));
+        }
+        self.drop_if_empty(path);
+    }
+
     pub fn remove_tag(&mut self, path: &Path, tag: &str) {
         if let Some(entry) = self.items.get_mut(path) {
             entry.tags.retain(|t| !same_tag(t, tag));
@@ -353,6 +363,18 @@ mod tests {
         let names: Vec<&str> = m.artists.iter().map(|a| a.name.as_str()).collect();
         assert_eq!(names, ["Mitsu", "Other one"]);
         assert!(m.has_artist("OTHER ONE"));
+    }
+
+    #[test]
+    fn artist_tags_give_way_to_artists() {
+        let mut c = Catalog::default();
+        c.add_tag(p("/a.jpg"), "Mitsu");
+        c.add_tag(p("/a.jpg"), "night");
+        c.set_artists(p("/a.jpg"), &[Person::named("mitsu")]);
+        c.untag_artists(p("/a.jpg"));
+        assert_eq!(c.tags(p("/a.jpg")), ["night"]);
+        c.untag_artists(p("/none.jpg"));
+        assert!(c.entry(p("/none.jpg")).is_none());
     }
 
     #[test]
