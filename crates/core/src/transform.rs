@@ -9,6 +9,9 @@ use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::time::UNIX_EPOCH;
 
+use fast_image_resize::{FilterType, ResizeAlg, ResizeOptions, Resizer};
+use image::DynamicImage;
+
 use crate::settings::{Adjust, State};
 use crate::error::{Error, Result};
 
@@ -67,10 +70,10 @@ pub fn shown_file(cache: &Path, src: &Path, adjust: &Adjust) -> Result<PathBuf> 
         let (iw, ih) = (img.width(), img.height());
         let (x, y) = (cut.x.min(iw.saturating_sub(1)), cut.y.min(ih.saturating_sub(1)));
         let (w, h) = (cut.width.clamp(1, iw - x), cut.height.clamp(1, ih - y));
-        img = img.crop_imm(x, y, w, h).resize_exact(cut.out_width.max(1), cut.out_height.max(1), image::imageops::FilterType::Lanczos3);
+        img = cut_and_scale(&img, (x, y, w, h), cut.out_width.max(1), cut.out_height.max(1));
     } else if let Some(frame) = adjust.frame {
         let (x, y, w, h) = frame.rect(img.width(), img.height());
-        img = img.crop_imm(x, y, w, h).resize_exact(frame.width, frame.height, image::imageops::FilterType::Lanczos3);
+        img = cut_and_scale(&img, (x, y, w, h), frame.width, frame.height);
     }
     let flip = adjust.flip;
     if flip.h {
@@ -92,6 +95,21 @@ pub fn shown_file(cache: &Path, src: &Path, adjust: &Adjust) -> Result<PathBuf> 
     saved.map_err(|e| Error::Image(e.to_string()))?;
     fs::rename(&tmp, &out)?;
     Ok(out)
+}
+
+/// `img`'s `(x, y, w, h)` scaled to `width`×`height`, its pixel type kept
+/// (alpha, 16 bits): Lanczos3 with SIMD, as compose.rs (an 8K picture's
+/// cut in a tenth of the time); image's own for the types
+/// fast_image_resize doesn't take (floats).
+fn cut_and_scale(img: &DynamicImage, (x, y, w, h): (u32, u32, u32, u32), width: u32, height: u32) -> DynamicImage {
+    let mut out = DynamicImage::new(width, height, img.color());
+    let options = ResizeOptions::new()
+        .resize_alg(ResizeAlg::Convolution(FilterType::Lanczos3))
+        .crop(f64::from(x), f64::from(y), f64::from(w), f64::from(h));
+    match Resizer::new().resize(img, &mut out, &options) {
+        Ok(()) => out,
+        Err(_) => img.crop_imm(x, y, w, h).resize_exact(width, height, image::imageops::FilterType::Lanczos3),
+    }
 }
 
 /// Drop the copies no monitor shows any more.
@@ -136,6 +154,20 @@ mod tests {
         assert_eq!(out.dimensions(), (160, 90));
         assert_eq!(out.get_pixel(0, 45), &image::Rgb([0, 0, 255]));
         assert_eq!(out.get_pixel(159, 45), &image::Rgb([0, 0, 255]));
+    }
+
+    #[test]
+    fn scaling_keeps_the_pixel_type() {
+        // 16 bits with alpha: the fast path, the type kept.
+        let rgba16 = DynamicImage::ImageRgba16(image::ImageBuffer::from_pixel(40, 20, image::Rgba([0, 0, 65535, 32768])));
+        let out = cut_and_scale(&rgba16, (10, 0, 20, 20), 8, 8);
+        assert_eq!((out.width(), out.height(), out.color()), (8, 8, image::ColorType::Rgba16));
+        let p = out.to_rgba16().get_pixel(4, 4).0;
+        assert!(p[2] > 65000 && p[3].abs_diff(32768) < 300, "{p:?}");
+        // Floats: image's own scaling.
+        let float = DynamicImage::ImageRgb32F(image::ImageBuffer::from_pixel(40, 20, image::Rgb([1.0, 0.0, 0.0])));
+        let out = cut_and_scale(&float, (0, 0, 40, 20), 10, 5);
+        assert_eq!((out.width(), out.height(), out.color()), (10, 5, image::ColorType::Rgb32F));
     }
 
     #[test]

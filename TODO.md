@@ -106,8 +106,9 @@ Each step checked and committed (an earlier attempt that didn't build was thrown
    920); a picture already the output's size as it is. Decoding is the rest: ~250 ms for a 20 MB
    JPEG (zune; jpeg-decoder's scaled decoding was slower). The decoded picture is kept 3 s for
    the next monitor: 6lezjx on both monitors in 0.39 s (2.5 s before).
-   - [ ] `transform.rs` (framed and spanned copies, every backend) still scales with image's
-     Lanczos3: the same switch would make Adjust and spanning big pictures faster.
+   - [x] `transform.rs` (framed and spanned copies, every backend) scales with it too, the
+     pixel type kept: 6lezjx's framed copy in 0.31 s, decoding and saving included (the
+     scaling alone took 0.49 s).
 3. [x] **The renderer in the daemon** (`renderer.rs`): its own thread and calloop loop (no CPU
    idle); a layer surface per output, drawn at the output's own pixels (`wp_viewporter`; the
    integer buffer scale without it), checked at scale 1, 1.5 and 2; outputs coming and going (a
