@@ -38,7 +38,8 @@ file in `quickshell/views/online/` (its choices in `serve`'s `online.options`), 
   don't.
   - Library: accept .gif (and maybe animated .webp); thumbnails from the first frame with a "▶"
     badge; the details preview animates.
-  - A backend that can't animate: warn, or apply the first frame.
+  - A backend that can't animate: warn, or apply the first frame. wallpicker's own renderer
+    (below) would animate whatever the setup.
   - Video (mp4/webm) means mpvpaper as a fourth backend: decide separately (CPU/GPU cost,
     pausing under fullscreen).
 - [ ] **Lock and login screens**: the current wallpaper for hyprlock, and Noctalia's greeter
@@ -47,6 +48,82 @@ file in `quickshell/views/online/` (its choices in `serve`'s `online.options`), 
   `/api/v1/settings`).
 - [ ] **matugen hook** (optional): run matugen on each applied wallpaper, for setups themed with
   it.
+
+## Its own renderer (planned 2026-10-08, steps 1-4 built 2026-10-09)
+
+A fourth backend, **wallpicker**: the daemon draws the wallpapers itself on the background layer
+(wlr-layer-shell, shared-memory buffers), so nothing else has to be installed or configured.
+Alongside the others, not replacing them: Noctalia's users keep Noctalia's wallpaper (its colors
+and greeter follow it), and hyprpaper and awww stay until this one has proven itself. Dropping
+them is a separate decision then (`hyprpaper.rs` is mostly the generic apply/remember code, which
+stays under another name).
+
+Less work than it sounds, here:
+
+- The image math exists: `transform.rs` frames and scales to a monitor's exact pixels, `span.rs`
+  cuts each monitor's part. The renderer shows a picture already the output's size; only the fit
+  modes are new (Contain's bars, Tile's repeat, composed into the output-sized buffer).
+- The daemon exists: one per session (`claim()`), running from login, restoring the state.
+- `smithay-client-toolkit` (outputs, layer shell, shm) is pure Rust, no system libraries.
+
+What costs more than it looks:
+
+- **Memory**: a buffer is width × height × 4 bytes per monitor: 33 MB at 4K, 15 MB at QHD, 8 MB
+  at 1080p. Once the compositor releases a buffer (it uploads shm to a texture) the daemon
+  drops it and redraws from the file on a resize or scale change. Measured: 7.6 MB RSS showing
+  two 1080p monitors, steady over applies (glibc kept 85 MB of freed frames in the workers'
+  arenas until big allocations were mapped on their own: `mallopt` in renderer.rs).
+- **Scaling**: `wp_fractional_scale` and `wp_viewporter`, to draw at the output's real pixels.
+- **Transitions**: not 60 fps blending on the CPU. The new picture on a subsurface above the old
+  one with `wp_alpha_modifier_v1`: the compositor blends on the GPU, the daemon only steps the
+  alpha each frame callback. Fade only; awww's wipes and circles stay awww's. A plain cut where
+  the compositor lacks the protocol.
+- **The daemon becomes required** for this backend: applying talks to it over its socket (today
+  only a lock) and starts it when it isn't running, as awww's daemon is started. If it crashes,
+  the wallpaper goes with it: the renderer on its own thread, its errors logged, never a panic
+  out of the daemon.
+- **Checks**: cage has no layer shell. Done in the real session with a throwaway profile:
+  `hyprctl layers`, the socket's `status`, and `grim -o` of a headless output compared with the
+  expected picture. Careful: adding a headless output (`hyprctl output create headless`) and
+  changing its scale (`hyprctl eval 'hl.monitor{…}'`: `keyword` doesn't work with the Lua
+  config) left the pointer unable to cross from DP-1 to DP-2 until it was removed. Hyprland's
+  color management (`render:cm_enabled`) shows sRGB about 3.5% darker on screen, for any
+  wallpaper program: (200, 150, 100) comes out (193, 145, 97).
+
+What it opens up: animated wallpapers whatever the setup (GIF frames on frame callbacks),
+and tests that no longer drive the real awww (a renderer on the headless compositor's socket).
+
+Decided against: Quickshell drawing the wallpaper. A QML engine running all the time (tens of
+MB at least) goes against the picker exiting to 0 MB after closing.
+
+Each step checked and committed (an earlier attempt that didn't build was thrown away; it's in
+`git stash list`, "Before cleanup 2026-10-08"):
+
+1. [x] **Spike**: skipped, the renderer was built directly. The binary grows 0.55 MB (8.09 →
+   8.64 MB); smithay-client-toolkit without its keyboard feature, no system libraries.
+2. [x] **Composing** (`compose.rs`, unit-tested): an image and a fit → the output's pixels as
+   XRGB8888, Lanczos3 with SIMD (fast_image_resize: 8742×4918 to 1080p in 47 ms, image's took
+   920); a picture already the output's size as it is. Decoding is the rest: ~250 ms for a 20 MB
+   JPEG (zune; jpeg-decoder's scaled decoding was slower). The decoded picture is kept 3 s for
+   the next monitor: 6lezjx on both monitors in 0.39 s (2.5 s before).
+   - [ ] `transform.rs` (framed and spanned copies, every backend) still scales with image's
+     Lanczos3: the same switch would make Adjust and spanning big pictures faster.
+3. [x] **The renderer in the daemon** (`renderer.rs`): its own thread and calloop loop (no CPU
+   idle); a layer surface per output, drawn at the output's own pixels (`wp_viewporter`; the
+   integer buffer scale without it), checked at scale 1, 1.5 and 2; outputs coming and going (a
+   new one shows its saved wallpaper: `hyprpaper::saved_for`); a new size or scale stretches
+   what's shown until it's drawn again; a picture that can't be read leaves what's shown. The
+   socket (`daemon.rs` in core, a JSON line each way): `show {monitor, path, fit}` answered once
+   it's up or with the error, `status`. Running while the backend is wallpicker (then no
+   restore: it shows the saved state), stopped when another is picked.
+4. [x] **The backend**: `WallpaperBackend::Wallpicker`; applying goes to the daemon, started
+   when it isn't running; all five fit modes (`serve`'s options have its fits); conflicts with
+   every other program; a note in Settings → General; a README section. The Noctalia plugin goes
+   through the command line, so it follows on its own.
+   - [ ] On the desktop: Settings → General with this backend (the note, the fit choices): the
+     QML wasn't run.
+5. [ ] **Fade**: the alpha modifier; Settings' transitions offer Fade or None for this backend.
+6. [ ] With the HDR monitor: how 8-bit sRGB shm looks there, next to the other backends.
 
 ## Spanning, refined (done 2026-10-07)
 

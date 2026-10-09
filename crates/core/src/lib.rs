@@ -19,6 +19,8 @@ pub mod wallhaven;
 
 pub mod awww;
 pub mod cmd;
+pub mod compose;
+pub mod daemon;
 pub mod hyprpaper;
 pub mod noctalia;
 pub mod store;

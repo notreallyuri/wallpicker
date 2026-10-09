@@ -45,6 +45,10 @@ pub enum WallpaperBackend {
     /// the wallpapers across restarts; wallpicker starts it when needed.
     #[serde(alias = "swww")]
     Awww,
+    /// wallpicker's own renderer: `wallpicker daemon` draws the wallpapers
+    /// itself (daemon.rs, compose.rs), started when needed. Its fit is
+    /// wallpicker's (Cover by default).
+    Wallpicker,
 }
 
 impl WallpaperBackend {
@@ -53,6 +57,7 @@ impl WallpaperBackend {
             WallpaperBackend::Hyprpaper => "hyprpaper",
             WallpaperBackend::Noctalia => "noctalia",
             WallpaperBackend::Awww => "awww",
+            WallpaperBackend::Wallpicker => "wallpicker",
         }
     }
 }
@@ -249,17 +254,23 @@ impl Settings {
 }
 
 /// Fit modes with labels, as `backend` does them: "" is its own default
-/// (awww's crops, which is Cover), and awww can't tile (it centers).
+/// (awww's and wallpicker's crop, which is Cover), and awww can't tile (it
+/// centers).
 pub fn fit_modes(backend: WallpaperBackend) -> [(&'static str, &'static str); 5] {
     let (default, tile) = match backend {
         WallpaperBackend::Awww => ("awww's default (Cover)", "Centered (awww can't tile)"),
         WallpaperBackend::Hyprpaper | WallpaperBackend::Noctalia => ("hyprpaper's default", "Tile"),
+        WallpaperBackend::Wallpicker => ("wallpicker's default (Cover)", "Tile"),
     };
     [("", default), ("cover", "Cover"), ("contain", "Contain"), ("tile", tile), ("fill", "Fill")]
 }
 
-pub const BACKENDS: [(&str, &str); 3] =
-    [("hyprpaper", "hyprpaper"), ("awww", "awww (swww)"), ("noctalia", "Noctalia")];
+pub const BACKENDS: [(&str, &str); 4] = [
+    ("hyprpaper", "hyprpaper"),
+    ("awww", "awww (swww)"),
+    ("noctalia", "Noctalia"),
+    ("wallpicker", "wallpicker (draws it itself)"),
+];
 
 /// awww's transitions, with labels. ("any" and "center" are grow from a
 /// random point and from the middle.)

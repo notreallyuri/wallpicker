@@ -270,19 +270,26 @@ impl Backend {
     /// Show `path` on `monitor`. With Noctalia, `fit` doesn't apply: its
     /// fill mode is a setting of its own.
     pub fn apply(&self, runner: &dyn Runner, monitor: &str, path: &Path, fit: Option<FitMode>) -> Result<()> {
-        // An adjusted wallpaper is shown from its changed copy (only while
-        // the monitor still shows it: a new one goes on as it is).
-        let adjust = self.state.adjust_for(monitor, path);
-        let file = crate::transform::shown_file(&self.cache, path, &adjust)?;
-        // A framed picture is the monitor's exact size: nothing to fit.
-        // Framed or spanned: the copy is the monitor's exact size.
-        let fit = if adjust.frame.is_some() || adjust.span.is_some() { None } else { fit };
+        let (file, fit) = self.shown(monitor, path, fit)?;
         let path = file.as_path();
         match self.kind {
             WallpaperBackend::Hyprpaper => apply(runner, monitor, path, fit),
             WallpaperBackend::Awww => crate::awww::apply(runner, monitor, path, fit, &self.transition),
             WallpaperBackend::Noctalia => crate::noctalia::apply(runner, monitor, path, self.noctalia_enabled),
+            WallpaperBackend::Wallpicker => crate::daemon::show(runner, monitor, path, fit),
         }
+    }
+
+    /// The file the backend gets for `path` on `monitor`, and its fit: an
+    /// adjusted wallpaper is shown from its changed copy (only while the
+    /// monitor still shows it: a new one goes on as it is).
+    pub fn shown(&self, monitor: &str, path: &Path, fit: Option<FitMode>) -> Result<(PathBuf, Option<FitMode>)> {
+        let adjust = self.state.adjust_for(monitor, path);
+        let file = crate::transform::shown_file(&self.cache, path, &adjust)?;
+        // Framed or spanned: the copy is the monitor's exact size, nothing
+        // to fit.
+        let fit = if adjust.frame.is_some() || adjust.span.is_some() { None } else { fit };
+        Ok((file, fit))
     }
 
     /// Whether wallpicker's fit modes mean anything to it.
@@ -301,7 +308,7 @@ pub fn conflicts(runner: &dyn Runner, backend: WallpaperBackend) -> Vec<String> 
     let mine: &[&str] = match backend {
         WallpaperBackend::Hyprpaper => &["hyprpaper"],
         WallpaperBackend::Awww => &["awww-daemon", "swww-daemon"],
-        WallpaperBackend::Noctalia => &[],
+        WallpaperBackend::Noctalia | WallpaperBackend::Wallpicker => &[],
     };
     let mut found: Vec<String> = DAEMONS
         .iter()
@@ -581,6 +588,22 @@ pub fn reapply(runner: &dyn Runner, store: &Store, which: &dyn Fn(&str, &Path) -
         }
     }
     Ok(report)
+}
+
+/// What `monitor` shows in the saved state, as the configured backend gets
+/// it (the file and its fit): what wallpicker's renderer draws on a monitor
+/// as it appears. None when it shows nothing saved, or its file is gone.
+pub fn saved_for(store: &Store, monitor: &str) -> Option<(PathBuf, Option<FitMode>)> {
+    let state = store.load_state().ok()?;
+    let path = state.current.get(monitor).filter(|p| p.is_file())?;
+    let fit = Fits::load(store).of(monitor, path);
+    match Backend::from_settings(store).shown(monitor, path, fit) {
+        Ok(shown) => Some(shown),
+        Err(e) => {
+            eprintln!("wallpicker: {monitor}: {e}");
+            None
+        }
+    }
 }
 
 /// [`restore_with`] using real sleeping.

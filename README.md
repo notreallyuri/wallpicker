@@ -4,8 +4,8 @@
 
 # wallpicker
 
-A visual wallpaper picker for Hyprland, drawing through **hyprpaper**, **awww** (formerly swww)
-or **Noctalia**'s wallpaper manager (Settings → General → Wallpaper backend).
+A visual wallpaper picker for Hyprland, drawing through **hyprpaper**, **awww** (formerly swww),
+**Noctalia**'s wallpaper manager, or by itself (Settings → General → Wallpaper backend).
 
 - **Local**: a thumbnail grid of the images in your wallpaper folders, 60 a page (only one page
   is on screen, so memory stays the same however far you go). Click one to apply it.
@@ -184,7 +184,7 @@ checkout (a binary built inside it finds its `quickshell/`; `WALLPICKER_UI` poin
   duplicates` and `--open details <image>` (a wallpaper's details: its tags and artists) open it there (the plugin hands bigger jobs over that way).
 - **The daemon**, in Hyprland's autostart: `wallpicker daemon`. It puts the saved wallpapers back
   through the chosen backend (starting awww's daemon if needed; with hyprpaper, start hyprpaper
-  in the autostart too), then follows workspaces, keeps the slideshow's time and Noctalia's colors
+  in the autostart too; with wallpicker's own, it draws them), then follows workspaces, keeps the slideshow's time and Noctalia's colors
   following the wallpaper. One per session; a second one
   says so and leaves. `wallpicker --tray`, from the old app's autostarts, runs it too.
 
@@ -295,6 +295,25 @@ right-click a caption for apply/favorite/fit/trash, or click it for the wallpape
 already-downloaded results are marked. Pick a monitor, click to apply. Settings, Duplicates,
 Collections and tag editing open in the picker (`wallpicker --open`). It's built on the command line above.
 See `noctalia-plugin/README.md` to install it.
+
+## wallpicker as the backend
+
+With **wallpicker (draws it itself)** picked in Settings → General, nothing else is needed:
+`wallpicker daemon` draws the wallpapers on Hyprland's background layer (wlr-layer-shell), at each
+monitor's own pixels whatever its scale.
+
+- **Daemon**: applying starts it when it isn't running. To have your wallpapers from login, add
+  it to Hyprland's autostart (`wallpicker daemon`); it shows each monitor's saved wallpaper,
+  including a monitor plugged in later. Picking another backend stops it drawing (what's
+  underneath shows).
+- **Fit**: Cover (the default), Contain (black bars), Fill and Tile (at the picture's own size,
+  from the top left). Adjusted and spanned wallpapers are cut to the monitor's size first, as for
+  the other backends.
+- **Memory**: about 8 MB while it shows them. A picture is read and fitted when it changes (or a
+  monitor's resolution or scale does), then let go: Hyprland keeps its own copy.
+- No transition yet.
+- Only one program should draw the wallpaper: stop hyprpaper, awww and Noctalia's own wallpaper
+  (Settings warns about them).
 
 ## Noctalia as the backend
 
@@ -445,12 +464,13 @@ each is its own provider with its own saved filters.
 
 ```
 crates/core/        all logic that doesn't need a desktop: hyprpaper/awww/Noctalia commands,
-                    monitor parsing, settings/state files, folder scanning, thumbnails, colors,
+                    the daemon's socket and fitting a picture for its renderer, monitor parsing, settings/state files, folder scanning, thumbnails, colors,
                     duplicates, favorites/tags, backups, and the online providers: `online.rs`
                     (shared types), `wallhaven.rs`, `moebooru.rs`. `cargo test -p wallpicker-core`
 crates/wallpicker/  the `wallpicker` binary: service/ (what it does, by area), serve/ (the
-                    picker's backend), cli/ (the command line, the daemon, `ui`), the HTTP calls
-                    to the providers, Noctalia's colors, the file dialogs (XDG portal)
+                    picker's backend), cli/ (the command line, the daemon, `ui`), the renderer
+                    (the wallpicker backend), the HTTP calls to the providers, Noctalia's colors,
+                    the file dialogs (XDG portal)
 quickshell/         the picker (QML), see "How it fits together"
 noctalia-plugin/    the Noctalia v5 plugin (Luau), a panel over the command line
 packaging/          the launcher entry and the icon

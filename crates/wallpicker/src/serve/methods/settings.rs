@@ -51,6 +51,7 @@ fn options() -> Value {
         "fits": {
             "hyprpaper": pairs(&settings::fit_modes(WallpaperBackend::Hyprpaper)),
             "awww": pairs(&settings::fit_modes(WallpaperBackend::Awww)),
+            "wallpicker": pairs(&settings::fit_modes(WallpaperBackend::Wallpicker)),
         },
         "konachan_sites": pairs(&settings::KONACHAN_SITES),
         "hues": pairs(&HUES),

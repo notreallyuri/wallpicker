@@ -89,6 +89,10 @@ ColumnLayout {
         }
     }
     Note {
+        visible: section.backend === "wallpicker"
+        text: "wallpicker draws the wallpaper itself, through its daemon: started when it isn't running, and it puts the wallpapers back when it starts. To have them from login, add wallpicker daemon to Hyprland's autostart. No transition yet."
+    }
+    Note {
         visible: section.backend === "noctalia"
         text: "Noctalia keeps the wallpapers itself, so they come back after a restart. Its fill mode and transitions are set in Noctalia's settings (Wallpaper). Turn Noctalia's wallpaper on there, and stop hyprpaper (take it out of your Hyprland autostart): both draw the background."
     }
