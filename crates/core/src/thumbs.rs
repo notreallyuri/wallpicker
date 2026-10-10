@@ -7,7 +7,10 @@
 
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::UNIX_EPOCH;
+
+static NEXT_TEMP: AtomicU64 = AtomicU64::new(0);
 
 use crate::error::{Error, Result};
 
@@ -53,7 +56,13 @@ pub fn ensure_thumb(cache_dir: &Path, src: &Path, width: u32) -> Result<PathBuf>
 
     fs::create_dir_all(out.parent().unwrap_or(cache_dir))?;
     // Write elsewhere first so a concurrent reader never sees a partial file.
-    let tmp = out.with_extension("jpg.tmp");
+    // Writers need separate temporary files: sharing one lets a second
+    // writer truncate an inode the first has already published.
+    let tmp = out.with_extension(format!(
+        "{}-{}.jpg.tmp",
+        std::process::id(),
+        NEXT_TEMP.fetch_add(1, Ordering::Relaxed)
+    ));
     rgb.save_with_format(&tmp, image::ImageFormat::Jpeg)
         .map_err(|e| Error::Image(e.to_string()))?;
     fs::rename(&tmp, &out)?;
@@ -150,12 +159,41 @@ mod tests {
 
         let bad = tmp.path().join("bad.png");
         fs::write(&bad, b"this is not a png").unwrap();
-        assert!(matches!(
-            ensure_thumb(&cache, &bad, 200),
-            Err(Error::Image(_))
-        ));
+        assert!(matches!(ensure_thumb(&cache, &bad, 200), Err(Error::Image(_))));
 
         assert!(ensure_thumb(&cache, &tmp.path().join("nope.png"), 200).is_err());
         assert!(ensure_thumb(&cache, tmp.path(), 200).is_err());
     }
+}
+
+#[cfg(test)]
+#[test]
+fn concurrent_requests_publish_complete_thumbnails() {
+    use std::sync::{Arc, Barrier};
+    let dir = tempfile::tempdir().unwrap();
+    let source = dir.path().join("source.png");
+    image::RgbImage::from_fn(640, 360, |x, y| {
+        image::Rgb([(x % 255) as u8, (y % 255) as u8, ((x * y) % 255) as u8])
+    })
+    .save(&source)
+    .unwrap();
+    let barrier = Arc::new(Barrier::new(6));
+    let paths = std::thread::scope(|scope| {
+        let workers: Vec<_> = (0..6)
+            .map(|_| {
+                let barrier = barrier.clone();
+                let source = &source;
+                let cache = dir.path();
+                scope.spawn(move || {
+                    barrier.wait();
+                    let path = ensure_thumb(cache, source, 320).unwrap();
+                    let decoded = image::open(&path).unwrap();
+                    assert_eq!((decoded.width(), decoded.height()), (320, 180));
+                    path
+                })
+            })
+            .collect();
+        workers.into_iter().map(|w| w.join().unwrap()).collect::<Vec<_>>()
+    });
+    assert!(paths.iter().all(|p| p == &paths[0]));
 }
