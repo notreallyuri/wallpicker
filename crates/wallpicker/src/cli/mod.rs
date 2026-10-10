@@ -13,25 +13,27 @@ use wallpicker_core::library;
 use wallpicker_core::store::{Dirs, Store};
 use wallpicker_core::thumbs;
 
+mod backup;
 mod config;
 mod daemon;
 mod library_edits;
 pub mod online;
+mod presets;
 mod random;
+pub mod slideshow;
 mod ui;
 mod workspaces;
-mod backup;
-pub mod slideshow;
 
+pub use backup::backup;
 pub use config::{filters, settings};
 pub use daemon::daemon;
 pub use library_edits::{adjust, artist, colors, duplicates, favorite, show_in_folder, tag, trash};
 pub use online::{apply_online, collection, collections, details, preview, search, tags};
-pub use backup::backup;
+pub use presets::presets;
 pub use random::random;
+pub use slideshow::slideshow;
 pub use ui::ui;
 pub use workspaces::workspaces;
-pub use slideshow::slideshow;
 
 #[derive(Serialize)]
 struct ListOutput {
@@ -101,8 +103,8 @@ pub fn list(args: &[String]) -> i32 {
     };
     let catalog = store.load_catalog().unwrap_or_default();
     let state = store.load_state().unwrap_or_default();
-    // No Hyprland (say, over ssh): an empty monitor list, not an error.
-    let monitors = hyprpaper::list_monitors(&SystemRunner).unwrap_or_default();
+    // No Wayland session (say, over ssh): an empty monitor list, not an error.
+    let monitors = wallpicker_core::monitors::list(&SystemRunner).unwrap_or_default();
 
     let mut images = library::scan(&settings.folders, settings.recursive);
     let all_tags = catalog
@@ -220,18 +222,12 @@ pub fn apply(args: &[String]) -> i32 {
         Err(e) => return fail(&e),
     };
     if monitors.is_empty() {
-        match hyprpaper::list_monitors(&SystemRunner) {
+        match wallpicker_core::monitors::list(&SystemRunner) {
             Ok(ms) => monitors = ms.into_iter().map(|m| m.name).collect(),
             Err(e) => return fail(&e),
         }
     }
-    match hyprpaper::apply_and_remember_with(
-        &SystemRunner,
-        &store,
-        settings.wallpaper_backend,
-        &monitors,
-        &path,
-    ) {
+    match hyprpaper::apply_and_remember_with(&SystemRunner, &store, settings.wallpaper_backend, &monitors, &path) {
         Ok(report) => {
             wallpicker_core::workspaces::remember_shown(&SystemRunner, &store, &report.applied);
             for m in &report.applied {
@@ -277,9 +273,21 @@ pub fn span(args: &[String]) -> i32 {
                 look.y = (y.clamp(0.0, 100.0) * 10.0) as u16;
             }
             "--monitors" => {
-                let names: Vec<String> = rest.next().map(|v| v.split(',').map(|n| n.trim().to_string()).filter(|n| !n.is_empty()).collect()).unwrap_or_default();
+                let names: Vec<String> = rest
+                    .next()
+                    .map(|v| {
+                        v.split(',')
+                            .map(|n| n.trim().to_string())
+                            .filter(|n| !n.is_empty())
+                            .collect()
+                    })
+                    .unwrap_or_default();
                 if names.len() < 2 {
-                    return usage_for("span", "--monitors needs two or more, comma-separated (DP-1,DP-2)", usage_text);
+                    return usage_for(
+                        "span",
+                        "--monitors needs two or more, comma-separated (DP-1,DP-2)",
+                        usage_text,
+                    );
                 }
                 ask.monitors = Some(names);
             }
@@ -289,10 +297,18 @@ pub fn span(args: &[String]) -> i32 {
                     Some("v") => (false, true),
                     Some("both") => (true, true),
                     Some("none") => (false, false),
-                    other => return usage_for("span", &format!("--flip {}? use h, v, both or none", other.unwrap_or("")), usage_text),
+                    other => {
+                        return usage_for(
+                            "span",
+                            &format!("--flip {}? use h, v, both or none", other.unwrap_or("")),
+                            usage_text,
+                        );
+                    }
                 };
             }
-            other if other.starts_with("--") => return usage_for("span", &format!("unknown option {other}"), usage_text),
+            other if other.starts_with("--") => {
+                return usage_for("span", &format!("unknown option {other}"), usage_text);
+            }
             other if path.is_none() => path = Some(PathBuf::from(other)),
             _ => return usage(usage_text),
         }
@@ -341,7 +357,7 @@ pub fn previous(args: &[String]) -> i32 {
         Err(e) => return fail(&e),
     };
     if monitors.is_empty() {
-        match hyprpaper::list_monitors(&SystemRunner) {
+        match wallpicker_core::monitors::list(&SystemRunner) {
             Ok(ms) => monitors = ms.into_iter().map(|m| m.name).collect(),
             Err(e) => return fail(&e),
         }

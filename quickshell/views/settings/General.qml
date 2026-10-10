@@ -48,13 +48,18 @@ ColumnLayout {
         backend: section.backend
     }
 
-    // awww: its transition.
+    // awww and wallpicker: their transition.
     ColumnLayout {
-        visible: section.backend === "awww"
+        visible: section.backend === "awww" || section.backend === "wallpicker"
         Layout.fillWidth: true
         spacing: 16
         Note {
+            visible: section.backend === "awww"
             text: "awww (called swww before) draws the wallpaper with a transition and keeps it after a restart. wallpicker starts its daemon when it isn't running; to have it from login, add awww-daemon to Hyprland's autostart."
+        }
+        Note {
+            visible: section.backend === "wallpicker"
+            text: "wallpicker draws the wallpaper itself, through its daemon: started when it isn't running, and it puts the wallpapers back when it starts. To have them from login, add wallpicker daemon to Hyprland's autostart."
         }
         RowLayout {
             spacing: 16
@@ -62,8 +67,20 @@ ColumnLayout {
                 label: "Transition"
                 Select {
                     minWidth: 180
-                    options: section.pairs(section.o ? section.o.transitions : null)
-                    value: section.d.transition ? section.d.transition.kind : ""
+                    options: {
+                        if (!section.o)
+                            return [];
+                        const choices = section.o.transitions_by_backend;
+                        if (choices && choices[section.backend])
+                            return section.pairs(choices[section.backend]);
+                        return section.pairs(section.o.transitions)
+                            .filter(o => section.backend !== "wallpicker" || o[0] === "fade" || o[0] === "none");
+                    }
+                    // Unsupported saved kinds use the renderer's Fade fallback.
+                    value: {
+                        const kind = section.d.transition ? section.d.transition.kind : "fade";
+                        return section.backend === "wallpicker" && !options.some(o => o[0] === kind) ? "fade" : kind;
+                    }
                     onPicked: v => section.form.set("transition.kind", v)
                 }
             }
@@ -76,6 +93,7 @@ ColumnLayout {
                 }
             }
             Field {
+                visible: section.backend === "awww"
                 label: "Frames per second"
                 NumberField {
                     to: 255
@@ -85,6 +103,7 @@ ColumnLayout {
             }
         }
         Note {
+            visible: section.backend === "awww"
             text: "Your monitors' refresh rate is the smoothest frame rate."
         }
     }

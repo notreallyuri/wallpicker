@@ -6,7 +6,7 @@ import qs.services
 Rectangle {
     id: tabs
 
-    property var names: ["Local", "Online", "Collections"]
+    property var names: ["Local", "Online", "Collections", "Presets"]
     property int current: 0
     signal picked(int index)
 

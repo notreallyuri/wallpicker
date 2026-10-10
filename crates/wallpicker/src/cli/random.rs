@@ -71,7 +71,13 @@ pub fn random(args: &[String]) -> i32 {
             },
             "--color" => match rest.next() {
                 Some(c) if wallpicker_core::settings::known_color(Some(c.clone())).is_some() => color = Some(c.clone()),
-                _ => return usage_for("random", "--color needs a color: red orange yellow green teal blue purple pink dark light warm muted", USAGE),
+                _ => {
+                    return usage_for(
+                        "random",
+                        "--color needs a color: red orange yellow green teal blue purple pink dark light warm muted",
+                        USAGE,
+                    );
+                }
             },
             "--monitor" | "-m" => match rest.next() {
                 Some(m) => monitors.push(m.clone()),
@@ -86,7 +92,15 @@ pub fn random(args: &[String]) -> i32 {
         Ok(s) => s,
         Err(e) => return fail(&e),
     };
-    let choice = Choice { favorites, tags, any, folder, color, monitors, each };
+    let choice = Choice {
+        favorites,
+        tags,
+        any,
+        folder,
+        color,
+        monitors,
+        each,
+    };
     match apply_random(&store, &settings, &choice) {
         Ok(true) => 0,
         Ok(false) => 1,
@@ -127,7 +141,11 @@ pub(super) fn apply_random(store: &Store, settings: &Settings, choice: &Choice) 
             let profiles = crate::service::library::color_profiles(store).map_err(|e| e.to_string())?;
             candidates
                 .into_iter()
-                .filter(|p| profiles.get(p).is_some_and(|cp| wallpicker_core::colors::matches(cp, c)))
+                .filter(|p| {
+                    profiles
+                        .get(p)
+                        .is_some_and(|cp| wallpicker_core::colors::matches(cp, c))
+                })
                 .collect()
         }
     };
@@ -135,7 +153,7 @@ pub(super) fn apply_random(store: &Store, settings: &Settings, choice: &Choice) 
         return Err("no wallpapers match".into());
     }
 
-    let connected: Vec<String> = hyprpaper::list_monitors(&SystemRunner)
+    let connected: Vec<String> = wallpicker_core::monitors::list(&SystemRunner)
         .map_err(|e| e.to_string())?
         .into_iter()
         .map(|m| m.name)

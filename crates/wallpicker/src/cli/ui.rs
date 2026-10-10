@@ -124,7 +124,7 @@ pub fn ui(args: &[String]) -> i32 {
 }
 
 /// Where `--open` can go.
-const PLACES: [&str; 7] = ["local", "online", "collections", "settings", "duplicates", "details", "tags"];
+const PLACES: [&str; 8] = ["local", "online", "collections", "presets", "settings", "duplicates", "details", "tags"];
 
 #[derive(Debug, PartialEq, Eq)]
 struct Place {
@@ -141,10 +141,10 @@ fn parse_open(args: &[String], cwd: &Path) -> Result<Option<Place>, String> {
         return Ok(None);
     };
     let Some(view) = args.get(i + 1) else {
-        return Err("--open needs a place: local, online, collections, settings, duplicates or details <image>".into());
+        return Err("--open needs a place: local, online, collections, presets, settings, duplicates or details <image>".into());
     };
     if !PLACES.contains(&view.as_str()) {
-        return Err(format!("--open {view}? use local, online, collections, settings, duplicates or details <image>"));
+        return Err(format!("--open {view}? use local, online, collections, presets, settings, duplicates or details <image>"));
     }
     let path = if view == "details" || view == "tags" {
         let image = args.get(i + 2).ok_or(format!("--open {view} needs the image"))?;

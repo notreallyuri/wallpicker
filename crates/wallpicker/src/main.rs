@@ -7,6 +7,7 @@ fn main() {
         Some("list") => std::process::exit(wallpicker::cli::list(&args[1..])),
         Some("apply") => std::process::exit(wallpicker::cli::apply(&args[1..])),
         Some("span") => std::process::exit(wallpicker::cli::span(&args[1..])),
+        Some("presets") => std::process::exit(wallpicker::cli::presets(&args[1..])),
         Some("search") => std::process::exit(wallpicker::cli::search(&args[1..])),
         Some("filters") => std::process::exit(wallpicker::cli::filters(&args[1..])),
         Some("settings") => std::process::exit(wallpicker::cli::settings(&args[1..])),
@@ -64,6 +65,8 @@ fn main() {
              wallpicker random [--favorites] [--tag T]... [--any] [--folder DIR] [--monitor NAME]... [--each]\n                                     \
              apply a random wallpaper (for keybinds)\n  \
              wallpicker previous [--monitor NAME]...  back to the wallpaper before (every monitor by default)\n  \
+             wallpicker presets list [--json] | save NAME | apply ID | update ID | rename ID NAME | delete ID\n                                     \
+             save and restore named wallpaper setups across monitors\n  \
              wallpicker theme [--json]          the colors from the current wallpaper (the app uses them)\n  \
              wallpicker noctalia-colors on|off|status  Noctalia's colors follow the wallpaper, or not\n  \
              wallpicker slideshow tick|run|status  change it every few minutes (Settings → Slideshow)\n  \
@@ -88,7 +91,7 @@ fn main() {
              wallpicker settings [set KEY=VALUE...]  read or change the settings\n  \
              wallpicker --restore               re-apply the saved wallpapers (hyprpaper) and exit\n  \
              wallpicker --toggle                open or close the picker (for a keybind)\n  \
-             wallpicker --open local|online|collections|settings|duplicates\n                                     \
+             wallpicker --open local|online|collections|presets|settings|duplicates\n                                     \
              open the picker at that tab or dialog\n  \
              wallpicker --open details <image>  an image's details in the picker (its tags, artists)\n\n\
              The picker (Quickshell) frees all its memory when closed; `wallpicker daemon` is\n\

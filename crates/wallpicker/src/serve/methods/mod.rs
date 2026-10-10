@@ -6,6 +6,7 @@ mod backup;
 mod files;
 mod library;
 mod online;
+mod presets;
 mod settings;
 mod slideshow;
 mod wallpapers;
@@ -20,6 +21,7 @@ use crate::{AppState, CmdResult};
 pub(super) async fn call(state: &AppState, out: &Out, method: &str, params: Value) -> CmdResult<Value> {
     let (area, name) = method.split_once('.').unwrap_or((method, ""));
     let result = match area {
+        "presets" => presets::call(state, out, name, &params).await,
         "app" => app::call(state, name, &params).await,
         "library" => library::call(state, out, name, &params).await,
         "online" => online::call(state, out, name, &params).await,

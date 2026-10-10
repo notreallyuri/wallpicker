@@ -10,6 +10,10 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"
 image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp"] }
+# The renderer's scaling (compose.rs): Lanczos3 with SIMD, ~15× faster than image's.
+fast_image_resize = { version = "6.1", features = ["image"] }
+# Compositor-independent output discovery (wl_output and xdg-output).
+smithay-client-toolkit = { version = "0.21", default-features = false }
 
 [dev-dependencies]
 tempfile = "3"

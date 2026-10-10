@@ -20,6 +20,9 @@ pub enum Error {
     #[error("hyprpaper is not running. Start it, and add it to your Hyprland autostart.")]
     HyprpaperNotRunning,
 
+    #[error("wallpicker daemon isn't running")]
+    DaemonNotRunning,
+
     #[error("{0}")]
     Invalid(String),
 }

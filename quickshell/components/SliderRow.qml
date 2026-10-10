@@ -18,18 +18,34 @@ RowLayout {
 
     spacing: 12
 
-    Text {
+    ColumnLayout {
         Layout.preferredWidth: 96
-        text: row.label
-        color: Theme.foreground
-        font.family: Theme.font
-        font.pixelSize: 14
-        font.weight: Font.Bold
+        Layout.minimumWidth: 96
+        Layout.maximumWidth: 96
+        spacing: 2
+
+        Text {
+            Layout.fillWidth: true
+            text: row.label
+            color: Theme.foreground
+            font.family: Theme.font
+            font.pixelSize: 14
+            font.weight: Font.Bold
+        }
+        Text {
+            Layout.fillWidth: true
+            text: Math.round(slider.value)
+            color: Theme.mutedForeground
+            font.family: Theme.font
+            font.pixelSize: 12
+        }
     }
 
     T.Slider {
         id: slider
         Layout.fillWidth: true
+        Layout.minimumWidth: 18
+        implicitWidth: 200
         implicitHeight: 20
         from: row.from
         to: row.to

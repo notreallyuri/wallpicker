@@ -13,12 +13,15 @@ pub mod library;
 pub mod moebooru;
 pub mod monitors;
 pub mod online;
+pub mod presets;
 pub mod settings;
 pub mod span;
 pub mod wallhaven;
 
 pub mod awww;
 pub mod cmd;
+pub mod compose;
+pub mod daemon;
 pub mod hyprpaper;
 pub mod noctalia;
 pub mod store;
@@ -27,3 +30,6 @@ pub mod transform;
 pub mod workspaces;
 
 pub use error::{Error, Result};
+
+#[cfg(test)]
+mod adjustment_tests;

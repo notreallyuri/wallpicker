@@ -11,6 +11,7 @@ import qs.dialogs
 import qs.services
 import qs.views.local
 import qs.views.online
+import qs.views.presets
 import qs.views.collections
 import qs.views.settings
 
@@ -85,7 +86,7 @@ Item {
             Loader {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                sourceComponent: [localTab, onlineTab, collectionsTab][Views.current]
+                sourceComponent: [localTab, onlineTab, collectionsTab, presetsTab][Views.current]
             }
         }
     }
@@ -111,9 +112,14 @@ Item {
         }
     }
 
-    // Ctrl+1/2/3: Local, Online, Collections (while no menu or dialog is open).
+    Component {
+        id: presetsTab
+        PresetsView {}
+    }
+
+    // Ctrl+1/2/3/4: Local, Online, Collections, Presets (while no popup is open).
     Repeater {
-        model: 3
+        model: 4
         Item {
             id: tabKey
             required property int index

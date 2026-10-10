@@ -50,8 +50,8 @@ function dragged(f, w, h, screenWidth, dx, dy, flip) {
     const cx = r.left + r.width / 2 - dx / s;
     const cy = r.top + r.height / 2 - dy / s;
     const moved = Object.assign({}, f, {
-        x: Math.trunc(Math.min(Math.max(cx / w * 1000, 0), 1000)),
-        y: Math.trunc(Math.min(Math.max(cy / h * 1000, 0), 1000))
+        x: Math.round(Math.min(Math.max(cx / w * 1000, 0), 1000)),
+        y: Math.round(Math.min(Math.max(cy / h * 1000, 0), 1000))
     });
     r = rect(moved, w, h);
     return Object.assign(moved, {
