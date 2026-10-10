@@ -13,6 +13,7 @@ pub mod library;
 pub mod moebooru;
 pub mod monitors;
 pub mod online;
+pub mod presets;
 pub mod settings;
 pub mod span;
 pub mod wallhaven;

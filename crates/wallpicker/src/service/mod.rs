@@ -11,3 +11,5 @@ pub mod settings;
 pub mod slideshow;
 pub mod wallpapers;
 pub mod workspaces;
+
+pub mod presets;

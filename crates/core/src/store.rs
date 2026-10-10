@@ -4,8 +4,8 @@ use std::path::{Path, PathBuf};
 
 use crate::catalog::Catalog;
 use crate::error::Result;
-use crate::settings::{Settings, State};
 use crate::online::OnlineFilters;
+use crate::settings::{Settings, State};
 use crate::wallhaven::SearchQuery;
 
 /// Where wallpicker keeps its files (XDG base directories).
@@ -169,24 +169,7 @@ impl Store {
     /// into its history.
     pub fn set_current(&self, monitor: &str, path: &Path) -> Result<()> {
         let mut state = self.load_state()?;
-        if let Some(old) = state.current.get(monitor).cloned()
-            && old != path
-        {
-            let h = state.history.entry(monitor.to_string()).or_default();
-            h.retain(|p| *p != old);
-            h.push(old);
-            if h.len() > crate::settings::HISTORY_LEN {
-                h.remove(0);
-            }
-        }
-        // Adjustments were for what it showed; a span ends.
-        if state.current.get(monitor).is_some_and(|p| p != path) {
-            state.adjust.remove(monitor);
-            end_span_on(&mut state, monitor);
-        }
-        state
-            .current
-            .insert(monitor.to_string(), path.to_path_buf());
+        remember_current(&mut state, monitor, path);
         self.save_state(&state)?;
         crate::transform::prune(&self.dirs.cache, &state);
         Ok(())
@@ -241,11 +224,23 @@ impl Store {
         let mut state = self.load_state()?;
         for (m, cut) in cuts {
             if state.current.get(m).is_some_and(|p| p == path) {
-                state.adjust.insert(m.clone(), crate::settings::Adjust { span: Some(*cut), flip: look.flip, ..Default::default() });
+                state.adjust.insert(
+                    m.clone(),
+                    crate::settings::Adjust {
+                        span: Some(*cut),
+                        flip: look.flip,
+                        ..Default::default()
+                    },
+                );
             }
         }
         let monitors = cuts.iter().map(|(m, _)| m.clone()).collect();
-        state.span = Some(crate::settings::Spanned { path: path.to_path_buf(), look, monitors, places });
+        state.span = Some(crate::settings::Spanned {
+            path: path.to_path_buf(),
+            look,
+            monitors,
+            places,
+        });
         self.save_state(&state)?;
         crate::transform::prune(&self.dirs.cache, &state);
         Ok(state)
@@ -496,10 +491,18 @@ impl Store {
 /// "library-2026-10-06" or "library-2026-10-06-142233", nothing else (so an
 /// id from outside can't name another file).
 fn is_snapshot_id(id: &str) -> bool {
-    let Some(rest) = id.strip_prefix("library-") else { return false };
+    let Some(rest) = id.strip_prefix("library-") else {
+        return false;
+    };
     let b = rest.as_bytes();
     let date_ok = b.len() >= 10
-        && b[..10].iter().enumerate().all(|(i, c)| if i == 4 || i == 7 { *c == b'-' } else { c.is_ascii_digit() });
+        && b[..10].iter().enumerate().all(|(i, c)| {
+            if i == 4 || i == 7 {
+                *c == b'-'
+            } else {
+                c.is_ascii_digit()
+            }
+        });
     date_ok && (b.len() == 10 || (b.len() == 17 && b[10] == b'-' && b[11..].iter().all(u8::is_ascii_digit)))
 }
 
@@ -509,9 +512,28 @@ fn now_secs() -> u64 {
         .map_or(0, |d| d.as_secs())
 }
 
+/// Shared success-only history update for ordinary applies and presets.
+pub(crate) fn remember_current(state: &mut State, monitor: &str, path: &Path) {
+    if let Some(old) = state.current.get(monitor).cloned()
+        && old != path
+    {
+        let history = state.history.entry(monitor.into()).or_default();
+        history.retain(|p| *p != old);
+        history.push(old);
+        if history.len() > crate::settings::HISTORY_LEN {
+            history.remove(0);
+        }
+    }
+    if state.current.get(monitor).is_some_and(|p| p != path) {
+        state.adjust.remove(monitor);
+        end_span_on(state, monitor);
+    }
+    state.current.insert(monitor.into(), path.to_path_buf());
+}
+
 /// Write to a temporary file in the same directory, then rename over the
 /// target, so a crash can't leave a half-written file.
-fn atomic_write(path: &Path, bytes: &[u8], private: bool) -> Result<()> {
+pub(crate) fn atomic_write(path: &Path, bytes: &[u8], private: bool) -> Result<()> {
     let dir = path.parent().unwrap_or_else(|| Path::new("."));
     fs::create_dir_all(dir)?;
 
@@ -572,7 +594,14 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let store = Store::new(Dirs::under(tmp.path()));
         let (wide, other) = (Path::new("/w/wide.png"), Path::new("/w/other.png"));
-        let cut = |x| Cut { x, y: 0, width: 1920, height: 1080, out_width: 1920, out_height: 1080 };
+        let cut = |x| Cut {
+            x,
+            y: 0,
+            width: 1920,
+            height: 1080,
+            out_width: 1920,
+            out_height: 1080,
+        };
         let cuts = [("DP-1".to_string(), cut(0)), ("DP-2".to_string(), cut(1920))];
         for (m, _) in &cuts {
             store.set_current(m, wide).unwrap();
@@ -661,7 +690,11 @@ mod tests {
         assert!(!store.catalog_path().exists());
 
         fs::create_dir_all(store.catalog_path().parent().unwrap()).unwrap();
-        fs::write(store.catalog_path(), r#"{"items": {"/w/a.jpg": {"favorite": true, "tags": ["x"]}}}"#).unwrap();
+        fs::write(
+            store.catalog_path(),
+            r#"{"items": {"/w/a.jpg": {"favorite": true, "tags": ["x"]}}}"#,
+        )
+        .unwrap();
         assert_eq!(store.load_catalog().unwrap().version, 1);
         store.upgrade_catalog().unwrap();
         let c = store.load_catalog().unwrap();
@@ -671,8 +704,15 @@ mod tests {
         assert!(fs::read_to_string(store.catalog_path()).unwrap().starts_with("{\n  \"version\": 2,"));
         // A version-1 snapshot restored comes back as the current one.
         fs::create_dir_all(store.snapshots_dir()).unwrap();
-        fs::write(store.snapshots_dir().join("library-2026-01-01.json"), r#"{"items": {}}"#).unwrap();
-        assert_eq!(store.restore_snapshot("library-2026-01-01").unwrap().version, crate::catalog::VERSION);
+        fs::write(
+            store.snapshots_dir().join("library-2026-01-01.json"),
+            r#"{"items": {}}"#,
+        )
+        .unwrap();
+        assert_eq!(
+            store.restore_snapshot("library-2026-01-01").unwrap().version,
+            crate::catalog::VERSION
+        );
         assert_eq!(store.load_catalog().unwrap().version, crate::catalog::VERSION);
     }
 
@@ -824,11 +864,7 @@ mod tests {
             sorting: Sorting::Views,
             ..SearchQuery::default()
         };
-        fs::write(
-            store.old_wallhaven_filters_path(),
-            serde_json::to_string(&old).unwrap(),
-        )
-        .unwrap();
+        fs::write(store.old_wallhaven_filters_path(), serde_json::to_string(&old).unwrap()).unwrap();
         assert_eq!(store.load_online_filters().unwrap().wallhaven.sorting, Sorting::Views);
     }
 

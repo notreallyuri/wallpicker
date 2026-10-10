@@ -22,6 +22,7 @@ pub(super) fn start(dirs: &Dirs, out: Out) {
         (dirs.config.join("config.json"), "settings-changed"),
         (dirs.state.join("state.json"), "state-changed"),
         (dirs.data.join("library.json"), "catalog-changed"),
+        (dirs.data.join("presets.json"), "presets-changed"),
     ];
     let store = Store::new(dirs.clone());
     std::thread::spawn(move || {
@@ -37,7 +38,7 @@ pub(super) fn start(dirs: &Dirs, out: Out) {
                 if now != last[i] {
                     last[i] = now;
                     out.event(event, json!(null));
-                    if *event != "catalog-changed" {
+                    if matches!(*event, "state-changed" | "settings-changed") {
                         let store = store.clone();
                         std::thread::spawn(move || {
                             if let Err(e) = crate::noctalia_colors::refresh(&store) {
