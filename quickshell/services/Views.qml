@@ -1,4 +1,4 @@
-// Which tab the picker shows: Local, Online or Collections. Anything can
+// Which tab the picker shows: Local, Online, Collections or Presets. Anything can
 // switch it (a tag in Collections' details searches on Online), and
 // `wallpicker --open PLACE [IMAGE]` sends it somewhere (go).
 pragma Singleton
@@ -9,15 +9,19 @@ Singleton {
     readonly property int local: 0
     readonly property int online: 1
     readonly property int collections: 2
+    readonly property int presets: 3
 
     property int current: local
 
-    /// A tab (local, online, collections), or a dialog over Local
+    /// A tab (local, online, collections, presets), or a dialog over Local
     /// (settings, duplicates, tags for `path`).
     function go(place, path) {
         switch (place) {
         case "online":
             current = online;
+            break;
+        case "presets":
+            current = presets;
             break;
         case "collections":
             current = collections;
