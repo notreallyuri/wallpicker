@@ -171,15 +171,28 @@ pub fn adjust(args: &[String]) -> i32 {
                     Some("v") => Flip { h: false, v: true },
                     Some("both" | "hv") => Flip { h: true, v: true },
                     Some("none") => Flip::default(),
-                    other => return usage_for("adjust", &format!("--flip {}? use h, v, both or none", other.unwrap_or("")), usage_text),
+                    other => {
+                        return usage_for(
+                            "adjust",
+                            &format!("--flip {}? use h, v, both or none", other.unwrap_or("")),
+                            usage_text,
+                        );
+                    }
                 }
             }
             "--fit" => {
+                adjust.backend_default_fit = false;
                 adjust.fit = match rest.next().map(String::as_str) {
                     Some("auto") => None,
                     Some(m) => match serde_json::from_value(serde_json::Value::String(m.to_string())) {
                         Ok(f) => Some(f),
-                        Err(_) => return usage_for("adjust", &format!("--fit {m}? use auto, cover, contain, tile or fill"), usage_text),
+                        Err(_) => {
+                            return usage_for(
+                                "adjust",
+                                &format!("--fit {m}? use auto, cover, contain, tile or fill"),
+                                usage_text,
+                            );
+                        }
                     },
                     None => return usage_for("adjust", "--fit needs a fit", usage_text),
                 }
@@ -194,7 +207,7 @@ pub fn adjust(args: &[String]) -> i32 {
                     return usage_for("adjust", "--frame needs ZOOM,X,Y (e.g. 200,50,50)", usage_text);
                 };
                 // Cut to this monitor's resolution.
-                let Some(m) = wallpicker_core::hyprpaper::list_monitors(&wallpicker_core::cmd::SystemRunner)
+                let Some(m) = wallpicker_core::monitors::list(&wallpicker_core::cmd::SystemRunner)
                     .ok()
                     .and_then(|ms| ms.into_iter().find(|m| m.name == *monitor))
                 else {

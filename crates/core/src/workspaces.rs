@@ -12,7 +12,7 @@ use std::time::Duration;
 
 use crate::cmd::Runner;
 use crate::error::Result;
-use crate::hyprpaper::{self, Backend, Fits};
+use crate::hyprpaper::{Backend, Fits};
 use crate::store::Store;
 
 /// Hyprland's event socket (`.socket2.sock`), if Hyprland is running.
@@ -34,7 +34,7 @@ pub fn is_workspace_event(line: &str) -> bool {
 
 /// Each monitor's (normal) workspace now.
 fn workspaces_now(runner: &dyn Runner) -> Result<HashMap<String, String>> {
-    Ok(hyprpaper::list_monitors(runner)?
+    Ok(crate::monitors::list(runner)?
         .into_iter()
         .filter_map(|m| {
             let ws = m.active_workspace?.name;
@@ -57,7 +57,9 @@ pub fn sync(runner: &dyn Runner, store: &Store, last: &mut HashMap<String, Strin
             if last.get(monitor) == Some(ws) {
                 continue;
             }
-            let Some(path) = settings.workspaces.wallpapers.get(ws) else { continue };
+            let Some(path) = settings.workspaces.wallpapers.get(ws) else {
+                continue;
+            };
             if !path.is_file() || state.current.get(monitor) == Some(path) {
                 continue;
             }
@@ -78,7 +80,9 @@ pub fn sync(runner: &dyn Runner, store: &Store, last: &mut HashMap<String, Strin
 /// "remember" on, what each shows now becomes the wallpaper of its workspace.
 /// Failing here never fails the apply; it's said and skipped.
 pub fn remember_shown(runner: &dyn Runner, store: &Store, monitors: &[String]) {
-    let Ok(state) = store.load_state() else { return };
+    let Ok(state) = store.load_state() else {
+        return;
+    };
     for m in monitors {
         if let Some(path) = state.current.get(m)
             && let Err(e) = remember(runner, store, m, path)
@@ -95,7 +99,9 @@ pub fn remember(runner: &dyn Runner, store: &Store, monitor: &str, path: &Path) 
     if !(settings.workspaces.enabled && settings.workspaces.remember) {
         return Ok(());
     }
-    let Some(ws) = workspaces_now(runner)?.remove(monitor) else { return Ok(()) };
+    let Some(ws) = workspaces_now(runner)?.remove(monitor) else {
+        return Ok(());
+    };
     if settings.workspaces.wallpapers.get(&ws).map(PathBuf::as_path) != Some(path) {
         settings.workspaces.wallpapers.insert(ws, path.to_path_buf());
         store.save_settings(&settings)?;
@@ -141,7 +147,12 @@ pub fn rows(runner: &dyn Runner, store: &Store) -> Result<Vec<WorkspaceRow>> {
         .collect();
     for (name, path) in &settings.workspaces.wallpapers {
         if !rows.iter().any(|r| r.name == *name) {
-            rows.push(WorkspaceRow { name: name.clone(), monitor: None, open: false, wallpaper: Some(path.clone()) });
+            rows.push(WorkspaceRow {
+                name: name.clone(),
+                monitor: None,
+                open: false,
+                wallpaper: Some(path.clone()),
+            });
         }
     }
     rows.sort_by(|a, b| match (a.name.parse::<i64>(), b.name.parse::<i64>()) {
@@ -255,7 +266,11 @@ mod tests {
                     .ws
                     .borrow()
                     .iter()
-                    .map(|(m, w)| format!(r#"{{"name":"{m}","width":1920,"height":1080,"activeWorkspace":{{"id":1,"name":"{w}"}}}}"#))
+                    .map(|(m, w)| {
+                        format!(
+                            r#"{{"name":"{m}","width":1920,"height":1080,"activeWorkspace":{{"id":1,"name":"{w}"}}}}"#
+                        )
+                    })
                     .collect();
                 return Ok(format!("[{}]", list.join(",")));
             }
@@ -296,7 +311,10 @@ mod tests {
         store.save_settings(&s).unwrap();
         store.set_current("DP-1", &a).unwrap();
 
-        let fake = Fake { ws: RefCell::new(vec![("DP-1", "1"), ("DP-2", "special:term")]), calls: RefCell::new(vec![]) };
+        let fake = Fake {
+            ws: RefCell::new(vec![("DP-1", "1"), ("DP-2", "special:term")]),
+            calls: RefCell::new(vec![]),
+        };
         let mut last = HashMap::new();
         // Workspace 1 has no wallpaper: nothing happens.
         assert!(sync(&fake, &store, &mut last).unwrap().is_empty());

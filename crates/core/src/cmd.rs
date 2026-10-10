@@ -4,6 +4,11 @@ use crate::error::{Error, Result};
 
 /// Runs external programs. A trait so tests can script `hyprctl` replies.
 pub trait Runner {
+    /// Discover outputs. Test runners can keep supplying Hyprland JSON.
+    fn monitors(&self) -> Result<Vec<crate::monitors::Monitor>> {
+        crate::monitors::parse_monitors(&self.run("hyprctl", &["monitors", "-j"])?)
+    }
+
     /// Run `program` with `args` and return its trimmed output.
     /// A non-zero exit status is an error.
     fn run(&self, program: &str, args: &[&str]) -> Result<String>;
@@ -16,7 +21,10 @@ pub trait Runner {
 
     /// Start `program` in the background and leave it running (a daemon).
     fn spawn(&self, program: &str, _args: &[&str]) -> Result<()> {
-        Err(Error::Command { cmd: program.to_string(), msg: "can't start programs here".into() })
+        Err(Error::Command {
+            cmd: program.to_string(),
+            msg: "can't start programs here".into(),
+        })
     }
 }
 
@@ -24,6 +32,20 @@ pub trait Runner {
 pub struct SystemRunner;
 
 impl Runner for SystemRunner {
+    fn monitors(&self) -> Result<Vec<crate::monitors::Monitor>> {
+        let mut monitors = crate::monitors::wayland::discover()?;
+        // Focus and active workspace are not exposed by wl_output. Only ask
+        // Hyprland for that optional metadata inside a Hyprland session.
+        if std::env::var_os("HYPRLAND_INSTANCE_SIGNATURE").is_some()
+            && let Ok(extra) = self
+                .run("hyprctl", &["monitors", "-j"])
+                .and_then(|json| crate::monitors::parse_monitors(&json))
+        {
+            crate::monitors::enrich(&mut monitors, &extra);
+        }
+        Ok(monitors)
+    }
+
     fn hyprpaper_socket(&self) -> Option<std::path::PathBuf> {
         crate::hyprpaper::socket_path()
     }
@@ -40,7 +62,10 @@ impl Runner for SystemRunner {
             .process_group(0)
             .spawn()
             .map(drop)
-            .map_err(|e| Error::Command { cmd: program.to_string(), msg: e.to_string() })
+            .map_err(|e| Error::Command {
+                cmd: program.to_string(),
+                msg: e.to_string(),
+            })
     }
 
     fn run(&self, program: &str, args: &[&str]) -> Result<String> {
@@ -69,10 +94,7 @@ impl Runner for SystemRunner {
                 .find(|s| !s.is_empty())
                 .map(str::to_string)
                 .unwrap_or_else(|| format!("exited with {}", out.status));
-            return Err(Error::Command {
-                cmd: cmd_text(),
-                msg,
-            });
+            return Err(Error::Command { cmd: cmd_text(), msg });
         }
 
         Ok(if stdout.is_empty() { stderr } else { stdout })

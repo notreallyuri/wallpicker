@@ -29,3 +29,6 @@ pub mod transform;
 pub mod workspaces;
 
 pub use error::{Error, Result};
+
+#[cfg(test)]
+mod adjustment_tests;

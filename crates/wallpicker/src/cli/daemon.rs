@@ -8,10 +8,11 @@
 //! workspace listener also waits while another program has it, and the
 //! slideshow's ticks take turns with the Noctalia plugin's.
 //!
-//! With the wallpicker backend it draws the wallpapers too (renderer.rs):
+//! With the wallpicker backend it draws the wallpapers too (renderer/):
 //! running while that's the backend (each monitor showing the saved state,
 //! so no restore), stopped when another is picked. Its socket answers the
-//! backend (core's daemon.rs): `show` and `status`, a JSON line each way.
+//! backend (core's daemon.rs): `show` (with the settings' transition) and
+//! `status`, a JSON line each way.
 
 use std::io::{BufRead, BufReader, Read, Write};
 use std::os::unix::net::{UnixListener, UnixStream};
@@ -27,7 +28,7 @@ use wallpicker_core::store::{Dirs, Store};
 use wallpicker_core::workspaces;
 
 use super::{slideshow, usage_for};
-use crate::renderer::Renderer;
+use crate::renderer::{Renderer, Transition};
 
 const USAGE: &str = "usage: wallpicker daemon   follow workspaces and keep the slideshow on time (for an autostart)";
 
@@ -47,7 +48,10 @@ pub fn daemon(args: &[String]) -> i32 {
     if let Err(e) = store.write_hyprpaper_conf() {
         eprintln!("wallpicker: could not write the hyprpaper config: {e}");
     }
-    let drawing = Arc::new(Drawing { store: store.clone(), renderer: Mutex::new(None) });
+    let drawing = Arc::new(Drawing {
+        store: store.clone(),
+        renderer: Mutex::new(None),
+    });
     if backend_of(&store) == WallpaperBackend::Wallpicker {
         // Each monitor shows its saved wallpaper as the renderer finds it.
         if let Err(e) = drawing.start() {
@@ -77,7 +81,10 @@ pub fn daemon(args: &[String]) -> i32 {
 /// Noctalia's palette made again when what's shown (or the settings: the
 /// monitor the colors come from) changes; once at start too.
 fn follow_colors(store: &Store) {
-    let files = [store.dirs().state.join("state.json"), store.dirs().config.join("config.json")];
+    let files = [
+        store.dirs().state.join("state.json"),
+        store.dirs().config.join("config.json"),
+    ];
     let stamp = |p: &std::path::PathBuf| std::fs::metadata(p).and_then(|m| m.modified()).ok();
     let mut last: Vec<_> = vec![None; files.len()];
     loop {
@@ -116,7 +123,9 @@ impl Drawing {
         if !renderer.as_ref().is_some_and(Renderer::running) {
             *renderer = None;
             let store = self.store.clone();
-            *renderer = Some(Renderer::start(Arc::new(move |m: &str| hyprpaper::saved_for(&store, m)))?);
+            *renderer = Some(Renderer::start(Arc::new(move |m: &str| {
+                hyprpaper::saved_for(&store, m)
+            }))?);
         }
         f(renderer.as_ref().expect("just started"))
     }
@@ -187,8 +196,14 @@ fn respond(request: &Value, drawing: &Drawing) -> Result<Value, String> {
             }
             let fit: Option<FitMode> = serde_json::from_value(request.get("fit").cloned().unwrap_or(Value::Null))
                 .map_err(|e| format!("fit: {e}"))?;
+            // {kind, duration_ms}, the settings' (none: a cut).
+            let transition = request.get("transition").and_then(|t| {
+                let kind = t.get("kind").and_then(Value::as_str)?;
+                let ms = t.get("duration_ms").and_then(Value::as_u64)?;
+                Transition::from_setting(kind, ms.min(10_000) as u32)
+            });
             // The wait is outside the lock: other monitors draw meanwhile.
-            let answer = drawing.with(|r| r.show(monitor, (path, fit)))?;
+            let answer = drawing.with(|r| r.show(monitor, (path, fit), transition))?;
             match answer.recv_timeout(Duration::from_secs(25)) {
                 Ok(result) => result.map(|()| json!({ "ok": true })),
                 Err(mpsc::RecvTimeoutError::Timeout) => Err("drawing it took too long".into()),

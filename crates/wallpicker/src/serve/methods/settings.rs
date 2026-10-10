@@ -48,6 +48,10 @@ fn options() -> Value {
     value!({
         "backends": pairs(&settings::BACKENDS),
         "transitions": pairs(&settings::TRANSITIONS),
+        "transitions_by_backend": {
+            "awww": pairs(&settings::transition_modes(WallpaperBackend::Awww)),
+            "wallpicker": pairs(&settings::transition_modes(WallpaperBackend::Wallpicker)),
+        },
         "fits": {
             "hyprpaper": pairs(&settings::fit_modes(WallpaperBackend::Hyprpaper)),
             "awww": pairs(&settings::fit_modes(WallpaperBackend::Awww)),

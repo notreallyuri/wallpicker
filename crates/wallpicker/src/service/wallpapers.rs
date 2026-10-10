@@ -15,7 +15,7 @@ use crate::service::library::update_catalog;
 use crate::{AppState, CmdResult, blocking, err, wallpaper_path};
 
 pub async fn monitors() -> CmdResult<Vec<Monitor>> {
-    blocking(|| hyprpaper::list_monitors(&SystemRunner)).await
+    blocking(|| wallpicker_core::monitors::list(&SystemRunner)).await
 }
 
 /// `path` on `monitors`, remembered for `--restore` (and, with workspaces
@@ -24,7 +24,13 @@ pub async fn apply(state: &AppState, monitors: Vec<String>, path: String) -> Cmd
     let store = state.store.clone();
     blocking(move || {
         let settings = store.load_settings()?;
-        let report = hyprpaper::apply_and_remember_with(&SystemRunner, &store, settings.wallpaper_backend, &monitors, &PathBuf::from(path))?;
+        let report = hyprpaper::apply_and_remember_with(
+            &SystemRunner,
+            &store,
+            settings.wallpaper_backend,
+            &monitors,
+            &PathBuf::from(path),
+        )?;
         wallpicker_core::workspaces::remember_shown(&SystemRunner, &store, &report.applied);
         Ok(report)
     })
@@ -79,11 +85,7 @@ pub async fn previous(state: &AppState, monitors: Vec<String>) -> CmdResult<Appl
 /// Adjust what `monitor` shows (mirrored...), and show it there now. Every
 /// backend: the changed copy is a file of its own. Temporary: another
 /// wallpaper on that monitor clears it.
-pub async fn set_adjust(
-    state: &AppState,
-    monitor: String,
-    adjust: Adjust,
-) -> CmdResult<State> {
+pub async fn set_adjust(state: &AppState, monitor: String, adjust: Adjust) -> CmdResult<State> {
     let store = state.store.clone();
     let lock = state.adjust_lock.clone();
     blocking(move || {

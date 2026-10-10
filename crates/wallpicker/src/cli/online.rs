@@ -60,11 +60,17 @@ fn sorts_for(provider: Provider) -> Vec<Choice> {
     match provider {
         Provider::Wallhaven => Sorting::ALL
             .iter()
-            .map(|s| Choice { value: s.as_str(), label: s.label() })
+            .map(|s| Choice {
+                value: s.as_str(),
+                label: s.label(),
+            })
             .collect(),
         Provider::Konachan | Provider::Yandere => MoebooruSort::ALL
             .iter()
-            .map(|s| Choice { value: s.as_str(), label: s.label() })
+            .map(|s| Choice {
+                value: s.as_str(),
+                label: s.label(),
+            })
             .collect(),
     }
 }
@@ -97,7 +103,9 @@ pub fn search(args: &[String]) -> i32 {
                 Some(s) => sort = Some(s.clone()),
                 None => return usage_for("search", "--sort needs a value", usage_text),
             },
-            flag if flag.starts_with('-') => return usage_for("search", &format!("unknown option {flag}"), usage_text),
+            flag if flag.starts_with('-') => {
+                return usage_for("search", &format!("unknown option {flag}"), usage_text);
+            }
             p if provider.is_none() => match Provider::from_str(p) {
                 Some(p) => provider = Some(p),
                 None => return usage_for("search", &format!("unknown provider {p}"), usage_text),
@@ -123,7 +131,11 @@ pub fn search(args: &[String]) -> i32 {
         };
         if !ok {
             let valid: Vec<&str> = sorts_for(provider).iter().map(|c| c.value).collect();
-            return usage_for("search", &format!("{sort} isn't a {} sort ({})", provider.as_str(), valid.join(", ")), usage_text);
+            return usage_for(
+                "search",
+                &format!("{sort} isn't a {} sort ({})", provider.as_str(), valid.join(", ")),
+                usage_text,
+            );
         }
         if let Err(e) = store.save_online_filters(&filters) {
             return fail(&e);
@@ -175,7 +187,10 @@ pub fn search(args: &[String]) -> i32 {
         provider: provider.as_str(),
         providers: Provider::ALL
             .iter()
-            .map(|p| Choice { value: p.as_str(), label: p.label() })
+            .map(|p| Choice {
+                value: p.as_str(),
+                label: p.label(),
+            })
             .collect(),
         sort: current_sort,
         sorts: sorts_for(provider),
@@ -261,7 +276,9 @@ async fn cache_image(http: reqwest::Client, url: String, dest: PathBuf, max: usi
 
 /// Drop cached images nobody has looked at in a while.
 fn prune_cache(dir: &Path) {
-    let Ok(entries) = std::fs::read_dir(dir) else { return };
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return;
+    };
     for entry in entries.flatten() {
         let old = entry
             .metadata()
@@ -392,13 +409,21 @@ pub fn collection(args: &[String]) -> i32 {
             },
             n if id.is_none() => match n.parse::<u64>() {
                 Ok(n) => id = Some(n),
-                Err(_) => return usage_for("collection", &format!("{n} isn't a collection id"), usage_text),
+                Err(_) => {
+                    return usage_for("collection", &format!("{n} isn't a collection id"), usage_text);
+                }
             },
-            other => return usage_for("collection", &format!("unknown option {other}"), usage_text),
+            other => {
+                return usage_for("collection", &format!("unknown option {other}"), usage_text);
+            }
         }
     }
     let Some(id) = id else {
-        return usage_for("collection", "which collection? (`wallpicker collections` lists them)", usage_text);
+        return usage_for(
+            "collection",
+            "which collection? (`wallpicker collections` lists them)",
+            usage_text,
+        );
     };
     let store = Store::new(Dirs::from_env());
     let state = AppState::new(store.clone());
@@ -512,12 +537,10 @@ pub async fn fetch_preview(state: &AppState, w: &OnlineWallpaper) -> Option<Path
     }
     let fit_dir = state.store.dirs().cache.join("online").join("preview-fit");
     prune_cache(&fit_dir.join("thumbs"));
-    crate::rt::spawn_blocking(move || {
-        wallpicker_core::thumbs::fit_within(&fit_dir, &original, FITTED_PREVIEW).ok()
-    })
-    .await
-    .ok()
-    .flatten()
+    crate::rt::spawn_blocking(move || wallpicker_core::thumbs::fit_within(&fit_dir, &original, FITTED_PREVIEW).ok())
+        .await
+        .ok()
+        .flatten()
 }
 
 #[derive(Serialize)]
@@ -551,7 +574,9 @@ pub fn details(args: &[String]) -> i32 {
         match a.as_str() {
             "--preview" => want_preview = true,
             "--json" => {} // always JSON; accepted for symmetry
-            flag if flag.starts_with('-') => return usage_for("details", &format!("unknown option {flag}"), usage_text),
+            flag if flag.starts_with('-') => {
+                return usage_for("details", &format!("unknown option {flag}"), usage_text);
+            }
             h if handle.is_none() => handle = Some(h),
             _ => return usage_for("details", "one wallpaper at a time", usage_text),
         }
@@ -599,17 +624,28 @@ pub fn details(args: &[String]) -> i32 {
         } else {
             String::new()
         },
-        uploader: d.uploader.map(|u| SearchLink { name: u.name, query: u.query }),
+        uploader: d.uploader.map(|u| SearchLink {
+            name: u.name,
+            query: u.query,
+        }),
         artists: d
             .tags
             .iter()
             .filter(|t| t.is_artist)
-            .map(|t| SearchLink { name: t.name.clone(), query: Some(t.query.clone()) })
+            .map(|t| SearchLink {
+                name: t.name.clone(),
+                query: Some(t.query.clone()),
+            })
             .collect(),
         tags: d
             .tags
             .into_iter()
-            .map(|t| TagOut { name: t.name, query: t.query, category: t.category, is_artist: t.is_artist })
+            .map(|t| TagOut {
+                name: t.name,
+                query: t.query,
+                category: t.category,
+                is_artist: t.is_artist,
+            })
             .collect(),
         downloaded,
         preview,
@@ -631,7 +667,9 @@ pub fn apply_online(args: &[String]) -> i32 {
         match a.as_str() {
             "--monitor" | "-m" => match rest.next() {
                 Some(m) => monitors.push(m.clone()),
-                None => return usage_for("apply-online", "--monitor needs a monitor name", usage_text),
+                None => {
+                    return usage_for("apply-online", "--monitor needs a monitor name", usage_text);
+                }
             },
             "--tag" | "-t" => match rest.next() {
                 Some(t) => tags.push(t.clone()),
@@ -661,7 +699,12 @@ pub fn apply_online(args: &[String]) -> i32 {
         Err(e) => return fail(&e),
     };
     let state = AppState::new(store.clone());
-    let path = match crate::rt::block_on(crate::service::online::download_and_tag(&state, &wallpaper, &tags, |_, _| {})) {
+    let path = match crate::rt::block_on(crate::service::online::download_and_tag(
+        &state,
+        &wallpaper,
+        &tags,
+        |_, _| {},
+    )) {
         Ok(p) => PathBuf::from(p),
         Err(e) => return fail(&e),
     };
@@ -670,18 +713,12 @@ pub fn apply_online(args: &[String]) -> i32 {
         return 0;
     }
     if monitors.is_empty() {
-        match hyprpaper::list_monitors(&SystemRunner) {
+        match wallpicker_core::monitors::list(&SystemRunner) {
             Ok(ms) => monitors = ms.into_iter().map(|m| m.name).collect(),
             Err(e) => return fail(&e),
         }
     }
-    match hyprpaper::apply_and_remember_with(
-        &SystemRunner,
-        &store,
-        settings.wallpaper_backend,
-        &monitors,
-        &path,
-    ) {
+    match hyprpaper::apply_and_remember_with(&SystemRunner, &store, settings.wallpaper_backend, &monitors, &path) {
         Ok(report) => {
             wallpicker_core::workspaces::remember_shown(&SystemRunner, &store, &report.applied);
             for m in &report.applied {

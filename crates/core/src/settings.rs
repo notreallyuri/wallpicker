@@ -262,7 +262,13 @@ pub fn fit_modes(backend: WallpaperBackend) -> [(&'static str, &'static str); 5]
         WallpaperBackend::Hyprpaper | WallpaperBackend::Noctalia => ("hyprpaper's default", "Tile"),
         WallpaperBackend::Wallpicker => ("wallpicker's default (Cover)", "Tile"),
     };
-    [("", default), ("cover", "Cover"), ("contain", "Contain"), ("tile", tile), ("fill", "Fill")]
+    [
+        ("", default),
+        ("cover", "Cover"),
+        ("contain", "Contain"),
+        ("tile", tile),
+        ("fill", "Fill"),
+    ]
 }
 
 pub const BACKENDS: [(&str, &str); 4] = [
@@ -291,6 +297,23 @@ pub const TRANSITIONS: [(&str, &str); 14] = [
     ("none", "None (instant)"),
 ];
 
+/// Transition choices implemented by each backend. Simple fade remains
+/// awww-specific; wallpicker uses compositor opacity or GLES shader effects.
+pub fn transition_modes(backend: WallpaperBackend) -> Vec<(&'static str, &'static str)> {
+    const WALLPICKER_KINDS: [&str; 13] = [
+        "fade", "wipe", "wave", "grow", "center", "any", "outer", "left", "right", "top", "bottom", "random", "none",
+    ];
+    match backend {
+        WallpaperBackend::Awww => TRANSITIONS.to_vec(),
+        WallpaperBackend::Wallpicker => TRANSITIONS
+            .iter()
+            .copied()
+            .filter(|(kind, _)| WALLPICKER_KINDS.contains(kind))
+            .collect(),
+        _ => Vec::new(),
+    }
+}
+
 /// How awww changes to a new wallpaper.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
@@ -305,15 +328,27 @@ pub struct Transition {
 
 impl Default for Transition {
     fn default() -> Self {
-        Transition { kind: "fade".into(), duration_ms: 1000, fps: 60 }
+        Transition {
+            kind: "fade".into(),
+            duration_ms: 1000,
+            fps: 60,
+        }
     }
 }
 
 impl Transition {
     /// A known kind, a duration up to 10 s and 1 to 255 fps.
     pub fn sanitized(self) -> Self {
-        let kind = if TRANSITIONS.iter().any(|(k, _)| *k == self.kind) { self.kind } else { Transition::default().kind };
-        Transition { kind, duration_ms: self.duration_ms.min(10_000), fps: self.fps.clamp(1, 255) }
+        let kind = if TRANSITIONS.iter().any(|(k, _)| *k == self.kind) {
+            self.kind
+        } else {
+            Transition::default().kind
+        };
+        Transition {
+            kind,
+            duration_ms: self.duration_ms.min(10_000),
+            fps: self.fps.clamp(1, 255),
+        }
     }
 }
 
@@ -385,14 +420,24 @@ pub struct SpanLook {
 
 impl Default for SpanLook {
     fn default() -> Self {
-        SpanLook { zoom: 100, x: 500, y: 500, flip: Flip::default() }
+        SpanLook {
+            zoom: 100,
+            x: 500,
+            y: 500,
+            flip: Flip::default(),
+        }
     }
 }
 
 impl SpanLook {
     /// Values in range.
     pub fn sanitized(self) -> SpanLook {
-        SpanLook { zoom: self.zoom.clamp(100, 400), x: self.x.min(1000), y: self.y.min(1000), flip: self.flip }
+        SpanLook {
+            zoom: self.zoom.clamp(100, 400),
+            x: self.x.min(1000),
+            y: self.y.min(1000),
+            flip: self.flip,
+        }
     }
 }
 
@@ -439,6 +484,10 @@ pub struct Adjust {
     /// Its own fit on this monitor, over the monitor's and the general one.
     /// Not used while it's framed (the frame is the monitor's exact size).
     pub fit: Option<FitMode>,
+    /// A preset explicitly selected the backend default instead of inheriting
+    /// future global fit changes. An explicit `fit` takes precedence.
+    #[serde(skip_serializing_if = "is_false")]
+    pub backend_default_fit: bool,
     /// The part of the picture shown, cut to the monitor's size.
     pub frame: Option<Frame>,
     /// Its part of a picture spanned across the monitors (`span.rs`): wins
@@ -447,9 +496,25 @@ pub struct Adjust {
 }
 
 impl Adjust {
-    pub fn is_none(&self) -> bool {
-        self.flip.is_none() && self.fit.is_none() && self.frame.is_none() && self.span.is_none()
+    pub fn effective_fit(&self, settings: &Settings, monitor: &str) -> Option<FitMode> {
+        if self.fit.is_none() && self.backend_default_fit {
+            None
+        } else {
+            settings.fit_for(monitor, self.fit)
+        }
     }
+
+    pub fn is_none(&self) -> bool {
+        self.flip.is_none()
+            && self.fit.is_none()
+            && !self.backend_default_fit
+            && self.frame.is_none()
+            && self.span.is_none()
+    }
+}
+
+fn is_false(value: &bool) -> bool {
+    !value
 }
 
 /// An exact part of a picture (`x`, `y`, `width`×`height` in its pixels),
@@ -494,7 +559,12 @@ impl Frame {
         let cy = f64::from(self.y.min(1000)) / 1000.0 * h;
         let left = (cx - cw / 2.0).clamp(0.0, w - cw);
         let top = (cy - ch / 2.0).clamp(0.0, h - ch);
-        (left.round() as u32, top.round() as u32, cw.round().max(1.0) as u32, ch.round().max(1.0) as u32)
+        (
+            left.round() as u32,
+            top.round() as u32,
+            cw.round().max(1.0) as u32,
+            ch.round().max(1.0) as u32,
+        )
     }
 
     /// Valid values: zoom in range, center in the picture, a real size.
@@ -552,7 +622,11 @@ pub struct Workspaces {
 
 impl Default for Workspaces {
     fn default() -> Self {
-        Workspaces { enabled: false, remember: true, wallpapers: BTreeMap::new() }
+        Workspaces {
+            enabled: false,
+            remember: true,
+            wallpapers: BTreeMap::new(),
+        }
     }
 }
 
@@ -598,7 +672,9 @@ impl NightSet {
     /// Whether `minute` (since local midnight) is in the night. Off, or a
     /// window that starts and ends at the same time, is never night.
     pub fn is_night(&self, minute: u32) -> bool {
-        let (Some(from), Some(to)) = (parse_hhmm(&self.from), parse_hhmm(&self.to)) else { return false };
+        let (Some(from), Some(to)) = (parse_hhmm(&self.from), parse_hhmm(&self.to)) else {
+            return false;
+        };
         if !self.enabled || from == to {
             return false;
         }
@@ -662,7 +738,13 @@ mod tests {
 
     #[test]
     fn frame_rects() {
-        let f = |zoom, x, y| Frame { zoom, x, y, width: 1920, height: 1080 };
+        let f = |zoom, x, y| Frame {
+            zoom,
+            x,
+            y,
+            width: 1920,
+            height: 1080,
+        };
         // A 4:3 picture on a 16:9 monitor: full width, a band of its height.
         assert_eq!(f(100, 500, 500).rect(4000, 3000), (0, 375, 4000, 2250));
         // Twice as close, around the center.

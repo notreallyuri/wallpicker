@@ -12,7 +12,7 @@ use serde_json::{Value, json};
 
 use crate::cmd::Runner;
 use crate::error::{Error, Result};
-use crate::settings::FitMode;
+use crate::settings::{FitMode, Transition};
 
 /// This session's daemon socket: one per Wayland session and Hyprland
 /// instance.
@@ -36,7 +36,9 @@ pub fn ask(request: &Value) -> Result<Value> {
     let mut line = String::new();
     BufReader::new(stream).read_line(&mut line)?;
     if line.is_empty() {
-        return Err(Error::Invalid("wallpicker daemon closed the connection without answering".into()));
+        return Err(Error::Invalid(
+            "wallpicker daemon closed the connection without answering".into(),
+        ));
     }
     let answer: Value = serde_json::from_str(&line)?;
     match answer.get("error").and_then(Value::as_str) {
@@ -45,10 +47,17 @@ pub fn ask(request: &Value) -> Result<Value> {
     }
 }
 
-/// Show `path` on `monitor` through the daemon's renderer, starting the
+/// Show `path` on `monitor` through the daemon's renderer, coming in with
+/// `transition` (the renderer's kinds: the others fade), starting the
 /// daemon first if it isn't running.
-pub fn show(runner: &dyn Runner, monitor: &str, path: &Path, fit: Option<FitMode>) -> Result<()> {
-    show_with(runner, monitor, path, fit, &ask, &std::thread::sleep)
+pub fn show(
+    runner: &dyn Runner,
+    monitor: &str,
+    path: &Path,
+    fit: Option<FitMode>,
+    transition: &Transition,
+) -> Result<()> {
+    show_with(runner, monitor, path, fit, transition, &ask, &std::thread::sleep)
 }
 
 /// [`show`] with the socket and the waiting injectable (tests).
@@ -57,10 +66,12 @@ pub fn show_with(
     monitor: &str,
     path: &Path,
     fit: Option<FitMode>,
+    transition: &Transition,
     ask: &dyn Fn(&Value) -> Result<Value>,
     sleep: &dyn Fn(Duration),
 ) -> Result<()> {
-    let request = json!({ "cmd": "show", "monitor": monitor, "path": path, "fit": fit });
+    let transition = json!({ "kind": transition.kind, "duration_ms": transition.duration_ms });
+    let request = json!({ "cmd": "show", "monitor": monitor, "path": path, "fit": fit, "transition": transition });
     match ask(&request) {
         Err(Error::DaemonNotRunning) => {}
         other => return other.map(drop),
@@ -75,7 +86,9 @@ pub fn show_with(
             _ => return ask(&request).map(drop),
         }
     }
-    Err(Error::Invalid("started wallpicker daemon, but it didn't come up; start it from Hyprland's autostart".into()))
+    Err(Error::Invalid(
+        "started wallpicker daemon, but it didn't come up; start it from Hyprland's autostart".into(),
+    ))
 }
 
 #[cfg(test)]
@@ -115,8 +128,17 @@ mod tests {
         };
         let runner = Spawns(RefCell::new(Vec::new()));
         let slept = RefCell::new(0);
-        show_with(&runner, "DP-1", Path::new("/w/a.png"), Some(FitMode::Contain), &ask, &|_| *slept.borrow_mut() += 1)
-            .unwrap();
+        let t = Transition::default();
+        show_with(
+            &runner,
+            "DP-1",
+            Path::new("/w/a.png"),
+            Some(FitMode::Contain),
+            &t,
+            &ask,
+            &|_| *slept.borrow_mut() += 1,
+        )
+        .unwrap();
         assert_eq!(*asked.borrow(), ["show", "status", "status", "show"]);
         assert_eq!(*runner.0.borrow(), ["daemon"]);
         assert_eq!(*slept.borrow(), 1);
@@ -124,10 +146,21 @@ mod tests {
 
     #[test]
     fn its_errors_are_reported_as_they_are() {
-        let (_, answers) = script(vec![Err(Error::Invalid("wallpicker daemon: no monitor named HDMI-9".into()))]);
+        let (_, answers) = script(vec![Err(Error::Invalid(
+            "wallpicker daemon: no monitor named HDMI-9".into(),
+        ))]);
         let ask = |_: &Value| answers.borrow_mut().pop_front().unwrap();
         let runner = Spawns(RefCell::new(Vec::new()));
-        let e = show_with(&runner, "HDMI-9", Path::new("/w/a.png"), None, &ask, &|_| {}).unwrap_err();
+        let e = show_with(
+            &runner,
+            "HDMI-9",
+            Path::new("/w/a.png"),
+            None,
+            &Transition::default(),
+            &ask,
+            &|_| {},
+        )
+        .unwrap_err();
         assert!(e.to_string().contains("no monitor named HDMI-9"));
         assert!(runner.0.borrow().is_empty());
     }

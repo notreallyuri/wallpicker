@@ -5,14 +5,14 @@
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
+use wallpicker_core::cmd::SystemRunner;
+use wallpicker_core::hyprpaper;
 use wallpicker_core::moebooru::{MoebooruQuery, MoebooruSort, Ratings};
+use wallpicker_core::noctalia;
 use wallpicker_core::online::{MIN_RESOLUTIONS, OnlineFilters, Provider};
 use wallpicker_core::settings::{self, Settings, WallpaperBackend};
 use wallpicker_core::store::{Dirs, Store};
 use wallpicker_core::wallhaven::{self, SearchQuery, Sorting};
-use wallpicker_core::cmd::SystemRunner;
-use wallpicker_core::hyprpaper;
-use wallpicker_core::noctalia;
 
 use super::{Choice, choices, fail, print_json, usage_for};
 
@@ -149,15 +149,24 @@ fn print_filters(store: &Store, f: &OnlineFilters) -> i32 {
         options: FilterOptions {
             wallhaven_sorts: Sorting::ALL
                 .iter()
-                .map(|s| Choice { value: s.as_str(), label: s.label() })
+                .map(|s| Choice {
+                    value: s.as_str(),
+                    label: s.label(),
+                })
                 .collect(),
             moebooru_sorts: MoebooruSort::ALL
                 .iter()
-                .map(|s| Choice { value: s.as_str(), label: s.label() })
+                .map(|s| Choice {
+                    value: s.as_str(),
+                    label: s.label(),
+                })
                 .collect(),
             top_ranges: wallhaven::TOP_RANGES
                 .iter()
-                .map(|(r, label)| Choice { value: r.as_str(), label })
+                .map(|(r, label)| Choice {
+                    value: r.as_str(),
+                    label,
+                })
                 .collect(),
             ratios: choices(&wallhaven::RATIOS),
             resolutions: choices(&wallhaven::RESOLUTIONS),
@@ -303,8 +312,9 @@ pub fn settings(args: &[String]) -> i32 {
             let switched = s.wallpaper_backend != backend_before;
             let after = hyprpaper::Fits::load(&store);
             if s.wallpaper_backend != WallpaperBackend::Noctalia
-                && let Err(e) =
-                    hyprpaper::reapply(&SystemRunner, &store, &|m, p| switched || before.of(m, p) != after.of(m, p))
+                && let Err(e) = hyprpaper::reapply(&SystemRunner, &store, &|m, p| {
+                    switched || before.of(m, p) != after.of(m, p)
+                })
             {
                 eprintln!("wallpicker: could not re-apply the wallpapers: {e}");
             }
@@ -340,7 +350,7 @@ fn print_settings(s: &Settings) -> i32 {
         options: SettingsOptions {
             backends: choices(&settings::BACKENDS),
             fit_modes: choices(&settings::fit_modes(s.wallpaper_backend)),
-            transitions: choices(&settings::TRANSITIONS),
+            transitions: choices(&settings::transition_modes(s.wallpaper_backend)),
             konachan_sites: choices(&settings::KONACHAN_SITES),
         },
     })
@@ -378,7 +388,13 @@ fn set_settings(s: &mut Settings, pairs: &[String]) -> Result<(), String> {
             "recursive" => next.recursive = boolean(key, value)?,
             "close_to_tray" => next.close_to_tray = boolean(key, value)?,
             "backend" => next.wallpaper_backend = enum_value(key, value)?,
-            "fit_mode" => next.fit_mode = if value.is_empty() { None } else { Some(enum_value(key, value)?) },
+            "fit_mode" => {
+                next.fit_mode = if value.is_empty() {
+                    None
+                } else {
+                    Some(enum_value(key, value)?)
+                }
+            }
             "thumb_width" => {
                 next.thumb_width = value
                     .parse::<u32>()
@@ -461,7 +477,10 @@ fn set_settings(s: &mut Settings, pairs: &[String]) -> Result<(), String> {
                 }
             }
             "wallhaven_api_key" => {
-                return Err("set the Wallhaven API key in the app (Settings → Wallhaven), so it never sits on a command line".into());
+                return Err(
+                    "set the Wallhaven API key in the app (Settings → Wallhaven), so it never sits on a command line"
+                        .into(),
+                );
             }
             _ => return Err(format!("{key} isn't a setting")),
         }
@@ -533,7 +552,7 @@ fn color(key: &str, value: &str) -> Result<Option<String>, String> {
     if v.is_empty() {
         return Ok(None);
     }
-    settings::known_color(Some(v.to_string()))
-        .map(Some)
-        .ok_or_else(|| format!("{key}: {v}? one of red orange yellow green teal blue purple pink dark light warm muted, or empty"))
+    settings::known_color(Some(v.to_string())).map(Some).ok_or_else(|| {
+        format!("{key}: {v}? one of red orange yellow green teal blue purple pink dark light warm muted, or empty")
+    })
 }

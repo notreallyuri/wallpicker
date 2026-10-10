@@ -27,7 +27,7 @@ use serde::Serialize;
 
 use crate::cmd::Runner;
 use crate::error::{Error, Result};
-use crate::monitors::{Monitor, parse_monitors};
+use crate::monitors::Monitor;
 use crate::settings::{FitMode, Settings, SpanLook, SpanPoint, WallpaperBackend};
 use crate::store::Store;
 
@@ -98,10 +98,10 @@ pub fn config_for(state: &crate::settings::State, fit_of: &dyn Fn(&str, &Path) -
     out
 }
 
-/// Monitors Hyprland currently knows about.
+/// Connected monitors, independent of the selected wallpaper backend.
+/// Kept here for callers of the original API; discovery lives in `monitors`.
 pub fn list_monitors(runner: &dyn Runner) -> Result<Vec<Monitor>> {
-    let json = runner.run("hyprctl", &["monitors", "-j"])?;
-    parse_monitors(&json)
+    crate::monitors::list(runner)
 }
 
 /// Set `path` as the wallpaper of one monitor.
@@ -171,12 +171,7 @@ fn explain_failure(err: Error, socket: Option<&Path>) -> Error {
 
 /// Apply one image to several monitors. Every monitor is attempted; the first
 /// error (if any) is returned afterwards.
-pub fn apply_to(
-    runner: &dyn Runner,
-    monitors: &[String],
-    path: &Path,
-    fit: Option<FitMode>,
-) -> Result<()> {
+pub fn apply_to(runner: &dyn Runner, monitors: &[String], path: &Path, fit: Option<FitMode>) -> Result<()> {
     let mut first_err = None;
     for m in monitors {
         if let Err(e) = apply(runner, m, path, fit) {
@@ -201,12 +196,7 @@ pub struct ApplyReport {
 /// Apply `path` to each monitor and record every success in the state file, so
 /// [`restore`] can bring it back after a reboot. Monitors fail independently:
 /// one bad output doesn't stop the others or lose their saved state.
-pub fn apply_and_remember(
-    runner: &dyn Runner,
-    store: &Store,
-    monitors: &[String],
-    path: &Path,
-) -> Result<ApplyReport> {
+pub fn apply_and_remember(runner: &dyn Runner, store: &Store, monitors: &[String], path: &Path) -> Result<ApplyReport> {
     apply_and_remember_with(runner, store, WallpaperBackend::Hyprpaper, monitors, path)
 }
 
@@ -233,7 +223,7 @@ impl Fits {
         if adjust.frame.is_some() {
             return None;
         }
-        self.settings.fit_for(monitor, adjust.fit)
+        adjust.effective_fit(&self.settings, monitor)
     }
 }
 
@@ -262,21 +252,37 @@ impl Backend {
         }
     }
 
+    /// Interactive adjustments replace the current frame immediately.
+    /// This affects only this operation; saved transition preferences stay intact.
+    pub fn without_transition(mut self) -> Self {
+        self.transition.kind = "none".into();
+        self.transition.duration_ms = 0;
+        self
+    }
+
     /// The one in the settings.
     pub fn from_settings(store: &Store) -> Backend {
-        Backend::new(store.load_settings().map(|s| s.wallpaper_backend).unwrap_or_default(), store)
+        Backend::new(
+            store.load_settings().map(|s| s.wallpaper_backend).unwrap_or_default(),
+            store,
+        )
     }
 
     /// Show `path` on `monitor`. With Noctalia, `fit` doesn't apply: its
     /// fill mode is a setting of its own.
     pub fn apply(&self, runner: &dyn Runner, monitor: &str, path: &Path, fit: Option<FitMode>) -> Result<()> {
         let (file, fit) = self.shown(monitor, path, fit)?;
-        let path = file.as_path();
+        self.apply_prepared(runner, monitor, &file, fit)
+    }
+
+    /// Show an already prepared image without consulting the current adjustments.
+    /// Batch operations use this after preparing every image before application.
+    pub fn apply_prepared(&self, runner: &dyn Runner, monitor: &str, path: &Path, fit: Option<FitMode>) -> Result<()> {
         match self.kind {
             WallpaperBackend::Hyprpaper => apply(runner, monitor, path, fit),
             WallpaperBackend::Awww => crate::awww::apply(runner, monitor, path, fit, &self.transition),
             WallpaperBackend::Noctalia => crate::noctalia::apply(runner, monitor, path, self.noctalia_enabled),
-            WallpaperBackend::Wallpicker => crate::daemon::show(runner, monitor, path, fit),
+            WallpaperBackend::Wallpicker => crate::daemon::show(runner, monitor, path, fit, &self.transition),
         }
     }
 
@@ -302,7 +308,14 @@ impl Backend {
 /// over the screen (whichever drew last is on top). Names to show, like
 /// "hyprpaper" or "Noctalia's wallpaper".
 /// The wallpaper programs [`conflicts`] looks for, and [`stop_program`] stops.
-const DAEMONS: [&str; 6] = ["hyprpaper", "awww-daemon", "swww-daemon", "swaybg", "mpvpaper", "wpaperd"];
+const DAEMONS: [&str; 6] = [
+    "hyprpaper",
+    "awww-daemon",
+    "swww-daemon",
+    "swaybg",
+    "mpvpaper",
+    "wpaperd",
+];
 
 pub fn conflicts(runner: &dyn Runner, backend: WallpaperBackend) -> Vec<String> {
     let mine: &[&str] = match backend {
@@ -398,10 +411,18 @@ pub struct SpanAsk {
 /// The monitors chosen and the arrangement are kept for next time.
 /// Temporary like any adjustment: another wallpaper on one of them ends the
 /// span.
-pub fn span_and_remember(runner: &dyn Runner, store: &Store, backend: WallpaperBackend, path: &Path, look: SpanLook, ask: SpanAsk) -> Result<ApplyReport> {
+pub fn span_and_remember(
+    runner: &dyn Runner,
+    store: &Store,
+    backend: WallpaperBackend,
+    path: &Path,
+    look: SpanLook,
+    ask: SpanAsk,
+) -> Result<ApplyReport> {
     if !crate::library::is_supported_image(path) {
         return Err(Error::Invalid(format!("unsupported image type: {}", path.display())));
     }
+    let adjusting_span = store.load_state()?.span.is_some_and(|span| span.path == path);
     let connected = list_monitors(runner)?;
     let mut settings = store.load_settings()?;
     let wanted = ask.monitors.unwrap_or_else(|| settings.span_monitors.clone());
@@ -432,6 +453,7 @@ pub fn span_and_remember(runner: &dyn Runner, store: &Store, backend: WallpaperB
     store.set_span(path, look, &cuts, places)?;
     // Read after the cuts are saved: each monitor is shown its part.
     let backend = Backend::new(backend, store);
+    let backend = if adjusting_span { backend.without_transition() } else { backend };
     let fits = Fits::load(store);
     let mut report = ApplyReport::default();
     for (m, _) in &cuts {
@@ -475,18 +497,32 @@ pub fn span_layout(runner: &dyn Runner, store: &Store, fresh: bool, bezel: Optio
     let saved = if fresh { BTreeMap::new() } else { settings.span_layout.clone() };
     let monitors: Vec<SpanMonitor> = crate::span::arrangement(&connected, &saved, bezel)
         .into_iter()
-        .map(|p| SpanMonitor { name: p.name, rect: p.rect, out_width: p.out_width, out_height: p.out_height })
+        .map(|p| SpanMonitor {
+            name: p.name,
+            rect: p.rect,
+            out_width: p.out_width,
+            out_height: p.out_height,
+        })
         .collect();
     let mut chosen: Vec<String> = monitors.iter().map(|m| m.name.clone()).filter(|n| settings.span_monitors.contains(n)).collect();
     if chosen.len() < 2 {
         chosen = monitors.iter().map(|m| m.name.clone()).collect();
     }
-    Ok(SpanLayout { monitors, chosen, bezel })
+    Ok(SpanLayout {
+        monitors,
+        chosen,
+        bezel,
+    })
 }
 
 /// Put back what each of `monitors` showed before ([`Store::previous`]),
 /// with its fit; monitors with nothing earlier are reported as failed.
-pub fn apply_previous(runner: &dyn Runner, store: &Store, backend: WallpaperBackend, monitors: &[String]) -> Result<ApplyReport> {
+pub fn apply_previous(
+    runner: &dyn Runner,
+    store: &Store,
+    backend: WallpaperBackend,
+    monitors: &[String],
+) -> Result<ApplyReport> {
     let fits = Fits::load(store);
     let backend = Backend::new(backend, store);
     let mut report = ApplyReport::default();
@@ -575,7 +611,7 @@ pub fn restore_with(
 pub fn reapply(runner: &dyn Runner, store: &Store, which: &dyn Fn(&str, &Path) -> bool) -> Result<ApplyReport> {
     let state = store.load_state()?;
     let fits = Fits::load(store);
-    let backend = Backend::from_settings(store);
+    let backend = Backend::from_settings(store).without_transition();
     let connected = list_monitors(runner)?;
     let mut report = ApplyReport::default();
     for (m, path) in &state.current {
@@ -607,12 +643,7 @@ pub fn saved_for(store: &Store, monitor: &str) -> Option<(PathBuf, Option<FitMod
 }
 
 /// [`restore_with`] using real sleeping.
-pub fn restore(
-    runner: &dyn Runner,
-    store: &Store,
-    attempts: u32,
-    delay: Duration,
-) -> Result<RestoreReport> {
+pub fn restore(runner: &dyn Runner, store: &Store, attempts: u32, delay: Duration) -> Result<RestoreReport> {
     restore_with(runner, store, attempts, delay, &std::thread::sleep)
 }
 
@@ -760,10 +791,7 @@ mod tests {
     fn reports_hyprpapers_reply_when_everything_fails() {
         let tmp = tempfile::tempdir().unwrap();
         let img = temp_image(tmp.path(), "a.png");
-        let mock = Mock::new(vec![
-            Ok("nope".into()),
-            Ok("preload failed: bad image".into()),
-        ]);
+        let mock = Mock::new(vec![Ok("nope".into()), Ok("preload failed: bad image".into())]);
         let err = apply(&mock, "DP-1", &img, None).unwrap_err();
         assert!(err.to_string().contains("preload failed: bad image"));
     }
@@ -824,11 +852,7 @@ mod tests {
         let img = temp_image(tmp.path(), "a.png");
         // DP-1: direct form fails, preload fails -> error.
         // DP-2: direct form succeeds.
-        let mock = Mock::new(vec![
-            Ok("bad".into()),
-            Ok("preload failed".into()),
-            Ok("ok".into()),
-        ]);
+        let mock = Mock::new(vec![Ok("bad".into()), Ok("preload failed".into()), Ok("ok".into())]);
         let monitors = vec!["DP-1".to_string(), "DP-2".to_string()];
         let err = apply_to(&mock, &monitors, &img, None).unwrap_err();
         assert!(err.to_string().contains("preload failed"));
@@ -843,11 +867,7 @@ mod tests {
         let img = temp_image(tmp.path(), "a.png");
 
         // DP-1 fails completely, DP-2 works.
-        let mock = Mock::new(vec![
-            Ok("bad".into()),
-            Ok("preload failed".into()),
-            Ok("ok".into()),
-        ]);
+        let mock = Mock::new(vec![Ok("bad".into()), Ok("preload failed".into()), Ok("ok".into())]);
         let monitors = vec!["DP-1".to_string(), "DP-2".to_string()];
         let report = apply_and_remember(&mock, &store, &monitors, &img).unwrap();
 
@@ -939,7 +959,11 @@ mod tests {
     fn previous_goes_back_through_the_history() {
         let tmp = tempfile::tempdir().unwrap();
         let store = Store::new(Dirs::under(tmp.path()));
-        let (a, b, c) = (temp_image(tmp.path(), "a.png"), temp_image(tmp.path(), "b.png"), temp_image(tmp.path(), "c.png"));
+        let (a, b, c) = (
+            temp_image(tmp.path(), "a.png"),
+            temp_image(tmp.path(), "b.png"),
+            temp_image(tmp.path(), "c.png"),
+        );
         let m = vec!["DP-1".to_string()];
         for p in [&a, &b, &c] {
             apply_and_remember(&Mock::new(vec![]), &store, &m, p).unwrap();

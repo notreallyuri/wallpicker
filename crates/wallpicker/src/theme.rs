@@ -9,7 +9,6 @@ use std::process::Command;
 
 use serde::{Deserialize, Serialize};
 use wallpicker_core::cmd::SystemRunner;
-use wallpicker_core::hyprpaper;
 use wallpicker_core::noctalia;
 use wallpicker_core::store::Store;
 
@@ -50,7 +49,7 @@ fn only_colors(v: &serde_json::Value) -> BTreeMap<String, String> {
 /// first connected monitor's, else any monitor's that still exists.
 pub(crate) fn source_image(store: &Store, monitor: Option<&str>) -> Option<PathBuf> {
     let state = store.load_state().ok()?;
-    let monitors = hyprpaper::list_monitors(&SystemRunner).unwrap_or_default();
+    let monitors = wallpicker_core::monitors::list(&SystemRunner).unwrap_or_default();
     monitor
         .and_then(|m| state.current.get(m))
         .into_iter()
@@ -67,7 +66,9 @@ pub fn palette(store: &Store) -> Result<Option<Palette>, String> {
     if !settings.theme_from_wallpaper {
         return Ok(None);
     }
-    let Some(image) = source_image(store, settings.theme_monitor.as_deref()) else { return Ok(None) };
+    let Some(image) = source_image(store, settings.theme_monitor.as_deref()) else {
+        return Ok(None);
+    };
     let scheme = noctalia::wallpaper_scheme_on_disk().unwrap_or_else(|| "m3-tonal-spot".into());
     let modified = image
         .metadata()
@@ -89,11 +90,21 @@ pub fn palette(store: &Store) -> Result<Option<Palette>, String> {
         _ => return Ok(None),
     };
     let json: serde_json::Value = serde_json::from_slice(&out).map_err(|e| format!("Noctalia's palette: {e}"))?;
-    let palette = Palette { image: image.clone(), scheme: scheme.clone(), dark: only_colors(&json["dark"]), light: only_colors(&json["light"]) };
+    let palette = Palette {
+        image: image.clone(),
+        scheme: scheme.clone(),
+        dark: only_colors(&json["dark"]),
+        light: only_colors(&json["light"]),
+    };
     if palette.dark.is_empty() || palette.light.is_empty() {
         return Ok(None);
     }
-    let cached = Cached { image, modified, scheme, palette: palette.clone() };
+    let cached = Cached {
+        image,
+        modified,
+        scheme,
+        palette: palette.clone(),
+    };
     if let Ok(text) = serde_json::to_string(&cached) {
         let _ = std::fs::write(cache_file, text);
     }
