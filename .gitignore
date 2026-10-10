@@ -1,5 +1,4 @@
 /target
 node_modules
-prototype/gpui-local/target
 __pycache__/
 *.pyc
