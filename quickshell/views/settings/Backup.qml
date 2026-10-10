@@ -27,7 +27,7 @@ ColumnLayout {
         Backend.request("backup.default_path", {}, suggested => {
             const cut = suggested.lastIndexOf("/");
             Files.save({
-                title: "Export the wallpicker library",
+                title: "Export the wallpicker library and presets",
                 folder: suggested.slice(0, cut),
                 name: suggested.slice(cut + 1),
                 filter: {
@@ -42,7 +42,7 @@ ColumnLayout {
                     path: path
                 }, e => {
                     section.busy = false;
-                    Toasts.info("Exported " + e.items + " wallpapers", e.path);
+                    Toasts.info("Exported " + e.items + " wallpapers and " + e.presets + " presets", e.path);
                 }, e => {
                     section.busy = false;
                     Toasts.error("Could not export", e);
@@ -70,6 +70,9 @@ ColumnLayout {
                 let text = "Found " + r.same_place + " where they were, " + r.moved + " moved.";
                 if (r.missing.length > 0)
                     text += " Not in your library now (" + r.missing.length + "): " + r.missing.join(", ") + ".";
+                text += r.presets === null ? " Presets left untouched (older backup)." : " Imported " + r.presets + " presets.";
+                if (r.preset_images_missing.length)
+                    text += " Missing preset images: " + r.preset_images_missing.join(", ") + ". Saved paths are retained.";
                 section.report = text;
                 section.reload();
             }, e => {
@@ -111,7 +114,7 @@ ColumnLayout {
             id: id
         }, c => {
             section.busy = false;
-            Toasts.info("Library restored (" + Object.keys(c.items || {}).length + " wallpapers)");
+            Toasts.info("Backup restored (" + Object.keys(c.items || {}).length + " wallpapers)");
             section.reload();
         }, e => {
             section.busy = false;
@@ -124,7 +127,7 @@ ColumnLayout {
     Field {
         Layout.fillWidth: true
         label: "To a file"
-        description: "Favorites, tags and fits, in one file. An import is merged into your library: a wallpaper that moved (another folder, another home) is found by its place in your wallpaper folders, or by name and size."
+        description: "Favorites, tags, fits and presets, in one file. Older library-only backups leave presets untouched. An import is merged into your library: a wallpaper that moved (another folder, another home) is found by its place in your wallpaper folders, or by name and size."
         RowLayout {
             spacing: 8
             Btn {
@@ -144,7 +147,7 @@ ColumnLayout {
         }
     }
     ToggleField {
-        label: "Replace the library instead of merging"
+        label: "Replace the library and presets instead of merging"
         checked: section.replace
         onToggled: section.replace = !section.replace
     }
@@ -157,7 +160,7 @@ ColumnLayout {
     Field {
         Layout.fillWidth: true
         label: "Daily snapshots"
-        description: "A copy of the library before the first change of each day; the last 14 are kept. Restoring keeps what's there now as a snapshot too. A synced folder (Syncthing, Nextcloud…) makes them backups off this machine."
+        description: "A copy of the library and presets before the first change of each day; the last 14 are kept. Restoring keeps what's there now as a snapshot too. A synced folder (Syncthing, Nextcloud…) makes them backups off this machine."
         RowLayout {
             Layout.fillWidth: true
             spacing: 8
@@ -189,7 +192,7 @@ ColumnLayout {
     }
     Note {
         visible: section.snapshots !== null && section.snapshots.length === 0
-        text: "None yet: the first comes with the first change to the library today."
+        text: "None yet: the first comes with the first change to the library or presets today."
     }
     Repeater {
         model: section.snapshots || []

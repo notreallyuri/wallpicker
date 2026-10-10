@@ -25,7 +25,7 @@ RowLayout {
     }
     Text {
         Layout.fillWidth: true
-        text: row.snapshot.items + (row.snapshot.items === 1 ? " wallpaper" : " wallpapers")
+        text: row.snapshot.items + (row.snapshot.items === 1 ? " wallpaper" : " wallpapers") + (row.snapshot.presets === null ? " · library only" : " · " + row.snapshot.presets + " presets")
         color: Theme.mutedForeground
         font.family: Theme.font
         font.pixelSize: 13

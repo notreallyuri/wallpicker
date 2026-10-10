@@ -331,6 +331,7 @@ pub struct Snapshot {
     pub label: String,
     /// How many wallpapers it has favorites, tags or fits for.
     pub items: usize,
+    pub presets: Option<usize>,
 }
 
 /// How many daily snapshots are kept.
@@ -378,9 +379,9 @@ impl Store {
     /// Before the first change of a day: a copy of the library as it was
     /// (`backups/library-YYYY-MM-DD.json`), keeping the newest
     /// [`SNAPSHOTS_KEPT`].
-    fn snapshot_catalog(&self) -> Result<()> {
+    pub(crate) fn snapshot_catalog(&self) -> Result<()> {
         let src = self.catalog_path();
-        if !src.is_file() {
+        if !src.is_file() && !self.presets_path().is_file() {
             return Ok(());
         }
         let (date, _) = crate::backup::date_and_time(now_secs());
@@ -390,7 +391,8 @@ impl Store {
             return Ok(());
         }
         fs::create_dir_all(&dir)?;
-        fs::copy(&src, &target)?;
+        let backup = self.export_backup(crate::backup::date_and_time(now_secs()).1)?;
+        atomic_write(&target, &serde_json::to_vec_pretty(&backup)?, false)?;
         self.prune_snapshots()
     }
 
@@ -425,10 +427,16 @@ impl Store {
         Ok(ids
             .into_iter()
             .map(|id| {
-                let items = fs::read_to_string(self.snapshots_dir().join(format!("{id}.json")))
+                let contents = fs::read_to_string(self.snapshots_dir().join(format!("{id}.json")))
                     .ok()
-                    .and_then(|t| serde_json::from_str::<Catalog>(&t).ok())
-                    .map_or(0, |c| c.items.len());
+                    .and_then(|t| serde_json::from_str::<serde_json::Value>(&t).ok());
+                let (items, presets) = contents.map_or((0, None), |v| {
+                    if v.get("wallpicker_backup").is_some() {
+                        serde_json::from_value::<crate::backup::Backup>(v).map_or((0,None), |b| (b.items.len(), b.presets.map(|p| p.items.len())))
+                    } else {
+                        serde_json::from_value::<Catalog>(v).map_or((0,None), |c| (c.items.len(), None))
+                    }
+                });
                 let rest = &id["library-".len()..];
                 let label = match rest.split_at_checked(10) {
                     Some((date, time)) if time.len() == 7 => {
@@ -436,7 +444,7 @@ impl Store {
                     }
                     _ => rest.to_string(),
                 };
-                Snapshot { id, label, items }
+                Snapshot { id, label, items, presets }
             })
             .collect())
     }
@@ -448,18 +456,28 @@ impl Store {
             return Err(crate::error::Error::Invalid(format!("no such snapshot: {id}")));
         }
         let text = fs::read_to_string(self.snapshots_dir().join(format!("{id}.json")))?;
-        let mut snapshot: Catalog = serde_json::from_str(&text)?;
+        let value: serde_json::Value = serde_json::from_str(&text)?;
+        let (mut snapshot, mut presets) = if value.get("wallpicker_backup").is_some() {
+            let backup: crate::backup::Backup = serde_json::from_value(value)?;
+            backup.validate()?;
+            let mut catalog = Catalog::default();
+            for item in backup.items { catalog.items.insert(item.path, item.entry); }
+            (catalog, backup.presets)
+        } else { (serde_json::from_value::<Catalog>(value)?, None) };
+        let _lock = self.backup_lock()?;
+        if let Some(saved) = &mut presets { saved.next_id = saved.next_id.max(self.preset_collection()?.next_id); }
+
         snapshot.version = crate::catalog::VERSION;
         let src = self.catalog_path();
-        if src.is_file() {
+        if src.is_file() || self.presets_path().is_file() {
             let secs = now_secs();
             let (date, _) = crate::backup::date_and_time(secs);
             let stamp = format!("{:02}{:02}{:02}", (secs / 3600) % 24, (secs / 60) % 60, secs % 60);
             fs::create_dir_all(self.snapshots_dir())?;
-            fs::copy(&src, self.snapshots_dir().join(format!("library-{date}-{stamp}.json")))?;
+            let backup = self.export_backup(crate::backup::date_and_time(secs).1)?;
+            atomic_write(&self.snapshots_dir().join(format!("library-{date}-{stamp}.json")), &serde_json::to_vec_pretty(&backup)?, false)?;
         }
-        let text = serde_json::to_string_pretty(&snapshot)?;
-        atomic_write(&src, text.as_bytes(), false)?;
+        self.write_backup_data(&snapshot, presets.as_ref())?;
         Ok(snapshot)
     }
 }

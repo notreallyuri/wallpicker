@@ -11,7 +11,7 @@ mod span_tests;
 mod storage;
 #[cfg(test)]
 mod tests;
-mod validation;
+pub(crate) mod validation;
 
 use crate::settings::{FitMode, Flip, SpanLook, SpanPoint};
 use serde::{Deserialize, Serialize};
@@ -70,15 +70,19 @@ pub struct PresetSpan {
     pub bezel: u32,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-struct Collection {
-    version: u32,
-    next_id: u64,
-    items: Vec<Preset>,
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Collection {
+    pub version: u32,
+    pub next_id: u64,
+    pub items: Vec<Preset>,
 }
 
 impl Default for Collection {
     fn default() -> Self {
-        Self { version: FORMAT, next_id: 1, items: Vec::new() }
+        Self {
+            version: FORMAT,
+            next_id: 1,
+            items: Vec::new(),
+        }
     }
 }

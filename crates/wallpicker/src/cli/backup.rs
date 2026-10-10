@@ -4,8 +4,8 @@ use wallpicker_core::store::{Dirs, Store};
 
 use super::{fail, print_json, usage_for};
 
-const USAGE: &str = "usage: wallpicker backup export [FILE]      the library (favorites, tags, fits) to one file\n       \
-     wallpicker backup import FILE [--replace]  merge a backup in (or make the library exactly it)\n       \
+const USAGE: &str = "usage: wallpicker backup export [FILE]      library and presets to one file\n       \
+     wallpicker backup import FILE [--replace]  merge a backup in (or replace library and presets)\n       \
      wallpicker backup snapshots [--json]     the automatic daily copies, newest first\n       \
      wallpicker backup restore ID             put a snapshot back (what's there now is kept as one)";
 
@@ -15,7 +15,12 @@ pub fn backup(args: &[String]) -> i32 {
     match args.first().map(String::as_str) {
         Some("export") => match crate::backup::export(&store, args.get(1).map(String::as_str)) {
             Ok(e) => {
-                println!("exported {} wallpapers to {}", e.items, e.path.display());
+                println!(
+                    "exported {} wallpapers and {} presets to {}",
+                    e.items,
+                    e.presets,
+                    e.path.display()
+                );
                 0
             }
             Err(e) => fail(&e),
@@ -32,6 +37,18 @@ pub fn backup(args: &[String]) -> i32 {
                     if !r.missing.is_empty() {
                         println!("not in the library now ({}): {}", r.missing.len(), r.missing.join(", "));
                     }
+                    match r.presets {
+                        Some(count) => {
+                            println!("imported {count} presets ({} images relocated)", r.preset_images_moved)
+                        }
+                        None => println!("older library-only backup: presets left untouched"),
+                    }
+                    if !r.preset_images_missing.is_empty() {
+                        println!(
+                            "missing preset images (original paths retained): {}",
+                            r.preset_images_missing.join(", ")
+                        );
+                    }
                     0
                 }
                 Err(e) => fail(&e),
@@ -44,7 +61,17 @@ pub fn backup(args: &[String]) -> i32 {
                     println!("no snapshots yet (one is made before the first change each day)");
                 }
                 for s in list {
-                    println!("{}  {}  ({} wallpaper{})", s.id, s.label, s.items, if s.items == 1 { "" } else { "s" });
+                    println!(
+                        "{}  {}  ({} wallpaper{})",
+                        s.id,
+                        s.label,
+                        s.items,
+                        if s.items == 1 { "" } else { "s" }
+                    );
+                    match s.presets {
+                        Some(count) => println!("  {count} presets"),
+                        None => println!("  library only; presets left untouched on restore"),
+                    }
                 }
                 0
             }

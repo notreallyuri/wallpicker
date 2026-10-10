@@ -164,9 +164,10 @@ rotates or changes the resolution of the actual desktops.
 
 - [ ] Add explicit monitor reassignment for renamed/replaced connectors, with a preview and
   validation of one-to-one mapping; update span membership/canvas references consistently.
-- [ ] Add preset export/import and backup coverage without silently changing the existing
-  library-only backup contract. Preserve original paths, report missing images and reuse
-  library path relocation rules where appropriate; export does not bundle wallpaper files.
+- [x] Include presets in backup export/import and daily snapshots. Older library-only backups
+  leave presets untouched; preserve IDs, adjustments and original missing paths, and reuse
+  library image relocation. Backups do not bundle wallpaper files.
+- [ ] Standalone preset export/import for sharing individual setups.
 - [ ] Document presets, missing-display behavior, automation and CLI usage in README. Verify
   two/three displays, reordered connector enumeration, unplug/replug, separate and span mode,
   restored zoom/pan/flips and a backend failure on the desktop before marking complete.
