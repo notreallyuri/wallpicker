@@ -117,22 +117,40 @@ MonitorFigure {
     MouseArea {
         anchors.fill: parent
         cursorShape: pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor
-        property point last
-        onPressed: mouse => last = Qt.point(mouse.x, mouse.y)
-        onPositionChanged: mouse => {
-            if (framer.naturalWidth === 0)
-                return;
-            framer.moved(Frame.dragged(framer.current(), framer.naturalWidth, framer.naturalHeight, framer.screenWidth, mouse.x - last.x, mouse.y - last.y, framer.adjusted.flip));
-            last = Qt.point(mouse.x, mouse.y);
+        property point origin
+        property var startFrame: null
+        onPressed: mouse => {
+            origin = Qt.point(mouse.x, mouse.y);
+            startFrame = framer.current();
         }
-        onReleased: framer.settled()
+        onPositionChanged: mouse => {
+            if (!pressed || !startFrame || framer.naturalWidth === 0)
+                return;
+            // Accumulate the whole gesture before quantizing the saved center.
+            // Tiny events at high zoom otherwise round away in one direction.
+            framer.moved(Frame.dragged(startFrame, framer.naturalWidth, framer.naturalHeight, framer.screenWidth, mouse.x - origin.x, mouse.y - origin.y, framer.adjusted.flip));
+        }
+        onReleased: {
+            startFrame = null;
+            framer.settled();
+        }
+        onCanceled: {
+            startFrame = null;
+            framer.settled();
+        }
         // Scroll to zoom: a notch is 10%.
         onWheel: wheel => {
             if (framer.naturalWidth === 0)
                 return;
             const zoomed = Frame.zoomed(framer.current(), 1 + wheel.angleDelta.y / 1200);
             // Its center kept valid at the new size.
-            framer.moved(Frame.dragged(zoomed, framer.naturalWidth, framer.naturalHeight, framer.screenWidth, 0, 0, framer.adjusted.flip));
+            const next = Frame.dragged(zoomed, framer.naturalWidth, framer.naturalHeight, framer.screenWidth, 0, 0, framer.adjusted.flip);
+            framer.moved(next);
+            // A wheel during a held drag starts a new anchor at the new zoom.
+            if (pressed) {
+                origin = Qt.point(wheel.x, wheel.y);
+                startFrame = next;
+            }
             framer.settled();
         }
     }
