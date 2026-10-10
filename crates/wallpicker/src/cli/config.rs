@@ -6,13 +6,12 @@ use serde::Serialize;
 use serde::de::DeserializeOwned;
 
 use wallpicker_core::cmd::SystemRunner;
-use wallpicker_core::hyprpaper;
 use wallpicker_core::moebooru::{MoebooruQuery, MoebooruSort, Ratings};
-use wallpicker_core::noctalia;
 use wallpicker_core::online::{MIN_RESOLUTIONS, OnlineFilters, Provider};
-use wallpicker_core::settings::{self, Settings, WallpaperBackend};
+use wallpicker_core::settings::{self, Settings};
 use wallpicker_core::store::{Dirs, Store};
 use wallpicker_core::wallhaven::{self, SearchQuery, Sorting};
+use wallpicker_core::wallpapers;
 
 use super::{Choice, choices, fail, print_json, usage_for};
 
@@ -246,13 +245,12 @@ struct SettingsOutput {
     folders: Vec<String>,
     download_dir: String,
     recursive: bool,
-    backend: &'static str,
     /// "" is the backend's default.
     fit_mode: &'static str,
     /// Monitor name -> its own fit, over `fit_mode`.
     monitor_fits: std::collections::BTreeMap<String, &'static str>,
     slideshow: settings::Slideshow,
-    /// awww's transition (the awww backend).
+    /// Native renderer transition.
     transition: settings::Transition,
     /// Other programs drawing wallpapers besides the backend (they fight).
     other_wallpaper_programs: Vec<String>,
@@ -263,14 +261,11 @@ struct SettingsOutput {
     konachan_site: &'static str,
     /// The key itself is never printed; it's set in the app.
     api_key_set: bool,
-    /// With the Noctalia backend, Noctalia's own wallpaper must be on.
-    noctalia_wallpaper_enabled: Option<bool>,
     options: SettingsOptions,
 }
 
 #[derive(Serialize)]
 struct SettingsOptions {
-    backends: Vec<Choice>,
     fit_modes: Vec<Choice>,
     transitions: Vec<Choice>,
     konachan_sites: Vec<Choice>,
@@ -278,14 +273,14 @@ struct SettingsOptions {
 
 const SETTINGS_USAGE: &str = "usage: wallpicker settings [--json]\n       \
      wallpicker settings set KEY=VALUE...\n\
-     keys: folders (one per line) download_dir recursive backend fit_mode thumb_width span_bezel konachan_site close_to_tray\n\
+     keys: folders (one per line) download_dir recursive fit_mode thumb_width span_bezel konachan_site close_to_tray\n\
      snapshot_dir (where the daily library snapshots go; empty: the default)\n\
      monitor_fit.NAME (a monitor's own fit; empty to use fit_mode)\n\
      slideshow.enabled slideshow.minutes slideshow.favorites slideshow.tags (comma-separated)\n\
      slideshow.any slideshow.folder slideshow.monitors (comma-separated; empty: all) slideshow.each\n\
      slideshow.color (empty: any) slideshow.night.enabled slideshow.night.from slideshow.night.to (HH:MM)\n\
      slideshow.night.favorites slideshow.night.tags slideshow.night.any slideshow.night.folder slideshow.night.color\n\
-     transition.kind transition.duration_ms transition.fps (the awww backend)\n\
+     transition.kind transition.duration_ms\n\
      The Wallhaven API key is set in the app.";
 
 /// `wallpicker settings [--json]`, `settings set KEY=VALUE...`.
@@ -299,23 +294,16 @@ pub fn settings(args: &[String]) -> i32 {
         [] => print_settings(&s),
         [flag] if flag == "--json" => print_settings(&s),
         [action, pairs @ ..] if action == "set" && !pairs.is_empty() => {
-            let backend_before = s.wallpaper_backend;
             if let Err(why) = set_settings(&mut s, pairs) {
                 return usage_for("settings", &why, SETTINGS_USAGE);
             }
-            let before = hyprpaper::Fits::load(&store);
+            let before = wallpapers::Fits::load(&store);
             if let Err(e) = store.save_settings(&s) {
                 return fail(&e);
             }
-            // A new backend shows what each monitor had; a fit that changed
-            // shows right away where it applies.
-            let switched = s.wallpaper_backend != backend_before;
-            let after = hyprpaper::Fits::load(&store);
-            if s.wallpaper_backend != WallpaperBackend::Noctalia
-                && let Err(e) = hyprpaper::reapply(&SystemRunner, &store, &|m, p| {
-                    switched || before.of(m, p) != after.of(m, p)
-                })
-            {
+            // Apply changed fits immediately.
+            let after = wallpapers::Fits::load(&store);
+            if let Err(e) = wallpapers::reapply(&SystemRunner, &store, &|m, p| before.of(m, p) != after.of(m, p)) {
                 eprintln!("wallpicker: could not re-apply the wallpapers: {e}");
             }
             match store.load_settings() {
@@ -328,29 +316,23 @@ pub fn settings(args: &[String]) -> i32 {
 }
 
 fn print_settings(s: &Settings) -> i32 {
-    let noctalia_wallpaper_enabled = (s.wallpaper_backend == WallpaperBackend::Noctalia)
-        .then(noctalia::wallpaper_enabled_on_disk)
-        .flatten();
     print_json(&SettingsOutput {
         folders: s.folders.iter().map(|p| p.display().to_string()).collect(),
         download_dir: s.download_dir.display().to_string(),
         recursive: s.recursive,
-        backend: s.wallpaper_backend.as_str(),
         fit_mode: s.fit_mode.map_or("", |f| f.as_str()),
         monitor_fits: s.monitor_fits.iter().map(|(m, f)| (m.clone(), f.as_str())).collect(),
         slideshow: s.slideshow.clone(),
         transition: s.transition.clone(),
-        other_wallpaper_programs: hyprpaper::conflicts(&wallpicker_core::cmd::SystemRunner, s.wallpaper_backend),
+        other_wallpaper_programs: wallpapers::conflicts(&wallpicker_core::cmd::SystemRunner),
         close_to_tray: s.close_to_tray,
         thumb_width: s.thumb_width,
         span_bezel: s.span_bezel,
         konachan_site: s.konachan_site.as_str(),
         api_key_set: s.wallhaven_api_key.is_some(),
-        noctalia_wallpaper_enabled,
         options: SettingsOptions {
-            backends: choices(&settings::BACKENDS),
-            fit_modes: choices(&settings::fit_modes(s.wallpaper_backend)),
-            transitions: choices(&settings::transition_modes(s.wallpaper_backend)),
+            fit_modes: choices(&settings::fit_modes()),
+            transitions: choices(&settings::TRANSITIONS),
             konachan_sites: choices(&settings::KONACHAN_SITES),
         },
     })
@@ -387,7 +369,6 @@ fn set_settings(s: &mut Settings, pairs: &[String]) -> Result<(), String> {
             "download_dir" => next.download_dir = path(key, value)?,
             "recursive" => next.recursive = boolean(key, value)?,
             "close_to_tray" => next.close_to_tray = boolean(key, value)?,
-            "backend" => next.wallpaper_backend = enum_value(key, value)?,
             "fit_mode" => {
                 next.fit_mode = if value.is_empty() {
                     None
@@ -420,13 +401,14 @@ fn set_settings(s: &mut Settings, pairs: &[String]) -> Result<(), String> {
             "transition.duration_ms" => {
                 next.transition.duration_ms = value.parse().map_err(|_| format!("{key}: a number of milliseconds"))?;
             }
-            "transition.fps" => {
-                next.transition.fps = value.parse().map_err(|_| format!("{key}: a number from 1 to 255"))?;
-            }
             // Moving the snapshots along is the app's (Settings → Backup); this
             // only says where new ones go.
             "snapshot_dir" => {
-                next.snapshot_dir = if value.trim().is_empty() { None } else { Some(path(key, value)?) };
+                next.snapshot_dir = if value.trim().is_empty() {
+                    None
+                } else {
+                    Some(path(key, value)?)
+                };
             }
             "slideshow.enabled" => next.slideshow.enabled = boolean(key, value)?,
             "slideshow.minutes" => {
@@ -441,7 +423,11 @@ fn set_settings(s: &mut Settings, pairs: &[String]) -> Result<(), String> {
             "slideshow.each" => next.slideshow.each = boolean(key, value)?,
             "slideshow.tags" => next.slideshow.tags = tag_list(key, value)?,
             "slideshow.folder" => {
-                next.slideshow.folder = if value.trim().is_empty() { None } else { Some(path(key, value)?) };
+                next.slideshow.folder = if value.trim().is_empty() {
+                    None
+                } else {
+                    Some(path(key, value)?)
+                };
             }
             "slideshow.color" => next.slideshow.color = color(key, value)?,
             "slideshow.night.enabled" => next.slideshow.night.enabled = boolean(key, value)?,
@@ -459,15 +445,27 @@ fn set_settings(s: &mut Settings, pairs: &[String]) -> Result<(), String> {
             "slideshow.night.any" => next.slideshow.night.any = boolean(key, value)?,
             "slideshow.night.tags" => next.slideshow.night.tags = tag_list(key, value)?,
             "slideshow.night.folder" => {
-                next.slideshow.night.folder = if value.trim().is_empty() { None } else { Some(path(key, value)?) };
+                next.slideshow.night.folder = if value.trim().is_empty() {
+                    None
+                } else {
+                    Some(path(key, value)?)
+                };
             }
             "slideshow.night.color" => next.slideshow.night.color = color(key, value)?,
             "slideshow.monitors" => {
-                next.slideshow.monitors = value.split(',').map(str::trim).filter(|m| !m.is_empty()).map(String::from).collect();
+                next.slideshow.monitors = value
+                    .split(',')
+                    .map(str::trim)
+                    .filter(|m| !m.is_empty())
+                    .map(String::from)
+                    .collect();
             }
             k if k.starts_with("monitor_fit.") => {
                 let monitor = &k["monitor_fit.".len()..];
-                if monitor.is_empty() || monitor.len() > 64 || monitor.chars().any(|c| c.is_control() || c.is_whitespace()) {
+                if monitor.is_empty()
+                    || monitor.len() > 64
+                    || monitor.chars().any(|c| c.is_control() || c.is_whitespace())
+                {
                     return Err(format!("{k}: not a monitor name"));
                 }
                 if value.is_empty() {
@@ -492,7 +490,8 @@ fn set_settings(s: &mut Settings, pairs: &[String]) -> Result<(), String> {
 // --------------------------------------------------------------- values ----
 
 fn split_pair(pair: &str) -> Result<(&str, &str), String> {
-    pair.split_once('=').ok_or_else(|| format!("{pair:?}: expected KEY=VALUE"))
+    pair.split_once('=')
+        .ok_or_else(|| format!("{pair:?}: expected KEY=VALUE"))
 }
 
 fn bad(key: &str, value: &str) -> String {

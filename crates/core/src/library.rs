@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
-/// File extensions hyprpaper can display and the thumbnailer can decode.
+/// File extensions the renderer and thumbnailer can decode.
 pub const IMAGE_EXTENSIONS: &[&str] = &["png", "jpg", "jpeg", "webp"];
 
 pub fn is_supported_image(path: &Path) -> bool {
@@ -49,11 +49,7 @@ pub fn scan(folders: &[PathBuf], recursive: bool) -> Vec<LocalImage> {
     for folder in folders {
         walk(folder, recursive, 0, &mut out);
     }
-    out.sort_by(|a, b| {
-        b.modified
-            .cmp(&a.modified)
-            .then_with(|| a.name.cmp(&b.name))
-    });
+    out.sort_by(|a, b| b.modified.cmp(&a.modified).then_with(|| a.name.cmp(&b.name)));
     out.dedup_by(|a, b| a.path == b.path);
     out
 }
@@ -222,7 +218,10 @@ impl Place {
 /// Where browsing starts: the only wallpaper folder's top, or the list of
 /// them when there are several.
 pub fn top_place(roots: usize) -> Option<Place> {
-    (roots <= 1).then(|| Place { root: 0, folder: String::new() })
+    (roots <= 1).then(|| Place {
+        root: 0,
+        folder: String::new(),
+    })
 }
 
 /// Is an image at `place` shown when browsing `at` (at it or below)?
@@ -250,7 +249,10 @@ pub fn browse(places: &[Place], at: Option<&Place>, root_names: &[String]) -> (V
         let (name, place) = match at {
             None => (
                 root_names.get(p.root).cloned().unwrap_or_else(|| "?".into()),
-                Place { root: p.root, folder: String::new() },
+                Place {
+                    root: p.root,
+                    folder: String::new(),
+                },
             ),
             Some(at) if !at.contains(p) => continue,
             Some(at) if p.folder == at.folder => {
@@ -258,15 +260,28 @@ pub fn browse(places: &[Place], at: Option<&Place>, root_names: &[String]) -> (V
                 continue;
             }
             Some(at) => {
-                let rest = if at.folder.is_empty() { &p.folder[..] } else { &p.folder[at.folder.len() + 1..] };
+                let rest = if at.folder.is_empty() {
+                    &p.folder[..]
+                } else {
+                    &p.folder[at.folder.len() + 1..]
+                };
                 let name = rest.split('/').next().unwrap_or(rest).to_string();
-                let folder = if at.folder.is_empty() { name.clone() } else { format!("{}/{name}", at.folder) };
+                let folder = if at.folder.is_empty() {
+                    name.clone()
+                } else {
+                    format!("{}/{name}", at.folder)
+                };
                 (name, Place { root: p.root, folder })
             }
         };
         match folders.iter_mut().find(|f| f.place == place) {
             Some(f) => f.count += 1,
-            None => folders.push(Subfolder { name, place, count: 1, first: i }),
+            None => folders.push(Subfolder {
+                name,
+                place,
+                count: 1,
+                first: i,
+            }),
         }
     }
     if at.is_none() {
@@ -285,7 +300,10 @@ pub fn parent_place(at: Option<&Place>, roots: usize) -> Option<Option<Place>> {
         return (roots > 1).then_some(None);
     }
     let up = at.folder.rsplit_once('/').map_or("", |(up, _)| up);
-    Some(Some(Place { root: at.root, folder: up.to_string() }))
+    Some(Some(Place {
+        root: at.root,
+        folder: up.to_string(),
+    }))
 }
 
 /// The way to `at`, for a breadcrumb: (label, place) from the top.
@@ -296,11 +314,27 @@ pub fn trail(at: Option<&Place>, root_names: &[String], all_label: &str) -> Vec<
     }
     let Some(at) = at else { return steps };
     let root = root_names.get(at.root).cloned().unwrap_or_else(|| "?".into());
-    steps.push((root, Some(Place { root: at.root, folder: String::new() })));
+    steps.push((
+        root,
+        Some(Place {
+            root: at.root,
+            folder: String::new(),
+        }),
+    ));
     let mut path = String::new();
     for part in at.folder.split('/').filter(|p| !p.is_empty()) {
-        path = if path.is_empty() { part.to_string() } else { format!("{path}/{part}") };
-        steps.push((part.to_string(), Some(Place { root: at.root, folder: path.clone() })));
+        path = if path.is_empty() {
+            part.to_string()
+        } else {
+            format!("{path}/{part}")
+        };
+        steps.push((
+            part.to_string(),
+            Some(Place {
+                root: at.root,
+                folder: path.clone(),
+            }),
+        ));
     }
     steps
 }
@@ -310,12 +344,21 @@ mod place_tests {
     use super::*;
 
     fn at(root: usize, folder: &str) -> Place {
-        Place { root, folder: folder.into() }
+        Place {
+            root,
+            folder: folder.into(),
+        }
     }
 
     #[test]
     fn browsing_one_root() {
-        let places = [at(0, ""), at(0, "anime"), at(0, "anime/mitsu"), at(0, "zz"), at(0, "anime")];
+        let places = [
+            at(0, ""),
+            at(0, "anime"),
+            at(0, "anime/mitsu"),
+            at(0, "zz"),
+            at(0, "anime"),
+        ];
         let names = vec!["w".to_string()];
         let top = top_place(1);
         let (folders, direct) = browse(&places, top.as_ref(), &names);
@@ -362,7 +405,15 @@ mod folder_tests {
 
     #[test]
     fn smaller_than_needs_a_known_size() {
-        let img = |width, height| LocalImage { path: "/a.jpg".into(), name: "a.jpg".into(), size: 1, modified: 0, width, height, thumb: None };
+        let img = |width, height| LocalImage {
+            path: "/a.jpg".into(),
+            name: "a.jpg".into(),
+            size: 1,
+            modified: 0,
+            width,
+            height,
+            thumb: None,
+        };
         assert!(img(1920, 1080).smaller_than(2560, 1440));
         assert!(!img(2560, 1440).smaller_than(2560, 1440));
         // Wide but short: smaller on one side counts.
@@ -372,7 +423,10 @@ mod folder_tests {
 
     #[test]
     fn file_uris_are_percent_encoded() {
-        assert_eq!(file_uri(Path::new("/w/a b/#1 ç.jpg")), "file:///w/a%20b/%231%20%C3%A7.jpg");
+        assert_eq!(
+            file_uri(Path::new("/w/a b/#1 ç.jpg")),
+            "file:///w/a%20b/%231%20%C3%A7.jpg"
+        );
         assert_eq!(file_uri(Path::new("/w/plain-name_1.jpg")), "file:///w/plain-name_1.jpg");
     }
 
@@ -380,7 +434,10 @@ mod folder_tests {
     fn folder_is_relative_to_the_deepest_root() {
         let roots = vec![PathBuf::from("/w"), PathBuf::from("/w/dl"), PathBuf::from("/other")];
         assert_eq!(folder_in(Path::new("/w/a.jpg"), &roots), Some((0, String::new())));
-        assert_eq!(folder_in(Path::new("/w/anime/mitsu/a.jpg"), &roots), Some((0, "anime/mitsu".into())));
+        assert_eq!(
+            folder_in(Path::new("/w/anime/mitsu/a.jpg"), &roots),
+            Some((0, "anime/mitsu".into()))
+        );
         // Inside the nested root, it's that root's top.
         assert_eq!(folder_in(Path::new("/w/dl/a.jpg"), &roots), Some((1, String::new())));
         assert_eq!(folder_in(Path::new("/other/x/a.png"), &roots), Some((2, "x".into())));

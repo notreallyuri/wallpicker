@@ -168,7 +168,7 @@ Dialog {
     }
 
     Section {
-        visible: Settings.backend !== "noctalia" && dialog.draft === null
+        visible: dialog.draft === null
         title: "Fit"
         Repeater {
             model: Settings.fitModes
@@ -184,11 +184,6 @@ Dialog {
             }
         }
     }
-    Muted {
-        visible: Settings.backend === "noctalia" && dialog.draft === null
-        text: "Fit: Noctalia uses its own fill mode (its settings)."
-    }
-
     footerLeft: [
         Spinner {
             visible: dialog.busy

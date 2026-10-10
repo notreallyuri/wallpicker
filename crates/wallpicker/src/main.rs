@@ -40,7 +40,7 @@ fn main() {
 
     if args.iter().any(|a| a == "-h" || a == "--help") {
         println!(
-            "wallpicker - wallpaper picker for hyprpaper and Noctalia\n\n\
+            "wallpicker - wallpaper picker with a native Wayland renderer\n\n\
              USAGE:\n  \
              wallpicker                         open the picker\n  \
              wallpicker list [--json] [--thumbs]\n                                     \
@@ -89,7 +89,7 @@ fn main() {
              wallpicker trash <image>           move to the desktop trash (wallpaper/download folders only)\n  \
              wallpicker filters [<provider> set KEY=VALUE...|reset]  read or change the online filters\n  \
              wallpicker settings [set KEY=VALUE...]  read or change the settings\n  \
-             wallpicker --restore               re-apply the saved wallpapers (hyprpaper) and exit\n  \
+             wallpicker --restore               re-apply the saved wallpapers and exit\n  \
              wallpicker --toggle                open or close the picker (for a keybind)\n  \
              wallpicker --open local|online|collections|presets|settings|duplicates\n                                     \
              open the picker at that tab or dialog\n  \

@@ -3,11 +3,7 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
-/// How hyprpaper should fit an image to the monitor.
-///
-/// This is passed as a third argument to `hyprctl hyprpaper wallpaper`, which
-/// only newer hyprpaper versions understand. Leave it unset to use whatever
-/// default your hyprpaper has.
+/// How the renderer fits an image to a monitor.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum FitMode {
@@ -24,40 +20,6 @@ impl FitMode {
             FitMode::Contain => "contain",
             FitMode::Tile => "tile",
             FitMode::Fill => "fill",
-        }
-    }
-}
-
-/// What draws the wallpaper. wallpicker applies through it and records what
-/// it applied either way.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum WallpaperBackend {
-    /// hyprpaper, through `hyprctl hyprpaper`. Fit mode is wallpicker's.
-    #[default]
-    Hyprpaper,
-    /// Noctalia's wallpaper manager, through `noctalia msg wallpaper-set`.
-    /// It keeps the wallpapers itself; fill mode and transitions are set in
-    /// Noctalia's settings.
-    Noctalia,
-    /// awww (swww before it was renamed), through `awww img`, with
-    /// wallpicker's fit and a transition ([`Transition`]). Its daemon keeps
-    /// the wallpapers across restarts; wallpicker starts it when needed.
-    #[serde(alias = "swww")]
-    Awww,
-    /// wallpicker's own renderer: `wallpicker daemon` draws the wallpapers
-    /// itself (daemon.rs, compose.rs), started when needed. Its fit is
-    /// wallpicker's (Cover by default).
-    Wallpicker,
-}
-
-impl WallpaperBackend {
-    pub fn as_str(self) -> &'static str {
-        match self {
-            WallpaperBackend::Hyprpaper => "hyprpaper",
-            WallpaperBackend::Noctalia => "noctalia",
-            WallpaperBackend::Awww => "awww",
-            WallpaperBackend::Wallpicker => "wallpicker",
         }
     }
 }
@@ -99,7 +61,6 @@ pub struct Settings {
     /// Your Wallhaven username: opening your collections needs it (the API
     /// doesn't say whose key it is).
     pub wallhaven_username: Option<String>,
-    pub wallpaper_backend: WallpaperBackend,
     /// The fit for every monitor (None: the backend's default).
     pub fit_mode: Option<FitMode>,
     /// A monitor's own fit (by name), over `fit_mode`. An adjusted fit (the
@@ -117,7 +78,7 @@ pub struct Settings {
     pub theme_from_wallpaper: bool,
     /// The monitor whose wallpaper the colors come from; None: the first one.
     pub theme_monitor: Option<String>,
-    /// awww's transition (the awww backend).
+    /// Native renderer transition.
     pub transition: Transition,
     /// Online details show the original image (else one fitted to 1600 px,
     /// which costs a fraction of the memory: an 8K original decoded is 130 MB).
@@ -171,7 +132,6 @@ impl Default for Settings {
             recursive: true,
             wallhaven_api_key: None,
             wallhaven_username: None,
-            wallpaper_backend: WallpaperBackend::default(),
             fit_mode: None,
             monitor_fits: BTreeMap::new(),
             konachan_site: KonachanSite::default(),
@@ -197,7 +157,9 @@ impl Settings {
     /// wallpaper changes), else the monitor's, else the general one. None
     /// leaves it to the backend.
     pub fn fit_for(&self, monitor: &str, adjusted: Option<FitMode>) -> Option<FitMode> {
-        adjusted.or_else(|| self.monitor_fits.get(monitor).copied()).or(self.fit_mode)
+        adjusted
+            .or_else(|| self.monitor_fits.get(monitor).copied())
+            .or(self.fit_mode)
     }
 }
 
@@ -234,7 +196,8 @@ impl Settings {
             .filter(|p| !p.as_os_str().is_empty());
         self.thumb_width = self.thumb_width.clamp(120, 1024);
         self.span_bezel = self.span_bezel.min(100);
-        self.span_layout.retain(|m, p| !m.is_empty() && p.x.is_finite() && p.y.is_finite() && p.x.abs() < 1e5 && p.y.abs() < 1e5);
+        self.span_layout
+            .retain(|m, p| !m.is_empty() && p.x.is_finite() && p.y.is_finite() && p.x.abs() < 1e5 && p.y.abs() < 1e5);
         self.span_monitors.retain(|m| !m.is_empty());
         self.wallhaven_api_key = self
             .wallhaven_api_key
@@ -245,7 +208,10 @@ impl Settings {
             .wallhaven_username
             .map(|u| u.trim().to_string())
             .filter(|u| crate::wallhaven::is_valid_username(u));
-        self.theme_monitor = self.theme_monitor.map(|m| m.trim().to_string()).filter(|m| !m.is_empty());
+        self.theme_monitor = self
+            .theme_monitor
+            .map(|m| m.trim().to_string())
+            .filter(|m| !m.is_empty());
         self.transition = self.transition.sanitized();
         self.slideshow.color = known_color(self.slideshow.color.take());
         self.slideshow.night = std::mem::take(&mut self.slideshow.night).sanitized();
@@ -253,36 +219,21 @@ impl Settings {
     }
 }
 
-/// Fit modes with labels, as `backend` does them: "" is its own default
-/// (awww's and wallpicker's crop, which is Cover), and awww can't tile (it
-/// centers).
-pub fn fit_modes(backend: WallpaperBackend) -> [(&'static str, &'static str); 5] {
-    let (default, tile) = match backend {
-        WallpaperBackend::Awww => ("awww's default (Cover)", "Centered (awww can't tile)"),
-        WallpaperBackend::Hyprpaper | WallpaperBackend::Noctalia => ("hyprpaper's default", "Tile"),
-        WallpaperBackend::Wallpicker => ("wallpicker's default (Cover)", "Tile"),
-    };
+/// Renderer fit choices; an unset fit uses Cover.
+pub fn fit_modes() -> [(&'static str, &'static str); 5] {
     [
-        ("", default),
+        ("", "Default (Cover)"),
         ("cover", "Cover"),
         ("contain", "Contain"),
-        ("tile", tile),
+        ("tile", "Tile"),
         ("fill", "Fill"),
     ]
 }
 
-pub const BACKENDS: [(&str, &str); 4] = [
-    ("hyprpaper", "hyprpaper"),
-    ("awww", "awww (swww)"),
-    ("noctalia", "Noctalia"),
-    ("wallpicker", "wallpicker (draws it itself)"),
-];
-
-/// awww's transitions, with labels. ("any" and "center" are grow from a
+/// Native renderer transitions, with labels. ("any" and "center" are grow from a
 /// random point and from the middle.)
-pub const TRANSITIONS: [(&str, &str); 14] = [
+pub const TRANSITIONS: [(&str, &str); 13] = [
     ("fade", "Fade"),
-    ("simple", "Simple fade"),
     ("wipe", "Wipe"),
     ("wave", "Wave"),
     ("grow", "Grow (a circle)"),
@@ -297,33 +248,14 @@ pub const TRANSITIONS: [(&str, &str); 14] = [
     ("none", "None (instant)"),
 ];
 
-/// Transition choices implemented by each backend. Simple fade remains
-/// awww-specific; wallpicker uses compositor opacity or GLES shader effects.
-pub fn transition_modes(backend: WallpaperBackend) -> Vec<(&'static str, &'static str)> {
-    const WALLPICKER_KINDS: [&str; 13] = [
-        "fade", "wipe", "wave", "grow", "center", "any", "outer", "left", "right", "top", "bottom", "random", "none",
-    ];
-    match backend {
-        WallpaperBackend::Awww => TRANSITIONS.to_vec(),
-        WallpaperBackend::Wallpicker => TRANSITIONS
-            .iter()
-            .copied()
-            .filter(|(kind, _)| WALLPICKER_KINDS.contains(kind))
-            .collect(),
-        _ => Vec::new(),
-    }
-}
-
-/// How awww changes to a new wallpaper.
+/// Native renderer transition preferences.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Transition {
     /// One of [`TRANSITIONS`].
     pub kind: String,
-    /// How long it takes (awww ignores this for "simple").
+    /// How long it takes, in milliseconds.
     pub duration_ms: u32,
-    /// Frames per second (awww allows up to 255).
-    pub fps: u32,
 }
 
 impl Default for Transition {
@@ -331,13 +263,12 @@ impl Default for Transition {
         Transition {
             kind: "fade".into(),
             duration_ms: 1000,
-            fps: 60,
         }
     }
 }
 
 impl Transition {
-    /// A known kind, a duration up to 10 s and 1 to 255 fps.
+    /// A supported kind and a duration up to 10 seconds.
     pub fn sanitized(self) -> Self {
         let kind = if TRANSITIONS.iter().any(|(k, _)| *k == self.kind) {
             self.kind
@@ -347,7 +278,6 @@ impl Transition {
         Transition {
             kind,
             duration_ms: self.duration_ms.min(10_000),
-            fps: self.fps.clamp(1, 255),
         }
     }
 }
@@ -475,8 +405,7 @@ impl Flip {
     }
 }
 
-/// A monitor's adjustments to the wallpaper it shows (Adjust dialog). No
-/// backend can do these: wallpicker makes the changed copy (`transform`).
+/// A monitor's adjustments to its wallpaper; prepared by `transform` before drawing.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Adjust {
@@ -551,7 +480,11 @@ impl Frame {
         let (w, h) = (f64::from(w.max(1)), f64::from(h.max(1)));
         let aspect = f64::from(self.width.max(1)) / f64::from(self.height.max(1));
         // Zoom 100: the widest area with the monitor's shape.
-        let (mut cw, mut ch) = if w / h > aspect { (h * aspect, h) } else { (w, w / aspect) };
+        let (mut cw, mut ch) = if w / h > aspect {
+            (h * aspect, h)
+        } else {
+            (w, w / aspect)
+        };
         let zoom = f64::from(self.zoom.clamp(100, 400)) / 100.0;
         cw /= zoom;
         ch /= zoom;
@@ -583,7 +516,7 @@ pub const HISTORY_LEN: usize = 30;
 
 /// Change the wallpaper every few minutes, picking at random like
 /// `wallpicker random`. Something has to call `wallpicker slideshow tick`
-/// (the Noctalia plugin does, every minute) or run `wallpicker slideshow run`.
+/// or run `wallpicker slideshow run`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Slideshow {
@@ -678,7 +611,11 @@ impl NightSet {
         if !self.enabled || from == to {
             return false;
         }
-        if from < to { (from..to).contains(&minute) } else { minute >= from || minute < to }
+        if from < to {
+            (from..to).contains(&minute)
+        } else {
+            minute >= from || minute < to
+        }
     }
 
     /// Times that parse, and a known color, or the defaults.
@@ -698,7 +635,10 @@ impl NightSet {
 /// A color the filter knows (`colors::HUES` or `TONES`), else None.
 pub fn known_color(color: Option<String>) -> Option<String> {
     color.filter(|c| {
-        crate::colors::HUES.iter().chain(crate::colors::TONES.iter()).any(|(k, _)| k == c)
+        crate::colors::HUES
+            .iter()
+            .chain(crate::colors::TONES.iter())
+            .any(|(k, _)| k == c)
     })
 }
 
@@ -754,23 +694,46 @@ mod tests {
         // A wide picture: full height.
         assert_eq!(f(100, 500, 500).rect(7680, 2160).3, 2160);
         assert_eq!(f(900, 2000, 0).sanitized().unwrap().zoom, 400);
-        assert!(Frame { width: 0, ..f(100, 0, 0) }.sanitized().is_none());
+        assert!(
+            Frame {
+                width: 0,
+                ..f(100, 0, 0)
+            }
+            .sanitized()
+            .is_none()
+        );
     }
 
     #[test]
     fn night_windows() {
-        let night = |from: &str, to: &str| NightSet { enabled: true, from: from.into(), to: to.into(), ..NightSet::default() };
+        let night = |from: &str, to: &str| NightSet {
+            enabled: true,
+            from: from.into(),
+            to: to.into(),
+            ..NightSet::default()
+        };
         let n = night("20:00", "07:00");
         assert!(n.is_night(22 * 60) && n.is_night(3 * 60) && n.is_night(20 * 60));
         assert!(!n.is_night(7 * 60) && !n.is_night(12 * 60));
         let afternoon = night("13:30", "18:00");
         assert!(afternoon.is_night(14 * 60) && !afternoon.is_night(18 * 60) && !afternoon.is_night(9 * 60));
         assert!(!night("10:00", "10:00").is_night(10 * 60));
-        assert!(!NightSet { enabled: false, ..n.clone() }.is_night(22 * 60));
+        assert!(
+            !NightSet {
+                enabled: false,
+                ..n.clone()
+            }
+            .is_night(22 * 60)
+        );
         assert_eq!(parse_hhmm("7:05"), Some(425));
         assert_eq!(parse_hhmm("24:00"), None);
         assert_eq!(parse_hhmm("ab"), None);
-        let fixed = NightSet { from: "25:00".into(), color: Some("plaid".into()), ..n }.sanitized();
+        let fixed = NightSet {
+            from: "25:00".into(),
+            color: Some("plaid".into()),
+            ..n
+        }
+        .sanitized();
         assert_eq!((fixed.from.as_str(), fixed.color), ("20:00", None));
     }
 
@@ -827,15 +790,15 @@ mod tests {
         assert_eq!(s.download_dir, PathBuf::from("/home/u"));
 
         // No HOME: leave paths alone.
-        assert_eq!(
-            expand_tilde(std::path::Path::new("~/a"), None),
-            PathBuf::from("~/a")
-        );
+        assert_eq!(expand_tilde(std::path::Path::new("~/a"), None), PathBuf::from("~/a"));
     }
 
     #[test]
     fn slideshow_timing() {
-        let s = Slideshow { minutes: 10, ..Slideshow::default() };
+        let s = Slideshow {
+            minutes: 10,
+            ..Slideshow::default()
+        };
         assert_eq!(s.due_in(1_000, 0), 0, "never changed: now");
         assert_eq!(s.due_in(1_000, 1_000), 600);
         assert_eq!(s.due_in(1_000 + 599, 1_000), 1);
@@ -850,7 +813,10 @@ mod tests {
 
     #[test]
     fn fit_comes_from_the_wallpaper_then_the_monitor_then_the_default() {
-        let mut s = Settings { fit_mode: Some(FitMode::Cover), ..Settings::default() };
+        let mut s = Settings {
+            fit_mode: Some(FitMode::Cover),
+            ..Settings::default()
+        };
         s.monitor_fits.insert("DP-3".into(), FitMode::Contain);
         assert_eq!(s.fit_for("DP-1", None), Some(FitMode::Cover));
         assert_eq!(s.fit_for("DP-3", None), Some(FitMode::Contain));

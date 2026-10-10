@@ -4,6 +4,18 @@ use crate::error::{Error, Result};
 
 /// Runs external programs. A trait so tests can script `hyprctl` replies.
 pub trait Runner {
+    /// Apply a prepared wallpaper. Production uses the native daemon; tests inject a desktop.
+    fn show_wallpaper(
+        &self,
+        monitor: &str,
+        path: &std::path::Path,
+        fit: Option<crate::settings::FitMode>,
+        transition: &crate::settings::Transition,
+    ) -> Result<()> {
+        let _ = (monitor, path, fit, transition);
+        Err(Error::Invalid("this runner cannot draw wallpapers".into()))
+    }
+
     /// Discover outputs. Test runners can keep supplying Hyprland JSON.
     fn monitors(&self) -> Result<Vec<crate::monitors::Monitor>> {
         crate::monitors::parse_monitors(&self.run("hyprctl", &["monitors", "-j"])?)
@@ -12,12 +24,6 @@ pub trait Runner {
     /// Run `program` with `args` and return its trimmed output.
     /// A non-zero exit status is an error.
     fn run(&self, program: &str, args: &[&str]) -> Result<String>;
-
-    /// Where hyprpaper's IPC socket should be, used to tell "hyprpaper isn't
-    /// running" apart from other failures. `None` skips that check.
-    fn hyprpaper_socket(&self) -> Option<std::path::PathBuf> {
-        None
-    }
 
     /// Start `program` in the background and leave it running (a daemon).
     fn spawn(&self, program: &str, _args: &[&str]) -> Result<()> {
@@ -32,6 +38,16 @@ pub trait Runner {
 pub struct SystemRunner;
 
 impl Runner for SystemRunner {
+    fn show_wallpaper(
+        &self,
+        monitor: &str,
+        path: &std::path::Path,
+        fit: Option<crate::settings::FitMode>,
+        transition: &crate::settings::Transition,
+    ) -> Result<()> {
+        crate::daemon::show(self, monitor, path, fit, transition)
+    }
+
     fn monitors(&self) -> Result<Vec<crate::monitors::Monitor>> {
         let mut monitors = crate::monitors::wayland::discover()?;
         // Focus and active workspace are not exposed by wl_output. Only ask
@@ -44,10 +60,6 @@ impl Runner for SystemRunner {
             crate::monitors::enrich(&mut monitors, &extra);
         }
         Ok(monitors)
-    }
-
-    fn hyprpaper_socket(&self) -> Option<std::path::PathBuf> {
-        crate::hyprpaper::socket_path()
     }
 
     fn spawn(&self, program: &str, args: &[&str]) -> Result<()> {
@@ -77,13 +89,10 @@ impl Runner for SystemRunner {
             }
         };
 
-        let out = Command::new(program)
-            .args(args)
-            .output()
-            .map_err(|e| Error::Command {
-                cmd: cmd_text(),
-                msg: e.to_string(),
-            })?;
+        let out = Command::new(program).args(args).output().map_err(|e| Error::Command {
+            cmd: cmd_text(),
+            msg: e.to_string(),
+        })?;
 
         let stdout = String::from_utf8_lossy(&out.stdout).trim().to_string();
         let stderr = String::from_utf8_lossy(&out.stderr).trim().to_string();

@@ -3,7 +3,7 @@
 //! serve`). `wallpicker` (or `wallpicker ui`) opens it; `--toggle` closes it
 //! when it's open (a keybind) or shows it again while it's still loaded;
 //! `--open PLACE [IMAGE]` opens it at a tab or a
-//! dialog (the Noctalia plugin hands bigger jobs over that way), or moves
+//! dialog, or moves
 //! the open one there.
 
 use std::path::{Path, PathBuf};
@@ -41,7 +41,11 @@ fn ui_dir() -> Option<PathBuf> {
 /// LLVM's compiler around). Anything already set in the environment wins.
 fn lighter(qs: &mut Command) {
     let unset = |key: &str| std::env::var_os(key).is_none();
-    for (key, value) in [("MALLOC_ARENA_MAX", "2"), ("MALLOC_MMAP_THRESHOLD_", "1048576"), ("MALLOC_TRIM_THRESHOLD_", "131072")] {
+    for (key, value) in [
+        ("MALLOC_ARENA_MAX", "2"),
+        ("MALLOC_MMAP_THRESHOLD_", "1048576"),
+        ("MALLOC_TRIM_THRESHOLD_", "131072"),
+    ] {
         if unset(key) {
             qs.env(key, value);
         }
@@ -54,7 +58,8 @@ fn lighter(qs: &mut Command) {
 /// A Vulkan driver is installed (an ICD manifest where the loader looks).
 fn has_vulkan_driver() -> bool {
     ["/usr/share/vulkan/icd.d", "/etc/vulkan/icd.d"].iter().any(|d| {
-        std::fs::read_dir(d).is_ok_and(|mut e| e.any(|f| f.is_ok_and(|f| f.path().extension().is_some_and(|x| x == "json"))))
+        std::fs::read_dir(d)
+            .is_ok_and(|mut e| e.any(|f| f.is_ok_and(|f| f.path().extension().is_some_and(|x| x == "json"))))
     })
 }
 
@@ -80,7 +85,9 @@ pub fn ui(args: &[String]) -> i32 {
         }
     };
     let Some(dir) = ui_dir() else {
-        return fail(&"the interface isn't installed (scripts/install-local.sh puts it in ~/.local/share/wallpicker/ui)");
+        return fail(
+            &"the interface isn't installed (scripts/install-local.sh puts it in ~/.local/share/wallpicker/ui)",
+        );
     };
     if running(&dir) {
         let call = |args: &[&str]| {
@@ -102,12 +109,20 @@ pub fn ui(args: &[String]) -> i32 {
         }
         return 0;
     }
-    let exe = std::env::current_exe().map(|p| p.into_os_string()).unwrap_or_else(|_| "wallpicker".into());
+    let exe = std::env::current_exe()
+        .map(|p| p.into_os_string())
+        .unwrap_or_else(|_| "wallpicker".into());
     let mut qs = Command::new("qs");
-    qs.arg("-p").arg(&dir).args(["--no-duplicate", "--daemonize"]).env("WALLPICKER_BIN", exe);
+    qs.arg("-p")
+        .arg(&dir)
+        .args(["--no-duplicate", "--daemonize"])
+        .env("WALLPICKER_BIN", exe);
     // Where to open, read once it's up (shell.qml).
     if let Some(p) = &place {
-        qs.env("WALLPICKER_OPEN", format!("{}\n{}", p.view, p.path.as_deref().unwrap_or("")));
+        qs.env(
+            "WALLPICKER_OPEN",
+            format!("{}\n{}", p.view, p.path.as_deref().unwrap_or("")),
+        );
     }
     lighter(&mut qs);
     match qs
@@ -124,7 +139,16 @@ pub fn ui(args: &[String]) -> i32 {
 }
 
 /// Where `--open` can go.
-const PLACES: [&str; 8] = ["local", "online", "collections", "presets", "settings", "duplicates", "details", "tags"];
+const PLACES: [&str; 8] = [
+    "local",
+    "online",
+    "collections",
+    "presets",
+    "settings",
+    "duplicates",
+    "details",
+    "tags",
+];
 
 #[derive(Debug, PartialEq, Eq)]
 struct Place {
@@ -141,10 +165,14 @@ fn parse_open(args: &[String], cwd: &Path) -> Result<Option<Place>, String> {
         return Ok(None);
     };
     let Some(view) = args.get(i + 1) else {
-        return Err("--open needs a place: local, online, collections, presets, settings, duplicates or details <image>".into());
+        return Err(
+            "--open needs a place: local, online, collections, presets, settings, duplicates or details <image>".into(),
+        );
     };
     if !PLACES.contains(&view.as_str()) {
-        return Err(format!("--open {view}? use local, online, collections, presets, settings, duplicates or details <image>"));
+        return Err(format!(
+            "--open {view}? use local, online, collections, presets, settings, duplicates or details <image>"
+        ));
     }
     let path = if view == "details" || view == "tags" {
         let image = args.get(i + 2).ok_or(format!("--open {view} needs the image"))?;
@@ -152,7 +180,10 @@ fn parse_open(args: &[String], cwd: &Path) -> Result<Option<Place>, String> {
     } else {
         None
     };
-    Ok(Some(Place { view: view.clone(), path }))
+    Ok(Some(Place {
+        view: view.clone(),
+        path,
+    }))
 }
 
 #[cfg(test)]
@@ -167,16 +198,39 @@ mod tests {
     fn parses_places() {
         let cwd = Path::new("/home/u");
         assert_eq!(parse_open(&args(&["--toggle"]), cwd), Ok(None));
-        assert_eq!(parse_open(&args(&["--open", "settings"]), cwd), Ok(Some(Place { view: "settings".into(), path: None })));
+        assert_eq!(
+            parse_open(&args(&["--open", "settings"]), cwd),
+            Ok(Some(Place {
+                view: "settings".into(),
+                path: None
+            }))
+        );
         assert_eq!(
             parse_open(&args(&["--open", "tags", "pics/a.png"]), cwd),
-            Ok(Some(Place { view: "tags".into(), path: Some("/home/u/pics/a.png".into()) }))
+            Ok(Some(Place {
+                view: "tags".into(),
+                path: Some("/home/u/pics/a.png".into())
+            }))
         );
-        assert_eq!(parse_open(&args(&["--open", "tags", "/w/b.jpg"]), cwd).unwrap().unwrap().path.as_deref(), Some("/w/b.jpg"));
+        assert_eq!(
+            parse_open(&args(&["--open", "tags", "/w/b.jpg"]), cwd)
+                .unwrap()
+                .unwrap()
+                .path
+                .as_deref(),
+            Some("/w/b.jpg")
+        );
         assert!(parse_open(&args(&["--open"]), cwd).is_err());
         assert!(parse_open(&args(&["--open", "nowhere"]), cwd).is_err());
         assert!(parse_open(&args(&["--open", "tags"]), cwd).is_err());
-        assert_eq!(parse_open(&args(&["--open", "details", "/w/b.jpg"]), cwd).unwrap().unwrap().path.as_deref(), Some("/w/b.jpg"));
+        assert_eq!(
+            parse_open(&args(&["--open", "details", "/w/b.jpg"]), cwd)
+                .unwrap()
+                .unwrap()
+                .path
+                .as_deref(),
+            Some("/w/b.jpg")
+        );
         assert!(parse_open(&args(&["--open", "details"]), cwd).is_err());
     }
 }

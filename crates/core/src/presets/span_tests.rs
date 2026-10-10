@@ -19,6 +19,16 @@ impl Runner for Outputs {
     fn monitors(&self) -> Result<Vec<Monitor>> {
         Ok(self.monitors.clone())
     }
+    fn show_wallpaper(
+        &self,
+        monitor: &str,
+        path: &std::path::Path,
+        _fit: Option<FitMode>,
+        _transition: &crate::settings::Transition,
+    ) -> Result<()> {
+        self.run("wallpicker", &[&format!("{monitor},{}", path.display())])
+            .map(drop)
+    }
     fn run(&self, _: &str, args: &[&str]) -> Result<String> {
         self.calls.borrow_mut().push(args.join(" "));
         if self.fail && args.iter().any(|a| a.starts_with("DP-2,")) {
@@ -33,7 +43,9 @@ fn setup() -> (TempDir, Store, Outputs, Preset) {
     let dir = TempDir::new().unwrap();
     let store = Store::new(Dirs::under(dir.path()));
     let path = dir.path().join("span.png");
-    image::RgbImage::from_pixel(64, 32, image::Rgb([0, 255, 0])).save(&path).unwrap();
+    image::RgbImage::from_pixel(64, 32, image::Rgb([0, 255, 0]))
+        .save(&path)
+        .unwrap();
     let mut state = State::default();
     let mut places = std::collections::BTreeMap::new();
     for (name, x) in [("DP-1", 0.0), ("DP-2", 600.0)] {
@@ -41,17 +53,38 @@ fn setup() -> (TempDir, Store, Outputs, Preset) {
         state.adjust.insert(
             name.into(),
             Adjust {
-                span: Some(Cut { x: 0, y: 0, width: 32, height: 32, out_width: 16, out_height: 16 }),
+                span: Some(Cut {
+                    x: 0,
+                    y: 0,
+                    width: 32,
+                    height: 32,
+                    out_width: 16,
+                    out_height: 16,
+                }),
                 ..Default::default()
             },
         );
-        places.insert(name.into(), SpanRect { x, y: 0.0, w: 600.0, h: 340.0 });
+        places.insert(
+            name.into(),
+            SpanRect {
+                x,
+                y: 0.0,
+                w: 600.0,
+                h: 340.0,
+            },
+        );
     }
     let extra = dir.path().join("other.png");
-    image::RgbImage::from_pixel(32, 32, image::Rgb([255, 0, 0])).save(&extra).unwrap();
+    image::RgbImage::from_pixel(32, 32, image::Rgb([255, 0, 0]))
+        .save(&extra)
+        .unwrap();
     state.current.insert("HDMI-A-1".into(), extra);
-    state.span =
-        Some(Spanned { path, monitors: vec!["DP-1".into(), "DP-2".into()], places, look: SpanLook::default() });
+    state.span = Some(Spanned {
+        path,
+        monitors: vec!["DP-1".into(), "DP-2".into()],
+        places,
+        look: SpanLook::default(),
+    });
     store.save_state(&state).unwrap();
     let preset = store.save_current_preset("Span").unwrap();
     let mut current = store.load_state().unwrap();
@@ -69,14 +102,25 @@ fn setup() -> (TempDir, Store, Outputs, Preset) {
     ]"#,
     )
     .unwrap();
-    (dir, store, Outputs { monitors, fail: false, calls: RefCell::default() }, preset)
+    (
+        dir,
+        store,
+        Outputs {
+            monitors,
+            fail: false,
+            calls: RefCell::default(),
+        },
+        preset,
+    )
 }
 
 #[test]
 fn span_restores_saved_canvas_and_rebuilds_cuts_for_current_rotations() {
     let (_dir, store, outputs, preset) = setup();
     let mut settings = store.load_settings().unwrap();
-    settings.span_layout.insert("DP-1".into(), SpanPoint { x: 999.0, y: 999.0 });
+    settings
+        .span_layout
+        .insert("DP-1".into(), SpanPoint { x: 999.0, y: 999.0 });
     settings.span_bezel = 20;
     store.save_settings(&settings).unwrap();
     let report = apply(&outputs, &store, &preset.id).unwrap();
@@ -117,7 +161,10 @@ fn partial_span_failure_leaves_successful_parts_separate_and_does_not_claim_fail
     let (_dir, store, mut outputs, preset) = setup();
     outputs.fail = true;
     let before = store.load_state().unwrap();
-    let settings = Settings { span_bezel: 12, ..Default::default() };
+    let settings = Settings {
+        span_bezel: 12,
+        ..Default::default()
+    };
     store.save_settings(&settings).unwrap();
     let report = apply(&outputs, &store, &preset.id).unwrap();
     assert_eq!(report.applied, ["DP-1", "HDMI-A-1"]);

@@ -49,7 +49,7 @@ pub use transition::Transition;
 pub type Picture = (PathBuf, Option<FitMode>);
 
 /// What a monitor shows in the saved state, as the renderer gets it
-/// (`hyprpaper::saved_for`).
+/// (`wallpapers::saved_for`).
 pub type Saved = Arc<dyn Fn(&str) -> Option<Picture> + Send + Sync>;
 
 /// How a show went: Ok once the monitor has the picture.
@@ -95,9 +95,7 @@ impl Renderer {
                     let (mut event_loop, mut state) = setup(rx, loop_tx, saved)?;
                     let _ = ready_tx.send(Ok(()));
                     while state.running {
-                        event_loop
-                            .dispatch(None, &mut state)
-                            .map_err(|e| e.to_string())?;
+                        event_loop.dispatch(None, &mut state).map_err(|e| e.to_string())?;
                     }
                     Ok(())
                 };

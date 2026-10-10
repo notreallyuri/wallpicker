@@ -15,6 +15,9 @@ from PIL import Image
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--binary', type=Path, default=Path('target/release/wallpicker'))
 parser.add_argument('--adjustments-only', action='store_true', help='Check that zoom/pan updates never animate')
+parser.add_argument('--status-only', action='store_true', help='Verify prepared files and daemon state without compositor screenshot pixels')
+parser.add_argument('--sample-y', type=int, help='Pixel row to sample when windows obscure the fixture; choose an exposed wallpaper strip')
+parser.add_argument('--start-delay', type=float, default=0, help='Seconds to return to a clear workspace after approval')
 parser.add_argument('--monitors', nargs=2, default=['DP-1', 'DP-2'])
 args = parser.parse_args()
 binary = args.binary.resolve()
@@ -34,8 +37,7 @@ stubs.mkdir()
 env['PATH'] = str(stubs) + ':' + env['PATH']
 config = root / 'config/wallpicker/config.json'
 state_path = root / 'state/wallpicker/state.json'
-settings = {'wallpaper_backend': 'wallpicker',
-            'transition': {'kind': 'left', 'duration_ms': 3000 if args.adjustments_only else 400, 'fps': 60},
+settings = {'transition': {'kind': 'left', 'duration_ms': 3000 if args.adjustments_only else 400},
             'slideshow': {'enabled': False}, 'workspaces': {'enabled': False},
             'span_layout': {names[0]: {'x': 0, 'y': 0}, names[1]: {'x': 600, 'y': 0}},
             'span_monitors': names, 'span_bezel': 0}
@@ -102,7 +104,20 @@ def stop():
 
 
 def check_pixels(label, colors):
-    settled()
+    screens = settled()
+    if args.status_only:
+        state = json.loads(state_path.read_text())
+        for name, expected in zip(names, colors):
+            screen = next(s for s in screens if s['monitor'] == name)
+            image = Image.open(screen['file']).convert('RGB')
+            w, h = image.size
+            assert screen['pixels'] == [1920, 1080], screen
+            for fraction, wanted in zip([0.25, 0.75], expected):
+                got = image.getpixel((int(w * fraction), int(h * 0.6)))
+                assert max(abs(a-b) for a, b in zip(got, wanted)) < 15, (label, name, got, wanted)
+            assert state['current'][name] in [str(root/'separate.png'), str(root/'span.png')]
+        print(label + ': both renderer files match expected pixels (no screenshot check)', flush=True)
+        return
     # Allow the compositor's layer mapping animation to finish too.
     time.sleep(0.5)
     for name, expected in zip(names, colors):
@@ -112,7 +127,9 @@ def check_pixels(label, colors):
         w, h = image.size
         assert (w, h) == (1920, 1080), f'{name}: this fixture expects 1920x1080'
         for fraction, wanted in zip([0.25, 0.75], expected):
-            got = image.getpixel((int(w * fraction), int(h * 0.6)))
+            sample_y = args.sample_y if args.sample_y is not None else int(h * 0.6)
+            assert 0 <= sample_y < h, 'Sample row must be inside the output'
+            got = image.getpixel((int(w * fraction), sample_y))
             assert max(abs(a-b) for a, b in zip(got, wanted)) < 15, f'{label} {name}: got {got}, expected {wanted}; {shot}'
     print(label + ': both monitors match expected pixels', flush=True)
 
@@ -151,6 +168,7 @@ def check_adjustments():
 
 
 try:
+    time.sleep(max(0, args.start_delay))
     if args.adjustments_only:
         check_adjustments()
     else:
@@ -183,7 +201,6 @@ try:
         state = apply(b)
         check_pixels('span-after-second-restart', span_colors)
         saved = json.loads(config.read_text())
-        assert saved['wallpaper_backend'] == settings['wallpaper_backend']
         assert saved['transition'] == settings['transition']
         assert not saved['slideshow']['enabled'] and not saved['workspaces']['enabled']
         print('PASS: separate/spanned presets, adjustments, history, transitions and two daemon restarts', flush=True)

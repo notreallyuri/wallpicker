@@ -87,28 +87,6 @@ impl Store {
         self.dirs.state.join("wallhaven.json")
     }
 
-    /// The hyprpaper config wallpicker keeps for `source =`.
-    pub fn hyprpaper_conf_path(&self) -> PathBuf {
-        self.dirs.state.join("hyprpaper.conf")
-    }
-
-    /// Rewrite the hyprpaper config from the saved state and fit mode.
-    pub fn write_hyprpaper_conf(&self) -> Result<()> {
-        let state = self.load_state()?;
-        // Each monitor with its fit: the wallpaper's, the monitor's, or the
-        // general one.
-        let fits = crate::hyprpaper::Fits::load(self);
-        // Adjusted wallpapers are their changed copies (made when applied).
-        let mut shown = state.clone();
-        for (m, path) in shown.current.iter_mut() {
-            if let Ok(file) = crate::transform::shown_file(&self.dirs.cache, path, &state.adjust_for(m, path)) {
-                *path = file;
-            }
-        }
-        let text = crate::hyprpaper::config_for(&shown, &|m, _| fits.of(m, &state.current[m]));
-        atomic_write(&self.hyprpaper_conf_path(), text.as_bytes(), false)
-    }
-
     fn catalog_path(&self) -> PathBuf {
         self.dirs.data.join("library.json")
     }
@@ -127,8 +105,7 @@ impl Store {
         let text = serde_json::to_string_pretty(&settings.clone().sanitized())?;
         // The file may hold an API key, so keep it private to the user.
         atomic_write(&self.settings_path(), text.as_bytes(), true)?;
-        // The fit mode is part of the hyprpaper config.
-        self.write_hyprpaper_conf()
+        Ok(())
     }
 
     pub fn load_state(&self) -> Result<State> {
@@ -142,9 +119,7 @@ impl Store {
     pub fn save_state(&self, state: &State) -> Result<()> {
         let text = serde_json::to_string_pretty(state)?;
         atomic_write(&self.state_path(), text.as_bytes(), false)?;
-        // Every change to what's applied goes through here, so the hyprpaper
-        // config can't fall out of step with it.
-        self.write_hyprpaper_conf()
+        Ok(())
     }
 
     /// Forget `path` as any monitor's current wallpaper (it was deleted), so
@@ -191,12 +166,14 @@ impl Store {
     }
 
     /// Adjust what `monitor` shows (None-like: back to as it is). Applying it
-    /// is the caller's (`hyprpaper::reapply`).
+    /// is the caller's (`wallpapers::reapply`).
     pub fn set_adjust(&self, monitor: &str, mut adjust: crate::settings::Adjust) -> Result<State> {
         adjust.frame = adjust.frame.and_then(crate::settings::Frame::sanitized);
         let mut state = self.load_state()?;
         if !state.current.contains_key(monitor) {
-            return Err(crate::error::Error::Invalid(format!("{monitor} shows nothing wallpicker set")));
+            return Err(crate::error::Error::Invalid(format!(
+                "{monitor} shows nothing wallpicker set"
+            )));
         }
         // Out of the span: adjusted on its own.
         if adjust.span.is_none() {
@@ -341,9 +318,6 @@ impl Store {
         catalog.version = crate::catalog::VERSION;
         let text = serde_json::to_string_pretty(&catalog)?;
         atomic_write(&self.catalog_path(), text.as_bytes(), false)?;
-        // A wallpaper's own fit is part of the hyprpaper config. Best effort:
-        // a tag edit shouldn't fail over it, and the next apply rewrites it.
-        let _ = self.write_hyprpaper_conf();
         Ok(catalog)
     }
 }
@@ -383,7 +357,10 @@ impl Store {
         let old = self.snapshots_dir();
         let mut settings = self.load_settings()?;
         settings.snapshot_dir = dir.filter(|d| *d != self.default_snapshots_dir());
-        let new = settings.snapshot_dir.clone().unwrap_or_else(|| self.default_snapshots_dir());
+        let new = settings
+            .snapshot_dir
+            .clone()
+            .unwrap_or_else(|| self.default_snapshots_dir());
         if new != old {
             fs::create_dir_all(&new)?;
             for id in self.snapshot_ids()? {
@@ -483,7 +460,6 @@ impl Store {
         }
         let text = serde_json::to_string_pretty(&snapshot)?;
         atomic_write(&src, text.as_bytes(), false)?;
-        let _ = self.write_hyprpaper_conf();
         Ok(snapshot)
     }
 }
@@ -606,7 +582,10 @@ mod tests {
         for (m, _) in &cuts {
             store.set_current(m, wide).unwrap();
         }
-        let look = SpanLook { zoom: 150, ..SpanLook::default() };
+        let look = SpanLook {
+            zoom: 150,
+            ..SpanLook::default()
+        };
         let state = store.set_span(wide, look, &cuts, Default::default()).unwrap();
         assert_eq!(state.span.as_ref().unwrap().monitors, ["DP-1", "DP-2"]);
         // A monitor outside it changes freely.
@@ -637,7 +616,10 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let store = Store::new(Dirs::under(tmp.path()));
         let (a, b) = (Path::new("/w/a.jpg"), Path::new("/w/b.jpg"));
-        let mirrored = Adjust { flip: Flip { h: true, v: false }, ..Default::default() };
+        let mirrored = Adjust {
+            flip: Flip { h: true, v: false },
+            ..Default::default()
+        };
         assert!(store.set_adjust("DP-1", mirrored).is_err(), "nothing shown there yet");
         store.set_current("DP-1", a).unwrap();
         store.set_current("DP-2", a).unwrap();
@@ -660,10 +642,16 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let store = Store::new(Dirs::under(tmp.path()));
         // The first edit has nothing to copy yet; the second copies the first.
-        store.update_catalog(|c| c.set_favorite(Path::new("/w/a.jpg"), true)).unwrap();
+        store
+            .update_catalog(|c| c.set_favorite(Path::new("/w/a.jpg"), true))
+            .unwrap();
         assert!(store.snapshots().unwrap().is_empty());
-        store.update_catalog(|c| c.set_favorite(Path::new("/w/b.jpg"), true)).unwrap();
-        store.update_catalog(|c| c.set_favorite(Path::new("/w/c.jpg"), true)).unwrap();
+        store
+            .update_catalog(|c| c.set_favorite(Path::new("/w/b.jpg"), true))
+            .unwrap();
+        store
+            .update_catalog(|c| c.set_favorite(Path::new("/w/c.jpg"), true))
+            .unwrap();
         let snaps = store.snapshots().unwrap();
         // One a day: as the library was before today's first copied change.
         assert_eq!(snaps.len(), 1);
@@ -675,7 +663,11 @@ mod tests {
         // What was there (3) is kept as a timestamped snapshot.
         let snaps = store.snapshots().unwrap();
         assert_eq!(snaps.len(), 2);
-        assert!(snaps.iter().any(|s| s.items == 3 && s.label.len() == "2026-10-06 14:03:22".len()));
+        assert!(
+            snaps
+                .iter()
+                .any(|s| s.items == 3 && s.label.len() == "2026-10-06 14:03:22".len())
+        );
 
         assert!(store.restore_snapshot("../config").is_err());
         assert!(store.restore_snapshot("library-2026-1x-06").is_err());
@@ -701,7 +693,11 @@ mod tests {
         assert_eq!(c.version, crate::catalog::VERSION);
         assert_eq!(c.tags(Path::new("/w/a.jpg")), ["x"]);
         // Written first in the file, where a script reading it looks.
-        assert!(fs::read_to_string(store.catalog_path()).unwrap().starts_with("{\n  \"version\": 2,"));
+        assert!(
+            fs::read_to_string(store.catalog_path())
+                .unwrap()
+                .starts_with("{\n  \"version\": 2,")
+        );
         // A version-1 snapshot restored comes back as the current one.
         fs::create_dir_all(store.snapshots_dir()).unwrap();
         fs::write(
@@ -773,10 +769,7 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let store = Store::new(Dirs::under(tmp.path()));
         store.save_settings(&Settings::default()).unwrap();
-        let mode = fs::metadata(store.settings_path())
-            .unwrap()
-            .permissions()
-            .mode();
+        let mode = fs::metadata(store.settings_path()).unwrap().permissions().mode();
         assert_eq!(mode & 0o777, 0o600);
     }
 
@@ -804,14 +797,7 @@ mod tests {
         assert_eq!(state.current["DP-1"], PathBuf::from("/c.png"));
         assert_eq!(state.current["DP-2"], PathBuf::from("/b.png"));
 
-        // The hyprpaper config follows the state.
-        let conf = fs::read_to_string(store.hyprpaper_conf_path()).unwrap();
-        assert!(conf.contains("monitor = DP-1\n    path = /c.png"));
-        assert!(conf.contains("monitor = DP-2\n    path = /b.png"));
-
         store.forget_current(Path::new("/b.png")).unwrap();
-        let conf = fs::read_to_string(store.hyprpaper_conf_path()).unwrap();
-        assert!(!conf.contains("/b.png"));
         let state = store.load_state().unwrap();
         assert_eq!(state.current.len(), 1);
         assert!(state.current.contains_key("DP-1"));

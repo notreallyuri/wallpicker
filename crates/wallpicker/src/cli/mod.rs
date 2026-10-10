@@ -1,5 +1,5 @@
 //! The command line: the library, applying, online search and the settings,
-//! without the window, for scripts, keybinds and the Noctalia plugin. It
+//! without the window, for scripts and keybinds. It
 //! uses the same settings, backend and saved state as the app.
 
 use std::io::Write;
@@ -8,10 +8,10 @@ use std::path::{Path, PathBuf};
 use serde::Serialize;
 
 use wallpicker_core::cmd::SystemRunner;
-use wallpicker_core::hyprpaper;
 use wallpicker_core::library;
 use wallpicker_core::store::{Dirs, Store};
 use wallpicker_core::thumbs;
+use wallpicker_core::wallpapers;
 
 mod backup;
 mod config;
@@ -37,7 +37,7 @@ pub use workspaces::workspaces;
 
 #[derive(Serialize)]
 struct ListOutput {
-    /// "hyprpaper" or "noctalia".
+    /// The native renderer ("wallpicker").
     backend: &'static str,
     monitors: Vec<MonitorOut>,
     /// Favorites first, then newest first (the app's order).
@@ -127,7 +127,9 @@ pub fn list(args: &[String]) -> i32 {
                 folder,
                 favorite: catalog.is_favorite(&i.path),
                 tags: catalog.tags(&i.path).to_vec(),
-                artists: catalog.metadata(&i.path).map_or_else(Vec::new, |m| m.artists.iter().map(|a| a.name.clone()).collect()),
+                artists: catalog
+                    .metadata(&i.path)
+                    .map_or_else(Vec::new, |m| m.artists.iter().map(|a| a.name.clone()).collect()),
                 thumb: want_thumbs
                     .then(|| thumbs::ensure_thumb(&store.dirs().cache, &i.path, settings.thumb_width).ok())
                     .flatten(),
@@ -140,7 +142,7 @@ pub fn list(args: &[String]) -> i32 {
         })
         .collect();
     let out = ListOutput {
-        backend: settings.wallpaper_backend.as_str(),
+        backend: "wallpicker",
         monitors: monitors
             .into_iter()
             .map(|m| MonitorOut {
@@ -178,7 +180,12 @@ pub fn list(args: &[String]) -> i32 {
             .iter()
             .try_for_each(|m| {
                 let current = m.current.as_deref().map(Path::display);
-                writeln!(stdout, "{}: {}", m.name, current.map_or("-".to_string(), |c| c.to_string()))
+                writeln!(
+                    stdout,
+                    "{}: {}",
+                    m.name,
+                    current.map_or("-".to_string(), |c| c.to_string())
+                )
             })
             .and_then(|()| {
                 out.images.iter().try_for_each(|i| {
@@ -217,7 +224,7 @@ pub fn apply(args: &[String]) -> i32 {
     let path = std::path::absolute(&path).unwrap_or(path);
 
     let store = Store::new(Dirs::from_env());
-    let settings = match store.load_settings() {
+    let _settings = match store.load_settings() {
         Ok(s) => s,
         Err(e) => return fail(&e),
     };
@@ -227,7 +234,7 @@ pub fn apply(args: &[String]) -> i32 {
             Err(e) => return fail(&e),
         }
     }
-    match hyprpaper::apply_and_remember_with(&SystemRunner, &store, settings.wallpaper_backend, &monitors, &path) {
+    match wallpapers::apply_and_remember(&SystemRunner, &store, &monitors, &path) {
         Ok(report) => {
             wallpicker_core::workspaces::remember_shown(&SystemRunner, &store, &report.applied);
             for m in &report.applied {
@@ -258,13 +265,16 @@ pub fn span(args: &[String]) -> i32 {
         };
     }
     let mut look = wallpicker_core::settings::SpanLook::default();
-    let mut ask = hyprpaper::SpanAsk::default();
+    let mut ask = wallpapers::SpanAsk::default();
     let mut path = None;
     let mut rest = args.iter();
     while let Some(a) = rest.next() {
         match a.as_str() {
             "--frame" => {
-                let parts: Vec<f64> = rest.next().map(|v| v.split(',').filter_map(|n| n.trim().parse().ok()).collect()).unwrap_or_default();
+                let parts: Vec<f64> = rest
+                    .next()
+                    .map(|v| v.split(',').filter_map(|n| n.trim().parse().ok()).collect())
+                    .unwrap_or_default();
                 let [zoom, x, y] = parts[..] else {
                     return usage_for("span", "--frame needs ZOOM,X,Y (e.g. 150,50,50)", usage_text);
                 };
@@ -317,14 +327,10 @@ pub fn span(args: &[String]) -> i32 {
         return usage(usage_text);
     };
     let path = std::path::absolute(&path).unwrap_or(path);
-    let backend = match store.load_settings() {
-        Ok(s) => s.wallpaper_backend,
-        Err(e) => return fail(&e),
-    };
-    match hyprpaper::span_and_remember(&SystemRunner, &store, backend, &path, look, ask) {
+    match wallpapers::span_and_remember(&SystemRunner, &store, &path, look, ask) {
         Ok(report) => {
             wallpicker_core::workspaces::remember_shown(&SystemRunner, &store, &report.applied);
-            let _ = store.write_hyprpaper_conf();
+
             for m in &report.applied {
                 println!("{m}: its part");
             }
@@ -352,7 +358,7 @@ pub fn previous(args: &[String]) -> i32 {
         }
     }
     let store = Store::new(Dirs::from_env());
-    let settings = match store.load_settings() {
+    let _settings = match store.load_settings() {
         Ok(s) => s,
         Err(e) => return fail(&e),
     };
@@ -362,12 +368,15 @@ pub fn previous(args: &[String]) -> i32 {
             Err(e) => return fail(&e),
         }
     }
-    match hyprpaper::apply_previous(&SystemRunner, &store, settings.wallpaper_backend, &monitors) {
+    match wallpapers::apply_previous(&SystemRunner, &store, &monitors) {
         Ok(report) => {
             wallpicker_core::workspaces::remember_shown(&SystemRunner, &store, &report.applied);
             let state = store.load_state().unwrap_or_default();
             for m in &report.applied {
-                println!("{m}: back to {}", state.current.get(m).map_or(String::new(), |p| p.display().to_string()));
+                println!(
+                    "{m}: back to {}",
+                    state.current.get(m).map_or(String::new(), |p| p.display().to_string())
+                );
             }
             for (m, why) in &report.failed {
                 eprintln!("{m}: {why}");
@@ -389,7 +398,11 @@ pub fn theme(args: &[String]) -> i32 {
         Ok(Some(p)) => {
             println!("{} ({})", p.image.display(), p.scheme);
             for k in ["primary", "secondary", "tertiary", "surface", "on_surface"] {
-                println!("  {k:<10} dark {}  light {}", p.dark.get(k).map_or("-", String::as_str), p.light.get(k).map_or("-", String::as_str));
+                println!(
+                    "  {k:<10} dark {}  light {}",
+                    p.dark.get(k).map_or("-", String::as_str),
+                    p.light.get(k).map_or("-", String::as_str)
+                );
             }
             0
         }
@@ -413,7 +426,15 @@ pub fn noctalia_colors(args: &[String]) -> i32 {
                 if !s.available {
                     "Noctalia isn't running".to_string()
                 } else {
-                    format!("{} ({})", if s.following { "follows the wallpaper" } else { "its own scheme" }, s.scheme.unwrap_or_default())
+                    format!(
+                        "{} ({})",
+                        if s.following {
+                            "follows the wallpaper"
+                        } else {
+                            "its own scheme"
+                        },
+                        s.scheme.unwrap_or_default()
+                    )
                 }
             );
             0
@@ -422,7 +443,7 @@ pub fn noctalia_colors(args: &[String]) -> i32 {
     }
 }
 
-/// A value and its label, for the plugin's selects.
+/// A value and its label for interface choices.
 #[derive(Serialize)]
 struct Choice {
     value: &'static str,
@@ -430,7 +451,10 @@ struct Choice {
 }
 
 fn choices<'a>(pairs: impl IntoIterator<Item = &'a (&'static str, &'static str)>) -> Vec<Choice> {
-    pairs.into_iter().map(|&(value, label)| Choice { value, label }).collect()
+    pairs
+        .into_iter()
+        .map(|&(value, label)| Choice { value, label })
+        .collect()
 }
 
 /// Print `value` as one line of JSON; a closed pipe isn't an error.

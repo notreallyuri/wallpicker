@@ -6,10 +6,10 @@ use std::path::PathBuf;
 use wallpicker_core::catalog::{self, Catalog};
 use wallpicker_core::cmd::SystemRunner;
 use wallpicker_core::duplicates::DuplicateGroup;
-use wallpicker_core::hyprpaper;
-use wallpicker_core::store::Store;
 use wallpicker_core::library::{self, LocalImage};
+use wallpicker_core::store::Store;
 use wallpicker_core::thumbs;
+use wallpicker_core::wallpapers;
 
 use crate::service::wallpapers::trash_path;
 use crate::{AppState, CmdResult, blocking, err, wallpaper_path};
@@ -20,7 +20,11 @@ pub async fn scan(state: &AppState) -> CmdResult<Vec<LocalImage>> {
     let store = state.store.clone();
     blocking(move || {
         let s = store.load_settings()?;
-        Ok(library::with_cached_thumbs(library::scan(&s.folders, s.recursive), &store.dirs().cache, s.thumb_width))
+        Ok(library::with_cached_thumbs(
+            library::scan(&s.folders, s.recursive),
+            &store.dirs().cache,
+            s.thumb_width,
+        ))
     })
     .await
 }
@@ -63,7 +67,12 @@ pub async fn library(state: &AppState) -> CmdResult<Library> {
             .collect();
         let roots = folders
             .iter()
-            .map(|p| Root { name: p.file_name().map_or_else(|| p.display().to_string(), |n| n.to_string_lossy().into_owned()), path: p.clone() })
+            .map(|p| Root {
+                name: p
+                    .file_name()
+                    .map_or_else(|| p.display().to_string(), |n| n.to_string_lossy().into_owned()),
+                path: p.clone(),
+            })
             .collect();
         Ok(Library { images, roots })
     })
@@ -89,7 +98,10 @@ pub async fn thumbnail(state: &AppState, path: String) -> CmdResult<String> {
 
 /// Change the catalog under the lock and return the saved version (two
 /// changes at once mustn't lose one).
-pub async fn update_catalog(state: &AppState, change: impl FnOnce(&mut Catalog) + Send + 'static) -> CmdResult<Catalog> {
+pub async fn update_catalog(
+    state: &AppState,
+    change: impl FnOnce(&mut Catalog) + Send + 'static,
+) -> CmdResult<Catalog> {
     let store = state.store.clone();
     let lock = state.catalog_lock.clone();
     blocking(move || {
@@ -114,7 +126,10 @@ pub async fn set_favorite(state: &AppState, path: String, favorite: bool) -> Cmd
 pub async fn add_tag(state: &AppState, path: String, tag: String) -> CmdResult<Catalog> {
     let path = wallpaper_path(&path)?;
     if catalog::normalize_tag(&tag).is_none() {
-        return Err(format!("Tags must be 1 to {} characters, without control characters.", catalog::MAX_TAG_LEN));
+        return Err(format!(
+            "Tags must be 1 to {} characters, without control characters.",
+            catalog::MAX_TAG_LEN
+        ));
     }
     update_catalog(state, move |c| {
         c.add_tag(&path, &tag);
@@ -135,7 +150,10 @@ pub async fn origin_page(state: &AppState, path: String) -> CmdResult<Option<Str
     blocking(move || {
         let site = store.load_settings()?.konachan_site;
         let catalog = store.load_catalog()?;
-        Ok(catalog.metadata(&path).and_then(|m| m.origin.as_ref()).and_then(|o| wallpicker_core::online::origin_page(o, site)))
+        Ok(catalog
+            .metadata(&path)
+            .and_then(|m| m.origin.as_ref())
+            .and_then(|o| wallpicker_core::online::origin_page(o, site)))
     })
     .await
 }
@@ -157,7 +175,15 @@ pub async fn set_artists(state: &AppState, path: String, artists: Vec<catalog::P
 /// most of it first: (path, score).
 pub async fn with_color(state: &AppState, color: String) -> CmdResult<Vec<(PathBuf, f32)>> {
     let Some(color) = wallpicker_core::settings::known_color(Some(color.clone())) else {
-        return Err(format!("{color}? one of {}", wallpicker_core::colors::HUES.iter().chain(wallpicker_core::colors::TONES.iter()).map(|(k, _)| *k).collect::<Vec<_>>().join(", ")));
+        return Err(format!(
+            "{color}? one of {}",
+            wallpicker_core::colors::HUES
+                .iter()
+                .chain(wallpicker_core::colors::TONES.iter())
+                .map(|(k, _)| *k)
+                .collect::<Vec<_>>()
+                .join(", ")
+        ));
     };
     let store = state.store.clone();
     blocking(move || {
@@ -204,9 +230,7 @@ pub async fn duplicates(state: &AppState) -> CmdResult<Vec<DuplicateGroup>> {
 /// Every library image's colors (computed once, cached), by path.
 pub fn color_profiles(
     store: &Store,
-) -> wallpicker_core::error::Result<
-    std::collections::BTreeMap<PathBuf, wallpicker_core::colors::ColorProfile>,
-> {
+) -> wallpicker_core::error::Result<std::collections::BTreeMap<PathBuf, wallpicker_core::colors::ColorProfile>> {
     let settings = store.load_settings()?;
     let images = library::scan(&settings.folders, settings.recursive);
     Ok(wallpicker_core::colors::profiles(
@@ -220,11 +244,7 @@ pub fn color_profiles(
 /// favorite, tags, metadata and fit (when it has none), and goes on any monitor that
 /// showed one of them. Each copy is trashed with the usual checks; one that
 /// fails doesn't stop the rest.
-pub async fn resolve_duplicates_with(
-    state: &AppState,
-    keep: &str,
-    others: &[String],
-) -> CmdResult<ResolveReport> {
+pub async fn resolve_duplicates_with(state: &AppState, keep: &str, others: &[String]) -> CmdResult<ResolveReport> {
     let keep_path = wallpaper_path(keep)?;
     let store = state.store.clone();
     let check = keep_path.clone();
@@ -235,10 +255,7 @@ pub async fn resolve_duplicates_with(
         library::library_file(&check, &roots)
     })
     .await?;
-    let other_paths: Vec<PathBuf> = others
-        .iter()
-        .map(|o| wallpaper_path(o))
-        .collect::<CmdResult<_>>()?;
+    let other_paths: Vec<PathBuf> = others.iter().map(|o| wallpaper_path(o)).collect::<CmdResult<_>>()?;
     if other_paths.contains(&keep_path) {
         return Err("The kept wallpaper can't also be trashed.".into());
     }
@@ -280,11 +297,7 @@ pub async fn resolve_duplicates_with(
     if !shown.is_empty() {
         let store = state.store.clone();
         let keep = keep_path.clone();
-        let applied = blocking(move || {
-            let backend = store.load_settings()?.wallpaper_backend;
-            hyprpaper::apply_and_remember_with(&SystemRunner, &store, backend, &shown, &keep)
-        })
-        .await?;
+        let applied = blocking(move || wallpapers::apply_and_remember(&SystemRunner, &store, &shown, &keep)).await?;
         report.reapplied = applied.applied;
     }
     Ok(report)

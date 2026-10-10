@@ -8,8 +8,8 @@
 use std::collections::BTreeMap;
 
 use serde_json::{Value, json as value};
-use wallpicker_core::hyprpaper::SpanAsk;
 use wallpicker_core::settings::{SpanLook, SpanPoint};
+use wallpicker_core::wallpapers::SpanAsk;
 
 use super::super::Out;
 use super::{json, param};
@@ -80,8 +80,16 @@ pub(super) async fn call(state: &AppState, out: &Out, name: &str, params: &Value
 /// y}}, bezel}: an arrangement from the Span dialog, kept).
 fn span_ask(params: &Value) -> CmdResult<(SpanLook, SpanAsk)> {
     let given = |key: &str| params.get(key).is_some_and(|v| !v.is_null());
-    let look = if given("look") { param(params, "look")? } else { SpanLook::default() };
-    let monitors = if given("monitors") { Some(param(params, "monitors")?) } else { None };
+    let look = if given("look") {
+        param(params, "look")?
+    } else {
+        SpanLook::default()
+    };
+    let monitors = if given("monitors") {
+        Some(param(params, "monitors")?)
+    } else {
+        None
+    };
     let layout = if given("layout") {
         let places: BTreeMap<String, SpanPoint> = param(&params["layout"], "places")?;
         let bezel: u32 = param(&params["layout"], "bezel")?;

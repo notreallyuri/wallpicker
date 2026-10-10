@@ -41,7 +41,7 @@ tmp = sys.argv[1]
 s = json.load(open(os.path.expanduser('~/.config/wallpicker/config.json')))
 if os.environ.get('CHECK_API_KEY') != '1':
     s['wallhaven_api_key'] = None
-s['wallpaper_backend'] = 'hyprpaper'
+s.pop('wallpaper_backend', None)
 # Downloads in a check land in the throwaway profile, not your folder.
 s['download_dir'] = f'{tmp}/downloads'
 s['workspaces'] = {'enabled': False, 'remember': False, 'wallpapers': {}}

@@ -20,7 +20,7 @@ ColumnLayout {
 
     ToggleField {
         label: "Noctalia's colors follow the wallpaper"
-        description: (Settings.backend === "noctalia" ? "Noctalia's own wallpaper mode." : "Noctalia doesn't draw the wallpaper with " + Settings.backend + ", so wallpicker makes it a palette from the wallpaper shown and keeps it current (the daemon, or the picker while it's open).") + " Applies at once. Now: " + (field.status && field.status.scheme ? field.status.scheme : "…") + ". Turning it off goes back to the scheme Noctalia had before."
+        description: "wallpicker makes Noctalia a palette from the wallpaper shown and keeps it current. Applies at once. Now: " + (field.status && field.status.scheme ? field.status.scheme : "…") + ". Turning it off goes back to the scheme Noctalia had before."
         checked: !!(field.status && field.status.following)
         enabled: !field.busy
         onToggled: {

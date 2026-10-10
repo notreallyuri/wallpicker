@@ -14,12 +14,6 @@ pub enum Error {
     #[error("command `{cmd}` failed: {msg}")]
     Command { cmd: String, msg: String },
 
-    #[error("hyprpaper: {0}")]
-    Hyprpaper(String),
-
-    #[error("hyprpaper is not running. Start it, and add it to your Hyprland autostart.")]
-    HyprpaperNotRunning,
-
     #[error("wallpicker daemon isn't running")]
     DaemonNotRunning,
 

@@ -6,11 +6,11 @@
 
 pub mod backup;
 pub mod cli;
+pub mod noctalia_colors;
+mod renderer;
 pub mod rt;
 mod serve;
 pub mod service;
-pub mod noctalia_colors;
-mod renderer;
 pub mod theme;
 
 use std::path::PathBuf;
@@ -19,9 +19,8 @@ use std::time::Duration;
 
 use tokio::sync::Semaphore;
 use wallpicker_core::cmd::SystemRunner;
-use wallpicker_core::hyprpaper;
-use wallpicker_core::settings::WallpaperBackend;
 use wallpicker_core::store::{Dirs, Store};
+use wallpicker_core::wallpapers;
 
 /// `wallpicker serve` (the Quickshell interface's backend).
 pub fn serve() -> i32 {
@@ -88,16 +87,8 @@ pub fn wallpaper_path(path: &str) -> CmdResult<PathBuf> {
 /// Returns the process exit code.
 pub fn restore_cli() -> i32 {
     let store = Store::new(Dirs::from_env());
-    let backend = store
-        .load_settings()
-        .map(|s| s.wallpaper_backend)
-        .unwrap_or_default();
-    if backend == WallpaperBackend::Noctalia {
-        println!("wallpicker uses Noctalia, which restores its wallpapers itself; nothing to do");
-        return 0;
-    }
-    // Retry for ~20s: at login hyprpaper may still be starting.
-    match hyprpaper::restore(&SystemRunner, &store, 40, Duration::from_millis(500)) {
+    // Retry while the native daemon starts.
+    match wallpapers::restore(&SystemRunner, &store, 40, Duration::from_millis(500)) {
         Ok(report) => {
             for m in &report.applied {
                 println!("restored {m}");

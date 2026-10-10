@@ -11,23 +11,16 @@ import qs.services
 Rectangle {
     id: conflicts
 
-    property string backend
     property var found: []
     property string stopping: ""
 
     function check() {
-        const asked = backend;
-        if (!asked)
-            return;
-        Backend.request("settings.conflicts", {
-            backend: asked
-        }, list => {
+        Backend.request("settings.conflicts", {}, list => {
             // The section may be gone by the answer (Settings closed).
-            if (conflicts && conflicts.backend === asked)
+            if (conflicts)
                 conflicts.found = list || [];
         }, () => {});
     }
-    onBackendChanged: check()
     Component.onCompleted: check()
 
     function stop(name) {
@@ -62,7 +55,7 @@ Rectangle {
         Text {
             Layout.fillWidth: true
             wrapMode: Text.Wrap
-            text: "Also drawing wallpapers: they fight over the screen with " + conflicts.backend + "."
+            text: "Also drawing wallpapers: they fight over the screen with wallpicker."
             color: Theme.foreground
             font.family: Theme.font
             font.pixelSize: 13

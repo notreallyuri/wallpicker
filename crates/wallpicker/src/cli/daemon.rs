@@ -1,18 +1,4 @@
-//! `wallpicker daemon`: what keeps running without the window, for an
-//! autostart. At start it puts the saved wallpapers back through the chosen
-//! backend (`--restore`: awww's daemon is started if needed; hyprpaper is
-//! waited for; Noctalia restores its own). Then the wallpaper per workspace
-//! (Hyprland's events), the
-//! slideshow's timer, and Noctalia's colors following the wallpaper (when
-//! they're wallpicker's palette: noctalia_colors.rs). One at a time; a second says so and leaves. The
-//! workspace listener also waits while another program has it, and the
-//! slideshow's ticks take turns with the Noctalia plugin's.
-//!
-//! With the wallpicker backend it draws the wallpapers too (renderer/):
-//! running while that's the backend (each monitor showing the saved state,
-//! so no restore), stopped when another is picked. Its socket answers the
-//! backend (core's daemon.rs): `show` (with the settings' transition) and
-//! `status`, a JSON line each way.
+//! Native wallpaper daemon: renderer, workspace listener, slideshow and Noctalia colors.
 
 use std::io::{BufRead, BufReader, Read, Write};
 use std::os::unix::net::{UnixListener, UnixStream};
@@ -22,9 +8,9 @@ use std::time::Duration;
 
 use serde_json::{Value, json};
 use wallpicker_core::cmd::SystemRunner;
-use wallpicker_core::hyprpaper;
-use wallpicker_core::settings::{FitMode, WallpaperBackend};
+use wallpicker_core::settings::FitMode;
 use wallpicker_core::store::{Dirs, Store};
+use wallpicker_core::wallpapers;
 use wallpicker_core::workspaces;
 
 use super::{slideshow, usage_for};
@@ -44,27 +30,15 @@ pub fn daemon(args: &[String]) -> i32 {
     if let Err(e) = store.upgrade_catalog() {
         eprintln!("wallpicker: could not update library.json's format: {e}");
     }
-    // hyprpaper.conf sources this file: make sure it exists (and matches).
-    if let Err(e) = store.write_hyprpaper_conf() {
-        eprintln!("wallpicker: could not write the hyprpaper config: {e}");
-    }
     let drawing = Arc::new(Drawing {
         store: store.clone(),
         renderer: Mutex::new(None),
     });
-    if backend_of(&store) == WallpaperBackend::Wallpicker {
-        // Each monitor shows its saved wallpaper as the renderer finds it.
-        if let Err(e) = drawing.start() {
-            eprintln!("wallpicker: can't draw the wallpapers: {e}");
-        }
-    } else {
-        // Retries for a while: at login the backend may still be starting.
-        std::thread::spawn(crate::restore_cli);
+    if let Err(e) = drawing.start() {
+        eprintln!("wallpicker: can't draw the wallpapers: {e}");
     }
     let answering = drawing.clone();
     std::thread::spawn(move || answer_all(&socket, &answering));
-    let following = drawing.clone();
-    std::thread::spawn(move || follow_backend(&following));
     let listener = store.clone();
     std::thread::spawn(move || workspaces::listen(&SystemRunner, &listener, &|| true, &|| {}));
     let colors = store.clone();
@@ -105,11 +79,7 @@ fn claim() -> Option<UnixListener> {
     UnixListener::bind_addr(&wallpicker_core::daemon::address().ok()?).ok()
 }
 
-fn backend_of(store: &Store) -> WallpaperBackend {
-    store.load_settings().map(|s| s.wallpaper_backend).unwrap_or_default()
-}
-
-/// The renderer, while the backend is wallpicker.
+/// The native wallpaper renderer.
 struct Drawing {
     store: Store,
     renderer: Mutex<Option<Renderer>>,
@@ -124,7 +94,7 @@ impl Drawing {
             *renderer = None;
             let store = self.store.clone();
             *renderer = Some(Renderer::start(Arc::new(move |m: &str| {
-                hyprpaper::saved_for(&store, m)
+                wallpapers::saved_for(&store, m)
             }))?);
         }
         f(renderer.as_ref().expect("just started"))
@@ -132,34 +102,6 @@ impl Drawing {
 
     fn start(&self) -> Result<(), String> {
         self.with(|_| Ok(()))
-    }
-
-    /// Its surfaces go: what's underneath shows.
-    fn stop(&self) {
-        self.renderer.lock().unwrap_or_else(|e| e.into_inner()).take();
-    }
-}
-
-/// The renderer started when the backend becomes wallpicker, stopped when
-/// it becomes another (checked when the settings file changes).
-fn follow_backend(drawing: &Drawing) {
-    let file = drawing.store.dirs().config.join("config.json");
-    let stamp = || std::fs::metadata(&file).and_then(|m| m.modified()).ok();
-    let mut last = stamp();
-    loop {
-        std::thread::sleep(Duration::from_secs(2));
-        let now = stamp();
-        if now == last {
-            continue;
-        }
-        last = now;
-        if backend_of(&drawing.store) == WallpaperBackend::Wallpicker {
-            if let Err(e) = drawing.start() {
-                eprintln!("wallpicker: can't draw the wallpapers: {e}");
-            }
-        } else {
-            drawing.stop();
-        }
     }
 }
 
@@ -189,7 +131,11 @@ fn answer(stream: UnixStream, drawing: &Drawing) -> std::io::Result<()> {
 fn respond(request: &Value, drawing: &Drawing) -> Result<Value, String> {
     match request.get("cmd").and_then(Value::as_str) {
         Some("show") => {
-            let monitor = request.get("monitor").and_then(Value::as_str).ok_or("no monitor")?.to_string();
+            let monitor = request
+                .get("monitor")
+                .and_then(Value::as_str)
+                .ok_or("no monitor")?
+                .to_string();
             let path = PathBuf::from(request.get("path").and_then(Value::as_str).ok_or("no path")?);
             if !path.is_absolute() {
                 return Err(format!("not an absolute path: {}", path.display()));

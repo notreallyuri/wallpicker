@@ -5,10 +5,10 @@ use std::path::{Path, PathBuf};
 
 use wallpicker_core::catalog::TagMatch;
 use wallpicker_core::cmd::SystemRunner;
-use wallpicker_core::hyprpaper;
 use wallpicker_core::library;
 use wallpicker_core::settings::{Settings, expand_tilde};
 use wallpicker_core::store::{Dirs, Store};
+use wallpicker_core::wallpapers;
 
 use super::{fail, usage_for};
 
@@ -162,15 +162,19 @@ pub(super) fn apply_random(store: &Store, settings: &Settings, choice: &Choice) 
     let monitors: Vec<String> = if choice.monitors.is_empty() {
         connected
     } else {
-        choice.monitors.iter().filter(|m| connected.contains(m)).cloned().collect()
+        choice
+            .monitors
+            .iter()
+            .filter(|m| connected.contains(m))
+            .cloned()
+            .collect()
     };
     if monitors.is_empty() {
         return Err("none of those monitors is connected".into());
     }
     let current = store.load_state().unwrap_or_default().current;
-    let now_on = |ms: &[String]| -> Vec<&Path> {
-        ms.iter().filter_map(|m| current.get(m).map(PathBuf::as_path)).collect()
-    };
+    let now_on =
+        |ms: &[String]| -> Vec<&Path> { ms.iter().filter_map(|m| current.get(m).map(PathBuf::as_path)).collect() };
 
     // One wallpaper for all, or one per monitor.
     let plan: Vec<(Vec<String>, &PathBuf)> = if choice.each {
@@ -186,12 +190,15 @@ pub(super) fn apply_random(store: &Store, settings: &Settings, choice: &Choice) 
             })
             .collect()
     } else {
-        pick(&candidates, &now_on(&monitors)).map(|p| (monitors.clone(), p)).into_iter().collect()
+        pick(&candidates, &now_on(&monitors))
+            .map(|p| (monitors.clone(), p))
+            .into_iter()
+            .collect()
     };
 
     let mut ok = true;
     for (targets, path) in plan {
-        match hyprpaper::apply_and_remember_with(&SystemRunner, store, settings.wallpaper_backend, &targets, path) {
+        match wallpapers::apply_and_remember(&SystemRunner, store, &targets, path) {
             Ok(report) => {
                 for m in &report.applied {
                     println!("{m}: {}", path.display());

@@ -92,7 +92,7 @@ MonitorFigure {
             id: picture
             readonly property bool framed: framer.frame !== null && framer.naturalWidth > 0
             readonly property var place: framed ? framer.placed() : null
-            // Tiles (or, with awww, one centered) at the original's size
+            // Tiles at the original's size
             // on this monitor.
             readonly property bool tiled: !framed && framer.fit === "tile"
             readonly property real tileScale: framer.screenWidth / Math.max(framer.monitorWidth, 1)
@@ -105,7 +105,7 @@ MonitorFigure {
             y: framed ? place.y : 0
             width: framed ? place.width : stage.width
             height: framed ? place.height : stage.height
-            fillMode: framed ? Image.Stretch : tiled ? (Settings.backend === "awww" ? Image.Pad : Image.Tile) : framer.fit === "contain" ? Image.PreserveAspectFit : framer.fit === "fill" ? Image.Stretch : Image.PreserveAspectCrop
+            fillMode: framed ? Image.Stretch : tiled ? Image.Tile : framer.fit === "contain" ? Image.PreserveAspectFit : framer.fit === "fill" ? Image.Stretch : Image.PreserveAspectCrop
             sourceSize: tiled && framer.naturalWidth > 0 ? Qt.size(framer.naturalWidth * tileScale, framer.naturalHeight * tileScale) : undefined
             onStatusChanged: if (status === Image.Ready && !tiled) {
                 framer.loadedWidth = implicitWidth;

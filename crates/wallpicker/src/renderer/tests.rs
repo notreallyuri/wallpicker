@@ -15,7 +15,7 @@ fn live_fade_lifecycle() {
     use wallpicker_core::store::{Dirs, Store};
     let store = Store::new(Dirs::from_env());
     let renderer = Renderer::start(Arc::new(move |name| {
-        wallpicker_core::hyprpaper::saved_for(&store, name)
+        wallpicker_core::wallpapers::saved_for(&store, name)
     }))
     .unwrap();
     let wait = |predicate: &dyn Fn(&Value) -> bool| {
@@ -92,14 +92,8 @@ fn live_fade_blends_pixels() {
     std::fs::create_dir_all(&dir).unwrap();
     let red = dir.join("red.png");
     let green = dir.join("green.png");
-    RgbImage::from_raw(1, 1, vec![255, 0, 0])
-        .unwrap()
-        .save(&red)
-        .unwrap();
-    RgbImage::from_raw(1, 1, vec![0, 255, 0])
-        .unwrap()
-        .save(&green)
-        .unwrap();
+    RgbImage::from_raw(1, 1, vec![255, 0, 0]).unwrap().save(&red).unwrap();
+    RgbImage::from_raw(1, 1, vec![0, 255, 0]).unwrap().save(&green).unwrap();
     let renderer = Renderer::start(Arc::new(move |_| Some((red.clone(), None)))).unwrap();
     let deadline = Instant::now() + Duration::from_secs(10);
     loop {
@@ -144,11 +138,7 @@ fn live_fade_blends_pixels() {
     }
     let (monitor, pixels) = exposed.expect("need exposed wallpaper on at least one monitor");
     renderer
-        .show(
-            monitor.clone(),
-            (green, None),
-            Transition::from_setting("fade", 2000),
-        )
+        .show(monitor.clone(), (green, None), Transition::from_setting("fade", 2000))
         .unwrap()
         .recv_timeout(Duration::from_secs(10))
         .unwrap()
@@ -187,10 +177,7 @@ fn live_fade_blends_pixels() {
             p[0] < 10 && p[1] > 150 && p[2] < 10
         })
         .count();
-    assert!(
-        green > pixels.len() / 2,
-        "final wallpaper did not become green"
-    );
+    assert!(green > pixels.len() / 2, "final wallpaper did not become green");
     drop(renderer);
     std::fs::remove_dir_all(dir).unwrap();
 }

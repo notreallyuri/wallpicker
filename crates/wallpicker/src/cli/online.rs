@@ -7,11 +7,11 @@ use std::path::{Path, PathBuf};
 use serde::Serialize;
 
 use wallpicker_core::cmd::SystemRunner;
-use wallpicker_core::hyprpaper;
 use wallpicker_core::moebooru::MoebooruSort;
 use wallpicker_core::online::{OnlineQuery, OnlineWallpaper, Page, Provider};
 use wallpicker_core::store::{Dirs, Store};
 use wallpicker_core::wallhaven::Sorting;
+use wallpicker_core::wallpapers;
 
 use super::{Choice, fail, print_json, usage_for};
 use crate::AppState;
@@ -86,7 +86,8 @@ fn likes_label(w: &OnlineWallpaper) -> String {
 /// Uses the provider's saved filters (the app's Filters dialog); `--sort`
 /// changes that provider's saved sort, for the app too.
 pub fn search(args: &[String]) -> i32 {
-    let usage_text = "usage: wallpicker search <wallhaven|konachan|yandere> [query...] [--page N] [--sort S] [--json] [--thumbs]";
+    let usage_text =
+        "usage: wallpicker search <wallhaven|konachan|yandere> [query...] [--page N] [--sort S] [--json] [--thumbs]";
     let mut provider = None;
     let mut words = Vec::new();
     let (mut page, mut sort, mut json, mut want_thumbs) = (1u32, None, false, false);
@@ -126,8 +127,12 @@ pub fn search(args: &[String]) -> i32 {
     if let Some(sort) = &sort {
         let ok = match provider {
             Provider::Wallhaven => Sorting::from_str(sort).map(|s| filters.wallhaven.sorting = s).is_some(),
-            Provider::Konachan => MoebooruSort::from_str(sort).map(|s| filters.konachan.sorting = s).is_some(),
-            Provider::Yandere => MoebooruSort::from_str(sort).map(|s| filters.yandere.sorting = s).is_some(),
+            Provider::Konachan => MoebooruSort::from_str(sort)
+                .map(|s| filters.konachan.sorting = s)
+                .is_some(),
+            Provider::Yandere => MoebooruSort::from_str(sort)
+                .map(|s| filters.yandere.sorting = s)
+                .is_some(),
         };
         if !ok {
             let valid: Vec<&str> = sorts_for(provider).iter().map(|c| c.value).collect();
@@ -376,7 +381,13 @@ pub fn collections(args: &[String]) -> i32 {
         Ok(list) if json => print_json(&list),
         Ok(list) => {
             for c in &list {
-                println!("{}  {} ({}{})", c.id, c.label, c.count, if c.public { ", public" } else { "" });
+                println!(
+                    "{}  {} ({}{})",
+                    c.id,
+                    c.label,
+                    c.count,
+                    if c.public { ", public" } else { "" }
+                );
             }
             0
         }
@@ -429,7 +440,11 @@ pub fn collection(args: &[String]) -> i32 {
     let state = AppState::new(store.clone());
     let result = crate::rt::block_on(async {
         let page = crate::service::online::wallhaven_collection_page(&state, id, page).await?;
-        let thumbs = if want_thumbs { fetch_thumbs(&state, &page.items).await } else { Vec::new() };
+        let thumbs = if want_thumbs {
+            fetch_thumbs(&state, &page.items).await
+        } else {
+            Vec::new()
+        };
         Ok::<_, String>((page, thumbs))
     });
     let (page, thumbs) = match result {
@@ -449,7 +464,13 @@ pub fn collection(args: &[String]) -> i32 {
     }
     println!("collection {id}: page {} of {}", out.page, out.last_page);
     for i in &out.items {
-        println!("{} {}  {}  {}", if i.downloaded { "d" } else { " " }, i.key, i.resolution, i.page_url);
+        println!(
+            "{} {}  {}  {}",
+            if i.downloaded { "d" } else { " " },
+            i.key,
+            i.resolution,
+            i.page_url
+        );
     }
     0
 }
@@ -592,7 +613,11 @@ pub fn details(args: &[String]) -> i32 {
     let state = AppState::new(store.clone());
     let result = crate::rt::block_on(async {
         let preview = async {
-            if want_preview { fetch_preview(&state, &w).await } else { None }
+            if want_preview {
+                fetch_preview(&state, &w).await
+            } else {
+                None
+            }
         };
         let (d, preview) = tokio::join!(crate::service::online::details(&state, &w), preview);
         d.map(|d| (d, preview))
@@ -601,7 +626,9 @@ pub fn details(args: &[String]) -> i32 {
         Ok(r) => r,
         Err(e) => return fail(&e),
     };
-    let downloaded = crate::service::online::downloaded_keys(&store).unwrap_or_default().contains(&w.key());
+    let downloaded = crate::service::online::downloaded_keys(&store)
+        .unwrap_or_default()
+        .contains(&w.key());
 
     let mut stats = vec![likes_label(&w)];
     stats.extend(w.views.map(|v| format!("{v} views")));
@@ -694,7 +721,7 @@ pub fn apply_online(args: &[String]) -> i32 {
     };
 
     let store = Store::new(Dirs::from_env());
-    let settings = match store.load_settings() {
+    let _settings = match store.load_settings() {
         Ok(s) => s,
         Err(e) => return fail(&e),
     };
@@ -718,7 +745,7 @@ pub fn apply_online(args: &[String]) -> i32 {
             Err(e) => return fail(&e),
         }
     }
-    match hyprpaper::apply_and_remember_with(&SystemRunner, &store, settings.wallpaper_backend, &monitors, &path) {
+    match wallpapers::apply_and_remember(&SystemRunner, &store, &monitors, &path) {
         Ok(report) => {
             wallpicker_core::workspaces::remember_shown(&SystemRunner, &store, &report.applied);
             for m in &report.applied {
@@ -732,4 +759,3 @@ pub fn apply_online(args: &[String]) -> i32 {
         Err(e) => fail(&e),
     }
 }
-

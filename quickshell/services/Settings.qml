@@ -12,8 +12,6 @@ Singleton {
     /// [{value, label}] the backend does ("" is its own default).
     property var fitModes: []
 
-    /// "hyprpaper", "awww" or "noctalia".
-    readonly property string backend: data.wallpaper_backend || "hyprpaper"
 
     /// The fit on `monitor` (as core's Settings::fit_for): its adjusted one,
     /// else the monitor's, else the general one; null leaves it to the

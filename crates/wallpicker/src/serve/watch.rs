@@ -1,5 +1,5 @@
 //! Changes other programs make while the interface is open (the slideshow,
-//! the Noctalia plugin, the command line, the workspace listener): the
+//! the command line and workspace listener): the
 //! settings, what the monitors show, the favorites and tags. Their files are
 //! checked a few times a second and a change is announced like `serve`'s
 //! own: `settings-changed`, `state-changed`, `catalog-changed`. (Its own

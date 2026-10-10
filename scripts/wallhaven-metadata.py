@@ -19,7 +19,7 @@ written or renamed without --write.
 
 A renamed file is renamed everywhere wallpicker remembers it too: the
 library, what each monitor shows and the history (state.json), the
-wallpapers per workspace (config.json) and hyprpaper's config. Reopen the
+wallpapers per workspace (config.json) and presets. Reopen the
 picker afterwards (a picker kept ready still lists the old names).
 
 Exit codes: 0 done, 1 something failed, 2 usage.
@@ -53,7 +53,7 @@ CONFIG = os.path.join(xdg("XDG_CONFIG_HOME", "~/.config"), "wallpicker", "config
 LIBRARY = os.path.join(xdg("XDG_DATA_HOME", "~/.local/share"), "wallpicker", "library.json")
 CACHE = os.path.join(xdg("XDG_CACHE_HOME", "~/.cache"), "wallpicker", "metadata", "wallhaven")
 STATE = os.path.join(xdg("XDG_STATE_HOME", "~/.local/state"), "wallpicker", "state.json")
-HYPRPAPER = os.path.join(xdg("XDG_STATE_HOME", "~/.local/state"), "wallpicker", "hyprpaper.conf")
+PRESETS = os.path.join(xdg("XDG_DATA_HOME", "~/.local/share"), "wallpicker", "presets.json")
 
 
 def load_json(path, missing):
@@ -150,9 +150,9 @@ def write_json(path, value):
 
 def rename_references(done):
     """What each monitor shows, the history, the wallpapers per workspace and
-    hyprpaper's config: the renamed files' new paths. Returns the files changed."""
+    presets: the renamed files' new paths. Returns the files changed."""
     changed = []
-    for path in (STATE, CONFIG):
+    for path in (STATE, CONFIG, PRESETS):
         before = load_json(path, None)
         if before is None:
             continue
@@ -160,18 +160,6 @@ def rename_references(done):
         if after != before:
             write_json(path, after)
             changed.append(path)
-    try:
-        with open(HYPRPAPER, encoding="utf-8") as f:
-            text = f.read()
-    except FileNotFoundError:
-        return changed
-    # Longest first: a path that's the start of another can't eat it.
-    new_text = text
-    for old in sorted(done, key=len, reverse=True):
-        new_text = new_text.replace(old, done[old])
-    if new_text != text:
-        write_atomic(HYPRPAPER, new_text)
-        changed.append(HYPRPAPER)
     return changed
 
 

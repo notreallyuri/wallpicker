@@ -1,6 +1,6 @@
 [package]
 name = "wallpicker-core"
-description = "wallpicker's logic: monitors, wallpaper backends, settings, the library, online providers"
+description = "wallpicker's logic: monitors, native wallpaper application, settings, the library, online providers"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

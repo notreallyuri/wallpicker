@@ -88,12 +88,8 @@ impl Effect {
             Self::Fade => None,
             Self::Wipe => Some(wipe::SHADER),
             Self::Slide(_) => Some(slide::SHADER),
-            Self::Circle {
-                shrinking: false, ..
-            } => Some(circle::GROW),
-            Self::Circle {
-                shrinking: true, ..
-            } => Some(circle::SHRINK),
+            Self::Circle { shrinking: false, .. } => Some(circle::GROW),
+            Self::Circle { shrinking: true, .. } => Some(circle::SHRINK),
             Self::Wave => Some(wave::SHADER),
         }
     }
@@ -114,9 +110,7 @@ fn random(limit: u64) -> u64 {
         .duration_since(UNIX_EPOCH)
         .unwrap_or_default()
         .as_nanos() as u64
-        ^ COUNTER
-            .fetch_add(1, Ordering::Relaxed)
-            .wrapping_mul(0x9e3779b97f4a7c15);
+        ^ COUNTER.fetch_add(1, Ordering::Relaxed).wrapping_mul(0x9e3779b97f4a7c15);
     n ^= n >> 30;
     n = n.wrapping_mul(0xbf58476d1ce4e5b9);
     n ^= n >> 27;
@@ -134,19 +128,12 @@ mod tests {
             "wipe", "left", "right", "top", "bottom", "grow", "center", "any", "outer", "wave",
         ] {
             assert!(
-                Transition::from_setting(kind, 800)
-                    .unwrap()
-                    .effect
-                    .shader()
-                    .is_some(),
+                Transition::from_setting(kind, 800).unwrap().effect.shader().is_some(),
                 "{kind}"
             );
         }
         for kind in ["fade", "simple", "unknown"] {
-            assert_eq!(
-                Transition::from_setting(kind, 800).unwrap().effect,
-                Effect::Fade
-            );
+            assert_eq!(Transition::from_setting(kind, 800).unwrap().effect, Effect::Fade);
         }
         assert!(Transition::from_setting("none", 800).is_none());
         assert!(Transition::from_setting("wipe", 0).is_none());
@@ -154,17 +141,14 @@ mod tests {
 
     #[test]
     fn every_offered_choice_has_an_implementation() {
-        use wallpicker_core::settings::{WallpaperBackend, transition_modes};
-        for (kind, _) in transition_modes(WallpaperBackend::Wallpicker) {
+        use wallpicker_core::settings::TRANSITIONS;
+        for (kind, _) in TRANSITIONS {
             let transition = Transition::from_setting(kind, 1000);
             if kind == "none" {
                 assert!(transition.is_none());
             } else {
                 let effect = transition.unwrap().effect;
-                assert!(
-                    matches!(kind, "fade" | "random") || effect.shader().is_some(),
-                    "{kind}"
-                );
+                assert!(matches!(kind, "fade" | "random") || effect.shader().is_some(), "{kind}");
                 assert_ne!(kind, "simple");
             }
         }
@@ -193,10 +177,7 @@ mod tests {
         assert_eq!(Effect::Slide(Direction::Top).parameters(), (0.0, 1.0));
         assert_eq!(Effect::Slide(Direction::Bottom).parameters(), (0.0, -1.0));
         for _ in 0..100 {
-            let (x, y) = Transition::from_setting("any", 800)
-                .unwrap()
-                .effect
-                .parameters();
+            let (x, y) = Transition::from_setting("any", 800).unwrap().effect.parameters();
             assert!((0.0..=1.0).contains(&x) && (0.0..=1.0).contains(&y));
         }
     }

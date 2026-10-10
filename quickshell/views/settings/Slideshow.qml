@@ -165,6 +165,6 @@ ColumnLayout {
         }
     }
     Note {
-        text: "Kept on time by the Noctalia plugin while Noctalia runs, or by `wallpicker slideshow run` (for a Hyprland autostart). Save to apply changes here; Change now uses what's saved."
+        text: "Kept on time by `wallpicker daemon` while the picker is closed. Save to apply changes here; Change now uses what's saved."
     }
 }

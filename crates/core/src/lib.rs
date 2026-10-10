@@ -18,18 +18,20 @@ pub mod settings;
 pub mod span;
 pub mod wallhaven;
 
-pub mod awww;
 pub mod cmd;
 pub mod compose;
 pub mod daemon;
-pub mod hyprpaper;
 pub mod noctalia;
 pub mod store;
 pub mod thumbs;
 pub mod transform;
+pub mod wallpapers;
 pub mod workspaces;
 
 pub use error::{Error, Result};
 
 #[cfg(test)]
 mod adjustment_tests;
+
+#[cfg(test)]
+mod migration_tests;

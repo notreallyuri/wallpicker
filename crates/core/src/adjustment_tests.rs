@@ -2,9 +2,9 @@
 use crate::{
     Result,
     cmd::Runner,
-    hyprpaper::{self, SpanAsk},
-    settings::{Settings, SpanLook, WallpaperBackend},
+    settings::{Settings, SpanLook},
     store::{Dirs, Store},
+    wallpapers::{self, SpanAsk},
 };
 use std::cell::RefCell;
 use std::path::Path;
@@ -12,6 +12,16 @@ use std::path::Path;
 #[derive(Default)]
 struct Mock(RefCell<Vec<Vec<String>>>);
 impl Runner for Mock {
+    fn show_wallpaper(
+        &self,
+        _monitor: &str,
+        _path: &Path,
+        _fit: Option<crate::settings::FitMode>,
+        transition: &crate::settings::Transition,
+    ) -> Result<()> {
+        self.run("wallpicker", &["--transition-type", &transition.kind])
+            .map(drop)
+    }
     fn run(&self, program: &str, args: &[&str]) -> Result<String> {
         self.0.borrow_mut().push(
             std::iter::once(program.to_owned())
@@ -48,7 +58,6 @@ fn image(root: &Path, name: &str) -> std::path::PathBuf {
 fn setup(root: &Path) -> Store {
     let store = Store::new(Dirs::under(root));
     let mut settings = Settings::default();
-    settings.wallpaper_backend = WallpaperBackend::Awww;
     settings.transition.kind = "left".into();
     settings.transition.duration_ms = 1000;
     store.save_settings(&settings).unwrap();
@@ -61,9 +70,9 @@ fn reapplying_adjustments_cuts_but_selection_keeps_transition() {
     let store = setup(root.path());
     let path = image(root.path(), "a.png");
     let runner = Mock::default();
-    hyprpaper::apply_and_remember_with(&runner, &store, WallpaperBackend::Awww, &["DP-1".into()], &path).unwrap();
-    hyprpaper::reapply(&runner, &store, &|_, _| true).unwrap();
-    hyprpaper::apply_and_remember_with(&runner, &store, WallpaperBackend::Awww, &["DP-1".into()], &path).unwrap();
+    wallpapers::apply_and_remember(&runner, &store, &["DP-1".into()], &path).unwrap();
+    wallpapers::reapply(&runner, &store, &|_, _| true).unwrap();
+    wallpapers::apply_and_remember(&runner, &store, &["DP-1".into()], &path).unwrap();
     assert_eq!(runner.transitions(), ["left", "none", "left"]);
     assert_eq!(store.load_settings().unwrap().transition.duration_ms, 1000);
     assert_eq!(store.load_settings().unwrap().transition.kind, "left");
@@ -80,14 +89,14 @@ fn changing_span_look_cuts_but_new_span_wallpaper_animates() {
         monitors: Some(vec!["DP-1".into(), "DP-2".into()]),
         layout: None,
     };
-    hyprpaper::span_and_remember(&runner, &store, WallpaperBackend::Awww, &a, SpanLook::default(), ask()).unwrap();
+    wallpapers::span_and_remember(&runner, &store, &a, SpanLook::default(), ask()).unwrap();
     let look = SpanLook {
         zoom: 150,
         x: 650,
         ..Default::default()
     };
-    hyprpaper::span_and_remember(&runner, &store, WallpaperBackend::Awww, &a, look, ask()).unwrap();
-    hyprpaper::span_and_remember(&runner, &store, WallpaperBackend::Awww, &b, look, ask()).unwrap();
+    wallpapers::span_and_remember(&runner, &store, &a, look, ask()).unwrap();
+    wallpapers::span_and_remember(&runner, &store, &b, look, ask()).unwrap();
     assert_eq!(runner.transitions(), ["left", "left", "none", "none", "left", "left"]);
     assert_eq!(store.load_settings().unwrap().transition.kind, "left");
 }

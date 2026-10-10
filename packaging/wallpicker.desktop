@@ -7,7 +7,7 @@ Exec=wallpicker
 Icon=wallpicker
 Terminal=false
 Categories=Utility;
-Keywords=wallpaper;background;hyprpaper;noctalia;wallhaven;konachan;yandere;
+Keywords=wallpaper;background;wallhaven;konachan;yandere;
 Actions=random;previous;
 
 [Desktop Action random]

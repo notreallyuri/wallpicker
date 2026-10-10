@@ -1,6 +1,6 @@
 [package]
 name = "wallpicker"
-description = "Wallpaper picker for Hyprland (hyprpaper, awww, Noctalia): the command line and the Quickshell interface's backend"
+description = "Wallpaper picker with a native Wayland renderer, command line and Quickshell interface"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

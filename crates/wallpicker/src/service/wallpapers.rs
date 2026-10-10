@@ -4,10 +4,10 @@
 use std::path::PathBuf;
 
 use wallpicker_core::cmd::SystemRunner;
-use wallpicker_core::hyprpaper::{self, ApplyReport};
 use wallpicker_core::library;
 use wallpicker_core::monitors::Monitor;
 use wallpicker_core::settings::{self, Adjust, SpanLook, State};
+use wallpicker_core::wallpapers::{self, ApplyReport};
 
 use wallpicker_core::store::Store;
 
@@ -23,14 +23,8 @@ pub async fn monitors() -> CmdResult<Vec<Monitor>> {
 pub async fn apply(state: &AppState, monitors: Vec<String>, path: String) -> CmdResult<ApplyReport> {
     let store = state.store.clone();
     blocking(move || {
-        let settings = store.load_settings()?;
-        let report = hyprpaper::apply_and_remember_with(
-            &SystemRunner,
-            &store,
-            settings.wallpaper_backend,
-            &monitors,
-            &PathBuf::from(path),
-        )?;
+        store.load_settings()?;
+        let report = wallpapers::apply_and_remember(&SystemRunner, &store, &monitors, &PathBuf::from(path))?;
         wallpicker_core::workspaces::remember_shown(&SystemRunner, &store, &report.applied);
         Ok(report)
     })
@@ -40,17 +34,16 @@ pub async fn apply(state: &AppState, monitors: Vec<String>, path: String) -> Cmd
 /// `path` across some monitors, each showing its part (`span.rs`), as
 /// `look` says (the same picture again: only its look changes); `ask`, which
 /// monitors and a new arrangement.
-pub async fn span(state: &AppState, path: String, look: SpanLook, ask: hyprpaper::SpanAsk) -> CmdResult<ApplyReport> {
+pub async fn span(state: &AppState, path: String, look: SpanLook, ask: wallpapers::SpanAsk) -> CmdResult<ApplyReport> {
     let path = wallpaper_path(&path)?;
     let store = state.store.clone();
     let lock = state.adjust_lock.clone();
     blocking(move || {
         // Like an adjust: it makes copies and prunes the unused ones.
         let _guard = lock.lock().unwrap_or_else(|p| p.into_inner());
-        let backend = store.load_settings()?.wallpaper_backend;
-        let report = hyprpaper::span_and_remember(&SystemRunner, &store, backend, &path, look, ask)?;
+        let report = wallpapers::span_and_remember(&SystemRunner, &store, &path, look, ask)?;
         wallpicker_core::workspaces::remember_shown(&SystemRunner, &store, &report.applied);
-        let _ = store.write_hyprpaper_conf();
+
         Ok(report)
     })
     .await
@@ -59,9 +52,9 @@ pub async fn span(state: &AppState, path: String, look: SpanLook, ask: hyprpaper
 /// The Span dialog's canvas: every monitor's place and size (mm; `fresh`:
 /// from Hyprland's layout, `bezel` mm apart), the monitors spanned by
 /// default, the bezel.
-pub async fn span_layout(state: &AppState, fresh: bool, bezel: Option<u32>) -> CmdResult<hyprpaper::SpanLayout> {
+pub async fn span_layout(state: &AppState, fresh: bool, bezel: Option<u32>) -> CmdResult<wallpapers::SpanLayout> {
     let store = state.store.clone();
-    blocking(move || hyprpaper::span_layout(&SystemRunner, &store, fresh, bezel)).await
+    blocking(move || wallpapers::span_layout(&SystemRunner, &store, fresh, bezel)).await
 }
 
 /// The monitors act on their own again, each keeping its part.
@@ -74,8 +67,7 @@ pub async fn separate(state: &AppState) -> CmdResult<State> {
 pub async fn previous(state: &AppState, monitors: Vec<String>) -> CmdResult<ApplyReport> {
     let store = state.store.clone();
     blocking(move || {
-        let backend = store.load_settings()?.wallpaper_backend;
-        let report = hyprpaper::apply_previous(&SystemRunner, &store, backend, &monitors)?;
+        let report = wallpapers::apply_previous(&SystemRunner, &store, &monitors)?;
         wallpicker_core::workspaces::remember_shown(&SystemRunner, &store, &report.applied);
         Ok(report)
     })
@@ -93,13 +85,13 @@ pub async fn set_adjust(state: &AppState, monitor: String, adjust: Adjust) -> Cm
         // use, which would be the other's.
         let _guard = lock.lock().unwrap_or_else(|p| p.into_inner());
         let saved = store.set_adjust(&monitor, adjust)?;
-        let report = hyprpaper::reapply(&SystemRunner, &store, &|m, _| m == monitor)?;
+        let report = wallpapers::reapply(&SystemRunner, &store, &|m, _| m == monitor)?;
         if let Some((_, why)) = report.failed.first() {
             return Err(wallpicker_core::error::Error::Invalid(format!(
                 "Could not show it on {monitor}: {why}"
             )));
         }
-        let _ = store.write_hyprpaper_conf();
+
         wallpicker_core::transform::prune(&store.dirs().cache, &saved);
         Ok(saved)
     })
@@ -115,14 +107,15 @@ pub async fn framing_image(state: &AppState, path: String) -> CmdResult<PathBuf>
 }
 
 /// The fit modes the chosen backend does, with labels ("" is its default).
-pub async fn fit_modes(state: &AppState) -> CmdResult<Vec<(&'static str, &'static str)>> {
-    let store = state.store.clone();
-    blocking(move || Ok(settings::fit_modes(store.load_settings()?.wallpaper_backend).to_vec())).await
+pub async fn fit_modes(_state: &AppState) -> CmdResult<Vec<(&'static str, &'static str)>> {
+    Ok(settings::fit_modes().to_vec())
 }
 
 pub async fn show_in_folder(state: &AppState, path: String) -> CmdResult<()> {
     let store = state.store.clone();
-    crate::rt::spawn_blocking(move || show_in_folder_blocking(&store, &path)).await.map_err(err)?
+    crate::rt::spawn_blocking(move || show_in_folder_blocking(&store, &path))
+        .await
+        .map_err(err)?
 }
 
 /// Move a wallpaper to the trash (the picker and `wallpicker trash`).

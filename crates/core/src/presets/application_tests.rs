@@ -19,10 +19,29 @@ impl Runner for Desktop {
     fn monitors(&self) -> Result<Vec<Monitor>> {
         Ok(self.outputs.clone())
     }
+    fn show_wallpaper(
+        &self,
+        monitor: &str,
+        path: &std::path::Path,
+        _fit: Option<FitMode>,
+        _transition: &crate::settings::Transition,
+    ) -> Result<()> {
+        self.run("wallpicker", &[&format!("{monitor},{}", path.display())])
+            .map(drop)
+    }
     fn run(&self, program: &str, args: &[&str]) -> Result<String> {
-        self.calls.borrow_mut().push((program.into(), args.iter().map(|s| (*s).into()).collect()));
-        if self.fail_on.as_ref().is_some_and(|m| args.iter().any(|a| a.starts_with(&format!("{m},")))) {
-            Err(Error::Command { cmd: program.into(), msg: "deliberate failure".into() })
+        self.calls
+            .borrow_mut()
+            .push((program.into(), args.iter().map(|s| (*s).into()).collect()));
+        if self
+            .fail_on
+            .as_ref()
+            .is_some_and(|m| args.iter().any(|a| a.starts_with(&format!("{m},"))))
+        {
+            Err(Error::Command {
+                cmd: program.into(),
+                msg: "deliberate failure".into(),
+            })
         } else {
             Ok(String::new())
         }
@@ -33,7 +52,9 @@ fn setup() -> (TempDir, Store, Desktop, Preset) {
     let dir = TempDir::new().unwrap();
     let store = Store::new(Dirs::under(dir.path()));
     let source = dir.path().join("source.png");
-    image::RgbImage::from_fn(32, 24, |x, y| image::Rgb([x as u8 * 7, y as u8 * 9, 100])).save(&source).unwrap();
+    image::RgbImage::from_fn(32, 24, |x, y| image::Rgb([x as u8 * 7, y as u8 * 9, 100]))
+        .save(&source)
+        .unwrap();
     let mut state = State::default();
     for name in ["DP-1", "DP-2"] {
         state.current.insert(name.into(), source.clone());
@@ -41,7 +62,13 @@ fn setup() -> (TempDir, Store, Desktop, Preset) {
     state.adjust.insert(
         "DP-1".into(),
         Adjust {
-            frame: Some(Frame { zoom: 175, x: 230, y: 710, width: 1920, height: 1080 }),
+            frame: Some(Frame {
+                zoom: 175,
+                x: 230,
+                y: 710,
+                width: 1920,
+                height: 1080,
+            }),
             flip: Flip { h: true, v: false },
             ..Default::default()
         },
@@ -62,7 +89,16 @@ fn setup() -> (TempDir, Store, Desktop, Preset) {
     ]"#,
     )
     .unwrap();
-    (dir, store, Desktop { outputs, calls: RefCell::default(), fail_on: None }, preset)
+    (
+        dir,
+        store,
+        Desktop {
+            outputs,
+            calls: RefCell::default(),
+            fail_on: None,
+        },
+        preset,
+    )
 }
 
 #[test]
@@ -74,7 +110,10 @@ fn application_restores_geometry_and_history_without_touching_unselected_outputs
     assert!(report.failed.is_empty() && report.skipped.is_empty());
     let state = store.load_state().unwrap();
     let frame = state.adjust["DP-1"].frame.unwrap();
-    assert_eq!((frame.width, frame.height, frame.zoom, frame.x, frame.y), (12, 16, 175, 230, 710));
+    assert_eq!(
+        (frame.width, frame.height, frame.zoom, frame.x, frame.y),
+        (12, 16, 175, 230, 710)
+    );
     assert!(state.adjust["DP-1"].flip.h);
     assert_eq!(state.history["DP-1"], [before.current["DP-1"].clone()]);
     assert_eq!(state.current["other"], before.current["other"]);
@@ -133,11 +172,14 @@ fn failed_output_keeps_its_state_and_successful_output_is_remembered() {
 #[test]
 fn explicit_backend_default_survives_future_global_fits_and_recapture() {
     let (_dir, store, desktop, preset) = setup();
-    let settings = Settings { fit_mode: Some(FitMode::Tile), ..Default::default() };
+    let settings = Settings {
+        fit_mode: Some(FitMode::Tile),
+        ..Default::default()
+    };
     store.save_settings(&settings).unwrap();
     apply(&desktop, &store, &preset.id).unwrap();
     let source = &preset.monitors["DP-2"].wallpaper;
-    assert_eq!(crate::hyprpaper::Fits::load(&store).of("DP-2", source), None);
+    assert_eq!(crate::wallpapers::Fits::load(&store).of("DP-2", source), None);
     assert_eq!(store.save_current_preset("Again").unwrap().monitors["DP-2"].fit, None);
     assert_eq!(store.load_settings().unwrap().fit_mode, Some(FitMode::Tile));
     assert!(store.load_state().unwrap().adjust["DP-2"].backend_default_fit);
@@ -147,7 +189,12 @@ fn explicit_backend_default_survives_future_global_fits_and_recapture() {
 fn standalone_source_regions_rebuild_output_dimensions() {
     let (_dir, store, desktop, mut preset) = setup();
     preset.monitors.get_mut("DP-1").unwrap().frame = None;
-    preset.monitors.get_mut("DP-1").unwrap().region = Some(SourceRegion { x: 4, y: 2, width: 20, height: 10 });
+    preset.monitors.get_mut("DP-1").unwrap().region = Some(SourceRegion {
+        x: 4,
+        y: 2,
+        width: 20,
+        height: 10,
+    });
     let plan = plan::prepare(&store, &preset, &desktop.outputs).unwrap();
     let entry = plan.entries.iter().find(|e| e.monitor == "DP-1").unwrap();
     let cut = entry.adjust.span.unwrap();

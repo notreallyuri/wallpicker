@@ -2,7 +2,7 @@
 //! Settings → Slideshow (or `wallpicker settings set slideshow.*`).
 //!
 //! `tick` changes it if it's due and does nothing otherwise, so calling it
-//! often is harmless: the Noctalia plugin calls it every minute. `run` (and
+//! often is harmless: ticks are serialized. `run` (and
 //! `wallpicker daemon`) does the same in a loop. Ticks take turns (a lock
 //! file), so two timers at once never both change it.
 
@@ -95,7 +95,7 @@ pub fn tick_with(store: &Store, force: bool) -> Result<bool, String> {
         }
     };
     let result = apply_random(store, &settings, &choice);
-    // Counted as a change even when it failed, so a broken setup (hyprpaper
+    // Counted as a change even when it failed, so a broken setup (the daemon
     // not running, nothing matching) is retried next interval, not every
     // minute.
     state = store.load_state().unwrap_or(state);
@@ -110,7 +110,12 @@ pub fn tick_with(store: &Store, force: bool) -> Result<bool, String> {
 fn take_turn(store: &Store) -> Option<std::fs::File> {
     let dir = &store.dirs().state;
     std::fs::create_dir_all(dir).ok()?;
-    let file = std::fs::OpenOptions::new().create(true).truncate(false).write(true).open(dir.join("slideshow.lock")).ok()?;
+    let file = std::fs::OpenOptions::new()
+        .create(true)
+        .truncate(false)
+        .write(true)
+        .open(dir.join("slideshow.lock"))
+        .ok()?;
     file.lock().ok()?;
     Some(file)
 }

@@ -12,8 +12,8 @@ use std::time::Duration;
 
 use crate::cmd::Runner;
 use crate::error::Result;
-use crate::hyprpaper::{Backend, Fits};
 use crate::store::Store;
+use crate::wallpapers::{Backend, Fits};
 
 /// Hyprland's event socket (`.socket2.sock`), if Hyprland is running.
 pub fn socket_path() -> Option<PathBuf> {
@@ -28,7 +28,14 @@ pub fn is_workspace_event(line: &str) -> bool {
     let name = line.split(">>").next().unwrap_or("");
     matches!(
         name,
-        "workspace" | "workspacev2" | "focusedmon" | "focusedmonv2" | "moveworkspace" | "moveworkspacev2" | "monitoradded" | "monitoraddedv2"
+        "workspace"
+            | "workspacev2"
+            | "focusedmon"
+            | "focusedmonv2"
+            | "moveworkspace"
+            | "moveworkspacev2"
+            | "monitoradded"
+            | "monitoraddedv2"
     )
 }
 
@@ -139,7 +146,11 @@ pub fn rows(runner: &dyn Runner, store: &Store) -> Result<Vec<WorkspaceRow>> {
         .into_iter()
         .filter(|w| !w.name.is_empty() && !w.name.starts_with("special"))
         .map(|w| WorkspaceRow {
-            monitor: shown.iter().find(|(_, ws)| **ws == w.name).map(|(m, _)| m.clone()).or(Some(w.monitor).filter(|m| !m.is_empty())),
+            monitor: shown
+                .iter()
+                .find(|(_, ws)| **ws == w.name)
+                .map(|(m, _)| m.clone())
+                .or(Some(w.monitor).filter(|m| !m.is_empty())),
             wallpaper: settings.workspaces.wallpapers.get(&w.name).cloned(),
             open: true,
             name: w.name,
@@ -260,6 +271,19 @@ mod tests {
     }
 
     impl Runner for Fake {
+        fn show_wallpaper(
+            &self,
+            monitor: &str,
+            path: &Path,
+            _fit: Option<crate::settings::FitMode>,
+            _transition: &crate::settings::Transition,
+        ) -> Result<()> {
+            self.calls
+                .borrow_mut()
+                .push(format!("wallpicker show {monitor} {}", path.display()));
+            Ok(())
+        }
+
         fn run(&self, program: &str, args: &[&str]) -> Result<String> {
             if args.first() == Some(&"monitors") {
                 let list: Vec<String> = self
@@ -320,7 +344,10 @@ mod tests {
         assert!(sync(&fake, &store, &mut last).unwrap().is_empty());
         // Over to 3: b goes on DP-1, without going into the history.
         fake.ws.borrow_mut()[0].1 = "3";
-        assert_eq!(sync(&fake, &store, &mut last).unwrap(), vec![("DP-1".to_string(), b.clone())]);
+        assert_eq!(
+            sync(&fake, &store, &mut last).unwrap(),
+            vec![("DP-1".to_string(), b.clone())]
+        );
         let state = store.load_state().unwrap();
         assert_eq!(state.current["DP-1"], b);
         assert!(state.history.get("DP-1").is_none_or(Vec::is_empty));
