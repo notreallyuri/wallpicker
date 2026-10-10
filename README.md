@@ -4,8 +4,8 @@
 
 # wallpicker
 
-A visual wallpaper picker for Hyprland, drawing through **hyprpaper**, **awww** (formerly swww),
-**Noctalia**'s wallpaper manager, or by itself (Settings → General → Wallpaper backend).
+A visual wallpaper picker for Hyprland with its own native Wayland renderer.
+Noctalia is optional, for wallpaper-derived colors.
 
 - **Local**: a thumbnail grid of the images in your wallpaper folders, 60 a page (only one page
   is on screen, so memory stays the same however far you go). Click one to apply it.
@@ -60,12 +60,12 @@ A visual wallpaper picker for Hyprland, drawing through **hyprpaper**, **awww** 
 - **Per monitor**: the bar at the top picks which monitors a click applies to, and shows what each
   one currently has (with a thumbnail).
 - **Fit**: a general fit in Settings, and a fit per monitor under it (say, Contain on a 4:3
-  screen). With the Noctalia backend, Noctalia's own fill mode applies.
+  screen).
 - **Adjust** (the monitor drawer's adjust button, or right-click a monitor pill): **frame** what
   a monitor shows (drag the preview to move, scroll or the sliders to zoom up to 4×; it's cut to
   the monitor's exact resolution), **mirror** it (left to right, top to bottom), or give it its
   own **fit**. The preview follows at once; the monitor a moment after you stop. Temporary:
-  another wallpaper on that monitor goes on as it is. No backend frames or mirrors, so wallpicker
+  another wallpaper on that monitor goes on as it is. wallpicker
   makes the changed copy (cached, deleted when unused).
   `wallpicker adjust <monitor> --frame 200,70,40 --flip h --fit contain`.
 - The search bar (and the tags and folder path under it) stays at the top while you scroll.
@@ -95,7 +95,7 @@ A visual wallpaper picker for Hyprland, drawing through **hyprpaper**, **awww** 
   `wallpicker --open presets` opens the picker there. From the command line, save a named setup of
   wallpaper assignments, fit, zoom, pan, flips and span canvas layout with
   `wallpicker presets save "Night"`. `wallpicker presets list` shows its ID;
-  `wallpicker presets apply p1` restores it using your current backend and transition.
+  `wallpicker presets apply p1` restores it using your current transition.
   `update p1` replaces its snapshot, `rename p1 "Work"` changes its name and `delete p1`
   removes it. Add `--json` for scripts. Disconnected monitors are skipped; an incomplete span
   is skipped as a group. Missing/unreadable images needed by connected assignments prevent
@@ -110,8 +110,7 @@ A visual wallpaper picker for Hyprland, drawing through **hyprpaper**, **awww** 
   some tags, a folder or a color, on all or some monitors, the same one or a different one on
   each. **Something else at night**: a second set for a time window (say 20:00–07:00, Dark), and
   it changes right away when night starts and ends. `wallpicker random --color dark` too.
-  `wallpicker daemon` keeps time for it (the Noctalia plugin does too; their ticks take turns, so
-  it never changes twice). **Change now** changes it at once.
+  `wallpicker daemon` keeps time for it. **Change now** changes it at once.
 - **A wallpaper per workspace** (Settings → Workspaces): when a monitor switches to a Hyprland
   workspace that has a wallpaper, it goes on that monitor. With **Remember what I put on each
   workspace**, applying a wallpaper is all it takes: it becomes the wallpaper of the workspace its
@@ -134,11 +133,9 @@ A visual wallpaper picker for Hyprland, drawing through **hyprpaper**, **awww** 
 - **Colors from the wallpaper** (Settings → Appearance): the picker takes its colors from the
   wallpaper on the monitor you pick (the first one by default), made by Noctalia's palette
   generator with its wallpaper scheme, so it matches Noctalia. **Noctalia's colors follow the
-  wallpaper** makes Noctalia's colors follow too (and goes back to the scheme it had): with the
-  Noctalia backend that's Noctalia's own wallpaper mode; with awww or hyprpaper, Noctalia doesn't
-  know the wallpaper, so wallpicker makes it a palette from the one shown
-  (`~/.config/noctalia/palettes/wallpicker.json`, `custom wallpicker`) and the daemon keeps it
-  current. The plugin's panel uses Noctalia's colors, so it follows along. `wallpicker theme`
+  wallpaper** makes Noctalia's colors follow too (and goes back to the scheme it had): with
+  a custom palette (`~/.config/noctalia/palettes/wallpicker.json`, `custom wallpicker`),
+  kept current by the daemon. `wallpicker theme`
   shows the palette; `wallpicker noctalia-colors on|off`.
 - **Color** (Local, next to the sort): show the wallpapers with a color (red, orange, yellow, green,
   teal, blue, purple, pink) or tone (Dark, Light, Warm: golden, brown, firelight; Muted: mostly
@@ -155,7 +152,7 @@ A visual wallpaper picker for Hyprland, drawing through **hyprpaper**, **awww** 
   its wallpaper in the monitor's own shape and the file; click one to make it the target, or ↶ to
   go back on that monitor only. Remembered open or closed.
 - **Previous**: each monitor remembers its last 30 wallpapers; **↶ Previous** (in the monitor
-  bar, the plugin's panel, or `wallpicker previous` for a keybind) goes back through them.
+  bar, or `wallpicker previous` for a keybind) goes back through them.
 - **Saved choices**: every applied wallpaper is written to `state.json`, and
   `wallpicker --restore` re-applies them at login.
 - **Settings**: the cog at the top right.
@@ -168,13 +165,11 @@ Rust library with unit tests. (Until October 2026 it was a Tauri + Leptos window
 On Arch:
 
 ```bash
-sudo pacman -S --needed base-devel quickshell hyprpaper   # or awww instead of hyprpaper
+sudo pacman -S --needed base-devel quickshell
 ```
 
 Rust (stable) to build. `wl-clipboard` for Copy path, `xdg-desktop-portal` (with a backend such
 as KDE's or GTK's) for Settings → Backup's file dialogs, Noctalia for colors from the wallpaper.
-With hyprpaper, it must be running with IPC enabled, which is its default. With awww, wallpicker
-starts its daemon when needed.
 
 ## Build and install
 
@@ -195,11 +190,10 @@ checkout (a binary built inside it finds its `quickshell/`; `WALLPICKER_UI` poin
 
 - **The picker**: a keybind on `wallpicker --toggle` (in the Lua config:
   `hl.bind("SUPER + SHIFT + W", hl.dsp.exec_cmd("/home/you/.local/bin/wallpicker --toggle"))`),
-  the launcher, or the Noctalia plugin. `wallpicker --open local|online|collections|presets|settings|
-  duplicates` and `--open details <image>` (a wallpaper's details: its tags and artists) open it there (the plugin hands bigger jobs over that way).
+  the launcher. `wallpicker --open local|online|collections|presets|settings|
+  duplicates` and `--open details <image>` (a wallpaper's details: its tags and artists) open it there.
 - **The daemon**, in Hyprland's autostart: `wallpicker daemon`. It puts the saved wallpapers back
-  through the chosen backend (starting awww's daemon if needed; with hyprpaper, start hyprpaper
-  in the autostart too; with wallpicker's own, it draws them), then follows workspaces, keeps the slideshow's time and Noctalia's colors
+  through its renderer, then follows workspaces, keeps the slideshow's time and Noctalia's colors
   following the wallpaper. One per session; a second one
   says so and leaves. `wallpicker --tray`, from the old app's autostarts, runs it too.
 
@@ -210,7 +204,7 @@ checkout (a binary built inside it finds its `quickshell/`; `WALLPICKER_UI` poin
   a file per section), `dialogs/`, `windows/`.
 - `wallpicker serve`: the picker's backend, one per open picker, JSON lines over stdin/stdout
   (`crates/wallpicker/src/serve/`); it also announces changes other programs make (the
-  slideshow, the plugin, the command line) so the open picker follows.
+  slideshow and command line) so the open picker follows.
 - `wallpicker ui` starts Quickshell with Vulkan (where there's a driver) and a leaner allocator:
   ~40 MB less than the defaults.
 - Checks: `scripts/ui-check.sh` runs the picker headless with a throwaway profile, clicks and
@@ -246,9 +240,9 @@ The slideshow, as set in Settings → Slideshow (or with `settings set slideshow
 ```bash
 wallpicker settings set slideshow.enabled=true slideshow.minutes=30 slideshow.favorites=true
 wallpicker slideshow status      # {"enabled":true,"minutes":30,"next_in":1740}
-wallpicker slideshow tick        # change it if it's due (the Noctalia plugin calls this every minute)
+wallpicker slideshow tick        # change it if it's due (the daemon checks this regularly)
 wallpicker slideshow tick --now  # change it now
-wallpicker slideshow run         # keep it going without Noctalia (Ctrl+C to stop)
+wallpicker slideshow run         # keep it going without the daemon (Ctrl+C to stop)
 ```
 
 Library edits, the same as the picker's:
@@ -273,7 +267,7 @@ wallpicker filters wallhaven set sort=toplist range=1w atleast=1280x720 nsfw=tru
 wallpicker filters wallhaven set resolutions=1920x1080,2560x1440 ratios=16x9,4x3   # "" for any
 wallpicker filters yandere set questionable=true            # or: filters yandere reset
 wallpicker settings
-wallpicker settings set backend=noctalia thumb_width=480 "folders=~/Pictures/wpp
+wallpicker settings set thumb_width=480 "folders=~/Pictures/wpp
 ~/Pictures/more"                                            # one folder per line
 ```
 
@@ -294,36 +288,23 @@ wallpicker apply-online '<handle>' --monitor DP-1  # a result's "handle" from se
 wallpicker apply-online '<handle>' --download-only --tag landscape --tag "digital art"
 ```
 
-`apply` and `apply-online` go through the configured backend and are recorded like an apply from
+`apply` and `apply-online` use the native renderer and are recorded like an apply from
 the picker; `apply-online` downloads (or reuses) the file first, with the same host and id checks,
 keeping its metadata (artists, uploader, source) and tagging it with any `--tag`s.
 `--thumbs` caches result thumbnails in `~/.cache/wallpicker/online/` (and `details --preview`
 a bigger image in `preview/` there); cached images unused for 14 days are removed. Exit codes: 0 on success,
 1 if anything failed, 2 for usage mistakes.
 
-## Noctalia plugin
+## Native wallpaper renderer
 
-`noctalia-plugin/` holds a Noctalia v5 plugin: a bar icon and a small panel, native to the shell:
-the quickest picker. **Local**: your library (favorites first, filter by name or tag);
-right-click a caption for apply/favorite/fit/trash, or click it for the wallpaper's own view.
-**Online**: search Wallhaven, Konachan or yande.re with a sort, filters and paging;
-already-downloaded results are marked. Pick a monitor, click to apply. Settings, Duplicates,
-Collections and tag editing open in the picker (`wallpicker --open`). It's built on the command line above.
-See `noctalia-plugin/README.md` to install it.
-
-## wallpicker as the backend
-
-With **wallpicker (draws it itself)** picked in Settings → General, nothing else is needed:
 `wallpicker daemon` draws the wallpapers on Hyprland's background layer (wlr-layer-shell), at each
 monitor's own pixels whatever its scale.
 
 - **Daemon**: applying starts it when it isn't running. To have your wallpapers from login, add
   it to Hyprland's autostart (`wallpicker daemon`); it shows each monitor's saved wallpaper,
-  including a monitor plugged in later. Picking another backend stops it drawing (what's
-  underneath shows).
+  including a monitor plugged in later.
 - **Fit**: Cover (the default), Contain (black bars), Fill and Tile (at the picture's own size,
-  from the top left). Adjusted and spanned wallpapers are cut to the monitor's size first, as for
-  the other backends.
+  from the top left). Adjusted and spanned wallpapers are cut to the monitor's size first, before applying.
 - **Memory**: about 8 MB for the shared-memory renderer before shader initialization. A picture
   is read and fitted when it changes (or a monitor's resolution or scale does), then let go:
   Hyprland keeps its own copy. Shader effects add the driver's EGL/GLES context and temporary
@@ -336,60 +317,18 @@ monitor's own pixels whatever its scale.
 - Only one program should draw the wallpaper: stop hyprpaper, awww and Noctalia's own wallpaper
   (Settings warns about them).
 
-## Noctalia as the backend
+## Migrating from external wallpaper backends
 
-With **Noctalia** picked in Settings → General, wallpicker applies through
-`noctalia msg wallpaper-set <monitor> <path>` (Noctalia v5). Noctalia saves it and restores it
-itself, so nothing else is needed after a reboot, and its colors-from-wallpaper theming follows.
-Its fill mode and transitions are Noctalia's own settings; wallpicker's fit mode doesn't apply.
+wallpicker always uses its native renderer. Existing `wallpaper_backend` settings are ignored
+and removed when settings are next saved; monitor assignments, adjustments, history and presets
+stay intact. Supported transition kinds and durations are preserved; Simple fade falls back to
+Fade. The old frame-rate setting is ignored because transitions follow the monitor's refresh rate.
 
-- Turn Noctalia's wallpaper on in its settings. While it's off, wallpicker refuses to apply rather
-  than appear to work.
-- Stop hyprpaper (take it out of your Hyprland autostart): both draw the background.
-
-## awww (swww) as the backend
-
-With **awww (swww)** picked in Settings → General, wallpicker applies through
-`awww img <image> --outputs <monitor> --resize <fit> --transition-type <…>` (or `swww`, on an
-install from before the rename). Its daemon keeps the wallpapers across restarts.
-
-- **Daemon**: when `awww-daemon` isn't running, wallpicker starts it and applies. To have it from
-  login, add it to Hyprland's autostart (`exec-once = awww-daemon`), or run `wallpicker --restore`
-  there, which starts it and puts your wallpapers back.
-- **Fit**: wallpicker's fit modes map to awww's: Cover → crop, Contain → fit, Fill → stretch.
-  awww can't tile, so Tile shows the image centered at its own size.
-- **Transition**: Settings → General (Transition, Duration, Frames per second), or
-  `wallpicker settings set transition.kind=wipe transition.duration_ms=800 transition.fps=144`.
-- Only one program should draw the wallpaper. Settings warns when another one is running
-  (hyprpaper, awww, Noctalia's own wallpaper, swaybg…), with **Stop it** for each program (awww
-  with `awww kill`); Noctalia's own wallpaper is turned off in its settings. Take a stopped
-  program out of Hyprland's autostart too, or it comes back at login.
-
-## Keeping wallpapers after hyprpaper restarts
-
-wallpicker only *sets* wallpapers through hyprpaper; it doesn't run in the background. So that
-hyprpaper comes back with your choices whenever it starts (at login, or restarted by hand),
-wallpicker keeps a hyprpaper config of its own up to date:
-`~/.local/state/wallpicker/hyprpaper.conf`, one `wallpaper { }` block per monitor, rewritten on
-every apply, trash and fit-mode change. Source it from `~/.config/hypr/hyprpaper.conf`:
-
-```ini
-source = ~/.local/state/wallpicker/hyprpaper.conf
-```
-
-and start hyprpaper from your Hyprland autostart (`hyprpaper` in the Lua config's startup
-commands, or `exec-once = hyprpaper` in hyprlang). This needs hyprpaper 0.8's config syntax.
-Don't also set wallpapers for the same monitors in `hyprpaper.conf`.
-
-A path containing `$` or a line break can't be written into hyprpaper's config language, so that
-monitor is left out of the file (with a comment saying so).
-
-`wallpicker --restore` still works as an alternative (for older hyprpaper versions): run it after
-hyprpaper starts. It retries for about 20 seconds, skips monitors that aren't connected and files
-that were deleted, and says so on stderr.
-
-**wallpiper**: both it and hyprpaper draw on the background layer, so on a monitor where
-wallpiper is running, it covers whatever wallpicker sets.
+Stop hyprpaper, awww/swww and Noctalia's wallpaper manager, and remove their wallpaper daemons
+from autostart. Settings warns about competing wallpaper programs. Keep Noctalia running if you
+use its color integration; enable **Noctalia's colors follow the wallpaper** in Appearance.
+The former Noctalia picker plugin is retired; open the picker with `wallpicker --toggle`.
+The old `~/.local/state/wallpicker/hyprpaper.conf` is no longer generated or used by wallpicker.
 
 ## The floating panel
 
@@ -406,7 +345,7 @@ normal window instead (the headless checks do).
 | settings (folders, download folder, API key, fit mode) | `~/.config/wallpicker/config.json` (mode 600) |
 | the picker's own choices (size, dark mode, theme, sort, layout) | `~/.local/state/wallpicker/ui.json` |
 | current wallpaper per monitor | `~/.local/state/wallpicker/state.json` |
-| the same, as hyprpaper config (for `source =`) | `~/.local/state/wallpicker/hyprpaper.conf` |
+| saved wallpaper presets | `~/.local/share/wallpicker/presets.json` |
 | favorites and tags | `~/.local/share/wallpicker/library.json` |
 | online provider and filters from last session | `~/.local/state/wallpicker/online.json` |
 | thumbnails | `~/.cache/wallpicker/thumbs/` (safe to delete) |
@@ -416,20 +355,10 @@ XDG variables are respected.
 
 ## How applying works
 
-hyprpaper's control interface changed between versions, so wallpicker tries the direct form first:
-
-```
-hyprctl hyprpaper wallpaper "DP-1,/path/img.png"
-```
-
-and, if hyprpaper refuses it, falls back to the older two-step form
-(`preload` then `wallpaper`, then `unload unused` to free memory). If both fail, the error toast
-shows hyprpaper's own reply.
-
-The **fit mode** setting adds a third field (`DP-1,/path,cover`), which only newer hyprpaper
-versions understand. Leave it on "hyprpaper default" if applying fails with it set.
-
-Paths containing a comma can't be applied: hyprpaper splits its argument on commas.
+The CLI and picker prepare adjusted images, then ask `wallpicker daemon` to show them on the
+requested monitors. The daemon starts when needed. Successful applications update state and
+history. `wallpicker --restore` re-applies saved wallpapers, skipping disconnected monitors
+and missing files; the daemon also restores them when it starts.
 
 ## Online notes
 
@@ -484,7 +413,7 @@ each is its own provider with its own saved filters.
 ## Layout
 
 ```
-crates/core/        all logic that doesn't need a desktop: hyprpaper/awww/Noctalia commands,
+crates/core/        all logic that doesn't need a desktop: native wallpaper application,
                     the daemon's socket and fitting a picture for its renderer, monitor parsing, settings/state files, folder scanning, thumbnails, colors,
                     duplicates, favorites/tags, backups, and the online providers: `online.rs`
                     (shared types), `wallhaven.rs`, `moebooru.rs`. `cargo test -p wallpicker-core`
@@ -493,19 +422,16 @@ crates/wallpicker/  the `wallpicker` binary: service/ (what it does, by area), s
                     (the wallpicker backend), the HTTP calls to the providers, Noctalia's colors,
                     the file dialogs (XDG portal)
 quickshell/         the picker (QML), see "How it fits together"
-noctalia-plugin/    the Noctalia v5 plugin (Luau), a panel over the command line
 packaging/          the launcher entry and the icon
 scripts/            install-local.sh, ui-check.sh, memory.sh, open-timing.sh
 ```
 
 ## Troubleshooting
 
-- **"Could not list monitors"**: wallpicker calls `hyprctl monitors -j`; run it in a terminal
-  to see the error.
-- **"hyprpaper is not running"**: start `hyprpaper`, and add it to your Hyprland autostart
-  (see "Restore at login").
-- **Applying fails**: the error toast includes hyprpaper's reply. To test by hand, run
-  `hyprctl hyprpaper wallpaper "DP-1,/full/path/to/image.png"` with one of your monitor names.
+- **"Could not list monitors"**: output discovery needs access to your Wayland session
+  (`WAYLAND_DISPLAY` and `XDG_RUNTIME_DIR`). Hyprland adds workspace/focus metadata when available.
+- **Applying fails**: run `wallpicker daemon` in a terminal to see renderer errors. The compositor
+  needs wlr-layer-shell; stop other wallpaper programs if they cover wallpicker's surfaces.
 - **Thumbnails show "No preview"**: the image couldn't be decoded (PNG, JPEG and WebP are
   supported).
 - **The picker doesn't open**: `qs` (quickshell) must be installed; `qs log -p

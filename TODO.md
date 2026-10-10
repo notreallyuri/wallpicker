@@ -34,16 +34,10 @@ file in `quickshell/views/online/` (its choices in `serve`'s `online.options`), 
 
 ## Features
 
-- [ ] **Animated wallpapers** (needs a plan). awww plays GIFs itself; hyprpaper and Noctalia
-  don't.
-  - Library: accept .gif (and maybe animated .webp); thumbnails from the first frame with a "▶"
-    badge; the details preview animates.
-  - A backend that can't animate: warn, or apply the first frame. wallpicker's own renderer
-    (below) would animate whatever the setup.
-  - Video (mp4/webm) means mpvpaper as a fourth backend: decide separately (CPU/GPU cost,
-    pausing under fullscreen).
-- [ ] **Lock and login screens**: the current wallpaper for hyprlock, and Noctalia's greeter
-  (`noctalia msg greeter-sync`).
+- [ ] **Animated wallpapers** (needs a plan): add GIF/animated WebP playback to the native
+  renderer, first-frame library thumbnails with a ▶ badge, and an animated details preview.
+  Plan video decoding (mp4/webm), CPU/GPU cost and pausing under fullscreen separately.
+- [ ] **Lock and login screens**: the current wallpaper for hyprlock and display-manager login screens.
 - [ ] **Wallhaven blacklist**: skip the tags and uploaders your account blacklists (from
   `/api/v1/settings`).
 - [ ] **Wallpaper presets**: named wallpaper setups for all monitors, with their adjustments
@@ -66,7 +60,7 @@ rotates or changes the resolution of the actual desktops.
 - Capture separate/spanned mode, selected span monitors, span zoom/pan/flips, wallpaper canvas
   positions and bezel spacing. Support a span on selected monitors alongside independent
   wallpapers on the others. Left/right and top/bottom placement belongs to this saved canvas.
-- Reuse the selected backend and current transition when applying; presets do not change
+- Use the native renderer and current transition when applying; presets do not change
   backend, theme preferences, transition settings, slideshow or workspace settings.
 - Presets are snapshots: later adjustments do not edit them. Updating a preset explicitly
   replaces its saved setup. Rename, delete and update refer to a stable ID, independent of its
@@ -119,9 +113,9 @@ rotates or changes the resolution of the actual desktops.
 - [x] Apply prepared per-monitor images through the existing `Backend`/daemon paths. Introduce
   small shared helpers where necessary: current span application saves state before backend
   success, so calling it blindly would violate the preset's success-only bookkeeping.
-  Preserve history, coherent span state, hyprpaper restore configuration and cache pruning.
+  Preserve history, coherent span state and cache pruning.
   Backend-default fits are explicit in the saved adjustment, so later global fit changes
-  cannot alter them. Noctalia still owns its own fit behavior, as for ordinary applies.
+  cannot alter them.
 - [x] Expose `wallpicker presets list [--json]`, `save NAME`, `apply ID`, `update ID`,
   `rename ID NAME` and `delete ID`. IDs are printed by list; errors distinguish missing images,
   absent outputs and backend failures. Document how automation interacts with preset apply.
@@ -143,7 +137,7 @@ rotates or changes the resolution of the actual desktops.
   immediately while wallpaper selections retain transitions. Two regression tests and
   live native daemon check passed (`scripts/test-presets-live.py --adjustments-only`).
   Full automated suite: 186 passed, six desktop checks ignored.
-- [ ] Repeat preset application/restoration under the other supported backends.
+- External-backend checks retired: wallpicker is now the sole wallpaper renderer.
 
 ### 3. Picker integration
 
@@ -179,12 +173,10 @@ rotates or changes the resolution of the actual desktops.
 
 ## Its own renderer (planned 2026-10-08, steps 1-4 built 2026-10-09)
 
-A fourth backend, **wallpicker**: the daemon draws the wallpapers itself on the background layer
-(wlr-layer-shell, shared-memory buffers), so nothing else has to be installed or configured.
-Alongside the others, not replacing them: Noctalia's users keep Noctalia's wallpaper (its colors
-and greeter follow it), and hyprpaper and awww stay until this one has proven itself. Dropping
-them is a separate decision then (`hyprpaper.rs` is mostly the generic apply/remember code, which
-stays under another name).
+The daemon draws wallpapers on the background layer (wlr-layer-shell), with shared-memory
+buffers for the steady image and GPU shaders for transitions. Initially introduced alongside
+external backends, it became the sole renderer on 2026-10-09; shared application/state code
+now lives in `wallpapers/`. Noctalia remains only for wallpaper-derived colors.
 
 Less work than it sounds, here:
 
@@ -244,7 +236,7 @@ Each step checked and committed (an earlier attempt that didn't build was thrown
 3. [x] **The renderer in the daemon** (`renderer/`): its own thread and calloop loop (no CPU
    idle); a layer surface per output, drawn at the output's own pixels (`wp_viewporter`; the
    integer buffer scale without it), checked at scale 1, 1.5 and 2; outputs coming and going (a
-   new one shows its saved wallpaper: `hyprpaper::saved_for`); a new size or scale stretches
+   new one shows its saved wallpaper: `wallpapers::saved_for`); a new size or scale stretches
    what's shown until it's drawn again; a picture that can't be read leaves what's shown. The
    socket (`daemon.rs` in core, a JSON line each way): `show {monitor, path, fit}` answered once
    it's up or with the error, `status`. Running while the backend is wallpicker (then no
@@ -264,8 +256,7 @@ Each step checked and committed (an earlier attempt that didn't build was thrown
 
 The daemon, image loading, fitting, and monitor handling remain shared. EGL/GLES code lives
 in `renderer/gpu/`; effect selection and individual shaders in `renderer/transition/`.
-Slide directions and circle origins share implementations. Settings uses backend-specific
-choices; awww keeps its full list. Shader effects use elapsed time at the monitor's refresh
+Slide directions and circle origins share implementations. Settings offers the native renderer's implemented effects. Shader effects use elapsed time at the monitor's refresh
 rate. Screenshot checks verify intermediate regions, direction, texture orientation, final
 pixels, replacement, cuts, and shutdown on the live hardware GPU.
 
@@ -441,42 +432,36 @@ only:
 ## Going public (if ever)
 
 - [ ] **AUR package** (`wallpicker-git`): a plain cargo build; installs the binary, the picker
-  (`quickshell/` to /usr/share/wallpicker/ui), the desktop entry, the icon and the Noctalia
-  plugin; depends on quickshell.
+  (`quickshell/` to /usr/share/wallpicker/ui), the desktop entry and icon; depends on quickshell.
 - [ ] **A systemd user service** for `wallpicker daemon`, as an alternative to Hyprland's
   autostart.
-- [ ] **One-command hyprpaper setup**: add the `source` line for wallpicker's config to
-  hyprpaper.conf (asking first), instead of documenting it.
 
 ## Cleanup
 
-- [ ] **Retire external wallpaper backends** (`hyprpaper`, `awww`/`swww`, Noctalia wallpaper):
-  make wallpicker's renderer the sole wallpaper backend. Remove backend selection from the
-  picker and CLI, external wallpaper application/startup paths, backend-specific fit and
-  transition choices, dependencies, tests and documentation. Move shared wallpaper/state
-  operations out of `hyprpaper.rs` into clearly named modules before removing its adapter.
-  Migrate saved external-backend selections to wallpicker, preserving wallpaper assignments,
-  adjustments, presets and supported transition preferences; unsupported kinds fall back to
-  Fade. Keep detection of competing wallpaper daemons where useful.
-  **Keep Noctalia only for wallpaper-derived colors**: preserve its color setting, palette
-  updates and `noctalia-colors` CLI; retire the wallpaper picker/plugin integration and its
-  documentation. Verify restore, preset application, adjustments and palette updates after
-  migration before removing compatibility paths.
-- [ ] `prototype/` (`gpui-local`, `quickshell-local`): the port's prototypes, no longer used.
-  Delete once you're sure nothing there is wanted.
+- [x] **Retire external wallpaper backends** (2026-10-09): remove hyprpaper, awww/swww and
+  Noctalia wallpaper adapters, backend selection and external config generation. Shared native
+  application, preparation, span, restore and conflict detection live in `wallpapers/`.
+  Legacy backend/FPS fields are ignored and disappear on the next settings save; supported
+  transitions, original paths, state, history and presets remain intact. Simple fade becomes Fade.
+  Keep Noctalia's color integration and competing-daemon detection; remove the Noctalia picker
+  plugin. Regression suite: 170 passed, six desktop checks ignored; migration, restore, preset
+  application and Noctalia palette/scheme restoration covered. Headless Settings checked without
+  QML warnings. Live native daemon: eight prepared-file checks across both monitors, separate/
+  span application and two restarts passed (`--status-only`); strict compositor screenshot
+  comparison was obscured by windows/shadows and remains unverified for this cleanup.
+  Release build and live single-monitor/span adjustment checks passed: adjustments cut
+  immediately, while new wallpaper selections retain their configured transitions.
+- [x] Remove `prototype/` (`gpui-local`, `quickshell-local`), including their old lockfiles,
+  assets and dependencies.
 
 ## Decisions to keep
 
 - **One wallpaper renderer** (2026-10-09): retire hyprpaper, awww/swww and Noctalia wallpaper
-  support through the cleanup queue above. Noctalia remains for wallpaper-derived colors;
-  this supersedes the earlier app/plugin division once cleanup lands.
-- **App and plugin** (2026-10-05): the Noctalia plugin is the quick picker (applying, random /
-  previous, favorites, search, online browsing with filters, favorite, fit, trash); the picker
-  is the library manager. New features land in the picker first; the plugin gets them only if
-  they fit a quick picker, and hands bigger jobs over with `wallpicker --open <place>`.
-- **No tray** (2026-10-07): the picker opens in ~0.3 s from a keybind or the plugin.
+  support removed through the cleanup above. Noctalia remains for wallpaper-derived colors;
+  this supersedes the earlier app/plugin division.
+- **No tray** (2026-10-07): the picker opens in ~0.3 s from a keybind or launcher.
 - **The daemon keeps time** (2026-10-07): `wallpicker daemon` runs the slideshow's ticks
-  (guarded so the plugin's ticks don't double them), the workspace listener, the restore at
+  (serialized against manual ticks), the workspace listener, the restore at
   login and Noctalia's palette.
 - **Closing** (2026-10-07): Settings → Performance → Keep the picker ready after closing (Off to
   30 min, 1 min by default): hidden and instant to reopen meanwhile, then it exits (0 MB).
