@@ -1,8 +1,8 @@
 // Adjust what one monitor shows (monitor_bar.rs's AdjustDialog): frame it
 // (drag, scroll, sliders), mirror it, give it its own fit. Applied there at
 // once (wallpicker makes the changed copy), and temporary: another
-// wallpaper on that monitor goes on as it is. Opened from the drawer's
-// cards or a right-click on a monitor's pill (Dialogs.adjusting).
+// wallpaper on that monitor goes on as it is. Opened with a right-click on
+// a monitor's pill (Dialogs.adjusting).
 import QtQuick
 import QtQuick.Layouts
 import qs.components

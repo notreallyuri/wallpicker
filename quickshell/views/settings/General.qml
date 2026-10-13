@@ -63,7 +63,7 @@ ColumnLayout {
     Field {
         Layout.fillWidth: true
         label: "Fit mode"
-        description: "For every monitor, unless it has its own below; a monitor's Adjust (the drawer) wins over both, until its wallpaper changes."
+        description: "For every monitor, unless it has its own below; a monitor's Adjust (right-click its pill) wins over both, until its wallpaper changes."
         Select {
             minWidth: 260
             options: section.pairs(section.o ? section.o.fits : null)

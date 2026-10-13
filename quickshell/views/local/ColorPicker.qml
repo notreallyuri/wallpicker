@@ -12,6 +12,8 @@ Btn {
     id: picker
 
     required property LocalModel local
+    /// Only the dots (or the chosen color), no label.
+    property bool compact: false
 
     // Keys as the backend knows them (core's colors::HUES and TONES).
     readonly property var hues: [["red", "Red", "#ef4444"], ["orange", "Orange", "#f97316"], ["yellow", "Yellow", "#eab308"], ["green", "Green", "#22c55e"], ["teal", "Teal", "#14b8a6"], ["blue", "Blue", "#3b82f6"], ["purple", "Purple", "#a855f7"], ["pink", "Pink", "#ec4899"]]
@@ -24,8 +26,8 @@ Btn {
     }
 
     // One width whatever is chosen.
-    minWidth: 112
-    text: chosen ? chosen[1] : "Color"
+    minWidth: compact ? 0 : 112
+    text: compact ? "" : chosen ? chosen[1] : "Color"
     tip: "Show the wallpapers with a color"
     onClicked: swatches.open()
 

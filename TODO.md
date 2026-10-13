@@ -21,6 +21,8 @@ and git history.
 
 - [ ] **Animated wallpapers**: GIF/animated WebP first; implementation plan below. Video is
   a separate phase.
+- [ ] **UI updates** (`feat/ui-updates`): layout, the control panel, animated wallpapers in
+  the picker, a visual refresh; plan below.
 - [ ] **Wallpaper control panel**: per-monitor playback controls, first in Adjust, later a
   non-modal side panel; plan below.
 - [ ] **Lock and login screens**: use the current wallpaper for hyprlock and display-manager
@@ -222,6 +224,36 @@ identity and the renderer shows their first frame.
 - [ ] Plan MP4/WebM separately: compare decoder dependencies and packaging, software versus
   hardware decoding, codec support, timestamp/seek/loop behavior, YUV conversion, GPU import
   and fallback cost. Local files first, muted playback; no audio/network streaming scope.
+
+## UI updates (planned 2026-10-13)
+
+Plan, findings and mockups: the Roadmap page of the
+[design system file](https://www.figma.com/design/gGlwX9OP3fJrNwAvSmChDC/?node-id=24-2).
+Keep the core components; change the layout around them. Mockups first, reviewed there.
+
+- [x] Load Nunito: `Theme.font` stayed "sans-serif" (a binding on the Instantiator's
+  `objectAt()` never re-ran), so the UI used the system sans since the Quickshell rewrite.
+- [x] Decided (2026-10-13): the Adjust dialog is retired for the panel; the panel opens on
+  demand from a toggle on the picker's right edge; it is resizable (drag its left edge);
+  Filters is a popover (a collapsible row mocked too, to compare).
+- [x] Stage 1 mockups final (2026-10-14): the drawer is removed (mockup A: monitors are
+  chosen in the bar's pills, adjusted in the panel); Filters as a popover (mockup C), with
+  the collapsible row (mockup D) as an alternative picked in Settings → Appearance.
+- [x] The open panel narrows the grid at Comfortable and Large (P1; columns animate, every
+  tile stays clickable) and overlays it at Compact (P4).
+- [x] Stage 2 and 3 mockups final (2026-10-14): "Stage 2 · Control panel" (P1–P4, P6; the
+  panel is a floating card with the tiles' hairline border) and "Stage 3 · Animated" (S1–S3).
+- [x] Stage 1, picker layout: the drawer is gone (the pills stay in the bar; right-click one
+  to adjust), Local's Filters button opens the tags and artists in a popover (or rows, Settings
+  → Appearance), Color/Flat/Random turn to icons when narrow. Online/Collections already had
+  the one-row card with Filters. The first tile row starts ~143 px down (was ~460).
+- [ ] Check stage 1 on the desktop (two monitors, a span, Compact size, the popover's keys).
+- [ ] Stage 2, the control panel below as a side panel (Preview, Frame, Mirror, Fit, Playback,
+  About, Actions); non-modal, resizable, overlays the grid at Compact. Replaces Adjust.
+- [ ] Stage 3, animated wallpapers in the picker (section 3 above): tile badge, details
+  preview, Playback section, pill mark.
+- [ ] Stage 4, visual refresh: tiles, presets, settings, empty/loading/error states,
+  truncation now that Nunito is wider. Mockups final: "Stage 4 · Visual refresh" (R1–R4).
 
 ## Wallpaper control panel (planned 2026-10-12)
 

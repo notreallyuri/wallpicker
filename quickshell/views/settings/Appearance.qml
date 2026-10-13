@@ -1,7 +1,8 @@
-// Settings → Appearance: dark mode and the color theme (both at once, kept
-// in the interface's own choices), colors from the wallpaper and from
-// which monitor (saved with the form), Noctalia's colors and the
-// wallpaper behind the picker (at once).
+// Settings → Appearance: the picker's size and where Local's filters are,
+// dark mode and the color theme (all at once, kept in the interface's own
+// choices), colors from the wallpaper and from which monitor (saved with
+// the form), Noctalia's colors and the wallpaper behind the picker (at
+// once).
 import QtQuick
 import QtQuick.Layouts
 import qs.components
@@ -25,6 +26,16 @@ ColumnLayout {
             options: [["large", "Large"], ["comfortable", "Comfortable"], ["compact", "Compact"]]
             value: ["large", "comfortable", "compact"].includes(Prefs.panelSize) ? Prefs.panelSize : "comfortable"
             onPicked: v => Prefs.panelSize = v
+        }
+    }
+    Field {
+        label: "Tag and artist filters"
+        description: "Local's Filters button opens them in a popover, or shows them as rows under the search bar. Applies right away."
+        Select {
+            minWidth: 200
+            options: [["popover", "In a popover"], ["rows", "As rows"]]
+            value: Prefs.filtersLayout === "rows" ? "rows" : "popover"
+            onPicked: v => Prefs.filtersLayout = v
         }
     }
     Field {

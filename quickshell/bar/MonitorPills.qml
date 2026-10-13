@@ -1,22 +1,14 @@
-// "APPLY TO", a pill per monitor, and All (a desk of every monitor's
-// screen). One of them is chosen at a time; right-click a monitor's to
-// adjust what it shows. Spanned, one pill for them all (right-click:
-// adjust the span).
+// A pill per monitor, and All (a desk of every monitor's screen): where a
+// click on a wallpaper applies. One of them is chosen at a time;
+// right-click a monitor's to adjust what it shows. Spanned, one pill for
+// them all (right-click: adjust the span).
 import QtQuick
 import QtQuick.Layouts
 import qs.services
 
 RowLayout {
-    spacing: 8
+    spacing: 6
 
-    Text {
-        text: "APPLY TO"
-        color: Theme.mutedForeground
-        font.family: Theme.font
-        font.pixelSize: 11
-        font.weight: Font.Bold
-        font.letterSpacing: 1.5
-    }
     MonitorPill {
         visible: Monitors.spanned
         label: "Spanned"

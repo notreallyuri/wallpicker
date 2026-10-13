@@ -23,13 +23,15 @@ Noctalia is optional, for wallpaper-derived colors.
     to (it would be scaled up there). Only a hint: nothing is hidden.
   - Sort and layout are remembered.
 - **Favorites, tags and artists**: star a local wallpaper to pin it to the top of every view.
-  Give it tags with right-click → **Details…**, then filter by one or more tags above the grid
-  (one line, selected tags first, then by name or the most used first as set in Settings →
-  General; **Expand** shows them all), matching **All** or **Any** of
-  them. Downloads keep where they came from, their artists, uploader and source link (as the
-  provider lists them) apart from the tags, and arrive tagged only with the tags you keep in
-  **Details**. The artists have a row of their own under the tags (any of those picked, with
-  the tags picked) and show on the tiles (a brush). Right-click → **Details…** shows where a
+  Give it tags with right-click → **Details…**, then filter by one or more tags with
+  **Filters** next to the search box (it says how many are picked): a popover with the tags
+  and the artists as chips (picked ones first, then by name or the most used first as set in
+  Settings → General; **All N** shows them all, the field finds one), matching all the tags
+  picked or, with **Match all tags** off, any of them. Settings → Appearance can show them as
+  rows under the search bar instead, opened by **Filters**. Downloads keep where they came
+  from, their artists, uploader and source link (as the provider lists them) apart from the
+  tags, and arrive tagged only with the tags you keep in **Details**. The artists filter
+  alongside the tags (any of those picked) and show on the tiles (a brush). Right-click → **Details…** shows where a
   wallpaper came from: its artists (**More by <artist>** searches the provider it came from
   for exactly them), uploader (**More from**), **Open source**, **Open on Wallhaven**; and
   edits its artists (add one by hand, or remove one) and tags. The name filter also matches tags, artists
@@ -61,7 +63,7 @@ Noctalia is optional, for wallpaper-derived colors.
   one currently has (with a thumbnail).
 - **Fit**: a general fit in Settings, and a fit per monitor under it (say, Contain on a 4:3
   screen).
-- **Adjust** (the monitor drawer's adjust button, or right-click a monitor pill): **frame** what
+- **Adjust** (right-click a monitor's pill): **frame** what
   a monitor shows (drag the preview to move, scroll or the sliders to zoom up to 4×; it's cut to
   the monitor's exact resolution), **mirror** it (left to right, top to bottom), or give it its
   own **fit**. The preview follows at once; the monitor a moment after you stop. Temporary:
@@ -79,9 +81,9 @@ Noctalia is optional, for wallpaper-derived colors.
   it stands on your desk (it snaps to the others, the bezel width apart, or lined up with
   them; anywhere along an edge), then **Span**. Your Hyprland layout isn't touched: the
   arrangement is wallpicker's own, kept for next time (**From Hyprland** starts it over). The
-  span's monitors then act as one: one **Spanned** card in the drawer (them as arranged, one
-  picture) and one pill; picked, a click on a tile spans that picture across them; the other
-  monitors carry on on their own. The card's **Adjust** reopens the dialog on the span shown
+  span's monitors then act as one: one **Spanned** pill (them as arranged, one picture);
+  picked, a click on a tile spans that picture across them; the other monitors carry on on
+  their own. Right-click the pill to reopen the dialog on the span shown
   (changes go on the monitors as you make them), with **Frame the picture**: zoom, move and
   mirror it over them all. **Separate** gives each monitor back to itself, keeping its part;
   **Previous** goes back on the span's monitors. Another wallpaper on one of them ends the
@@ -155,9 +157,8 @@ Noctalia is optional, for wallpaper-derived colors.
   Older library-only backups leave presets untouched. Missing preset images retain their
   saved paths and are reported; exports contain configuration, not wallpaper files.
   `wallpicker backup export|import|snapshots|restore`, `settings set snapshot_dir=…`.
-- **Monitors** (the chevron after "All" in the top bar): a drawer with each monitor bigger, showing
-  its wallpaper in the monitor's own shape and the file; click one to make it the target, or ↶ to
-  go back on that monitor only. Remembered open or closed.
+- **Monitors**: a pill per monitor in the top bar (and **All**), showing its wallpaper in the
+  monitor's own shape; click one to make it the target, right-click to adjust what it shows.
 - **Previous**: each monitor remembers its last 30 wallpapers; **↶ Previous** (in the monitor
   bar, or `wallpicker previous` for a keybind) goes back through them.
 - **Saved choices**: every applied wallpaper is written to `state.json`, and
@@ -327,12 +328,12 @@ monitor's own pixels whatever its scale.
 - **Animated wallpapers** (experimental; Settings → Animated wallpapers, or `wallpicker settings
   set animation.enabled=true`): GIF and animated WebP play on the GPU, shared by every monitor
   showing them, and keep playing through zoom, pan and flips. Off, or without hardware EGL, they
-  show their first frame. **Pause** (that section, a monitor's card in the drawer, or
-  `animation.paused=true`) holds every frame at once. **Frame rate** caps new frames per
+  show their first frame. **Pause** (that section, or `animation.paused=true`) holds every
+  frame at once. **Frame rate** caps new frames per
   second on each monitor (`animation.max_fps`, default 60; 0: the display's refresh). The
   daemon follows these at once (edits of the settings file by hand within a second) and plays
-  the saved animations again when it starts. The drawer and that section show what each
-  monitor's animation is doing (playing, fps, paused, resting, a still and why). A monitor
+  the saved animations again when it starts. That section shows what each monitor's
+  animation is doing (playing, fps, paused, resting, a still and why). A monitor
   plugged in later plays its animation too. While
   no monitor showing an animation asks for frames (locked, powered off) it rests: nothing is
   decoded, and it continues from the same frame afterwards. Limits are provisional: up to four decoders, each a separate process

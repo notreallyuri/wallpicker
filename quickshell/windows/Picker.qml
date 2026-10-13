@@ -79,9 +79,6 @@ Item {
                 tab: Views.current
                 onTabPicked: index => Views.current = index
             }
-            MonitorDrawer {
-                Layout.fillWidth: true
-            }
             // One tab at a time: the others aren't kept (nor their pictures).
             Loader {
                 Layout.fillWidth: true

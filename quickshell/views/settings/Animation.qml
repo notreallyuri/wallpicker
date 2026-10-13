@@ -30,7 +30,7 @@ ColumnLayout {
         Layout.fillWidth: true
         visible: Playback.enabled || !!section.a.enabled
         label: "Pause animations"
-        description: "Every animated wallpaper holds its frame until resumed, after a restart too. Also in the monitor drawer. Applies right away."
+        description: "Every animated wallpaper holds its frame until resumed, after a restart too. Applies right away."
         checked: Playback.paused
         onToggled: Playback.setPaused(!Playback.paused)
     }

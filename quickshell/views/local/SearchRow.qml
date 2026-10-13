@@ -1,5 +1,6 @@
-// The search card's first row: the search box, Favorites, the sort, Color,
-// the layout, Random, the count, and ⋯.
+// The search card's first row: the search box, Filters, Favorites, the
+// sort, Color, the layout, Random, the count, and ⋯. Narrow (the control
+// panel open, a Compact picker), Color, the layout and Random are icons.
 import QtQuick
 import QtQuick.Layouts
 import qs.components
@@ -13,6 +14,9 @@ RowLayout {
     function focusSearch() {
         search.forceFocus();
     }
+
+    /// Too narrow for every label.
+    readonly property bool compact: width < 1150
 
     spacing: 8
 
@@ -29,6 +33,23 @@ RowLayout {
         text: row.local.query
         onTextChanged: row.local.query = text
     }
+    // The tags and artists: a popover, or the rows under this one
+    // (Settings → Appearance). Says how many are picked.
+    Btn {
+        id: filtersButton
+        readonly property int picked: row.local.tagFilter.length + row.local.artistFilter.length
+        readonly property bool rows: Prefs.filtersLayout === "rows"
+        visible: Library.tagCounts.length + Library.artistCounts.length > 0
+        icon: "funnel"
+        text: picked > 0 ? "Filters · " + picked : "Filters"
+        active: picked > 0
+        tip: rows ? (Prefs.filtersOpen ? "Hide the tags and artists" : "Show the tags and artists") : "Filter by tag or artist"
+        onClicked: rows ? Prefs.filtersOpen = !Prefs.filtersOpen : filtersPopover.openUnder(filtersButton)
+        FiltersPopover {
+            id: filtersPopover
+            local: row.local
+        }
+    }
     Btn {
         icon: "star"
         text: "Favorites"
@@ -43,18 +64,19 @@ RowLayout {
     }
     ColorPicker {
         local: row.local
+        compact: row.compact
     }
     // Everything at once, or folder by folder (remembered).
     Btn {
-        minWidth: 104
+        minWidth: row.compact ? 0 : 104
         icon: row.local.folders ? "folder" : "grid"
-        text: row.local.folders ? "Folders" : "Flat"
+        text: row.compact ? "" : row.local.folders ? "Folders" : "Flat"
         onClicked: row.local.layout = row.local.folders ? "flat" : "folders"
         tip: "Show everything at once, or browse folder by folder"
     }
     Btn {
         icon: "shuffle"
-        text: "Random"
+        text: row.compact ? "" : "Random"
         tip: "Apply a random one of those shown (Ctrl+R)"
         onClicked: row.local.applyRandom()
     }

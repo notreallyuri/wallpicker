@@ -22,7 +22,7 @@ Item {
             id: grid
             anchors.fill: parent
             local: view.local
-            headerSpace: card.height + 12 + 28
+            headerSpace: card.height + 12 + 16
             onTileMenu: (img, at, x, y) => tileMenu.openFor(img, at, x, y)
         }
     }
@@ -40,7 +40,7 @@ Item {
         local: view.local
         behind: grid
         backdrop: view.backdrop
-        // The drawer opening moves the view, and the card with it.
+        // What moves the view, and the card with it.
         follow: view.y
     }
 

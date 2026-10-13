@@ -202,9 +202,9 @@ QtObject {
                 selection: Monitors.selection,
                 spanned: Monitors.spanned,
                 applying: Monitors.applying,
-                drawer: Monitors.drawerOpen,
                 focus: String(hooks.root.Window.activeFocusItem).split("(")[0],
-                active: hooks.root.Window.active
+                active: hooks.root.Window.active,
+                font: Theme.font
             });
         }
 

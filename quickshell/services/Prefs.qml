@@ -1,5 +1,5 @@
-// The interface's remembered choices (the Local sort and layout, the tag
-// row's expansion, the monitor drawer...), in a small JSON file next to
+// The interface's remembered choices (the Local sort and layout, the
+// filters' layout, the picker's size...), in a small JSON file next to
 // wallpicker's state: $XDG_STATE_HOME/wallpicker/ui.json. Set a property
 // and it's saved.
 pragma Singleton
@@ -17,7 +17,11 @@ Singleton {
     /// The tags' and artists' order above the grid: "name" or "count".
     property alias tagOrder: data.tagOrder
     property alias tagsMatchAll: data.tagsMatchAll
-    property alias monitorsOpen: data.monitorsOpen
+    /// Where Local's tag and artist filters are: "popover" (from the
+    /// Filters button) or "rows" (under the search bar, opened by it).
+    property alias filtersLayout: data.filtersLayout
+    /// The rows are open ("rows" layout).
+    property alias filtersOpen: data.filtersOpen
     /// "system", "light" or "dark".
     property alias darkMode: data.darkMode
     /// A color theme (services/Themes.js).
@@ -62,7 +66,8 @@ Singleton {
             property bool artistsExpanded: false
             property string tagOrder: "name"
             property bool tagsMatchAll: true
-            property bool monitorsOpen: false
+            property string filtersLayout: "popover"
+            property bool filtersOpen: false
             property string darkMode: "system"
             property string colorTheme: "blossom"
             property bool glass: true

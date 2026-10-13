@@ -1,8 +1,8 @@
 // A monitor (monitor_bar.rs's Screen): a dark bezel with a thin chin around
 // the screen, which shows its wallpaper in the monitor's own proportions
-// under a faint glare, on a tapered neck and a base. Sizes: "card" (the
-// drawer), "desk" (one of several on the All card: no base, the desk draws
-// one) and "big" (the Adjust dialog). An empty screen when nothing's set.
+// under a faint glare, on a tapered neck and a base. Sizes: "card",
+// "desk" (one of several on a desk: no base, the desk draws one) and "big"
+// (the Adjust dialog). An empty screen when nothing's set.
 // Children replace the wallpaper on the screen (the Adjust dialog's framer).
 import QtQuick
 import QtQuick.Effects
