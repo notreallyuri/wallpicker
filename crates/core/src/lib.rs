@@ -10,6 +10,7 @@ pub mod colors;
 pub mod duplicates;
 pub mod error;
 pub mod library;
+pub mod media;
 pub mod moebooru;
 pub mod monitors;
 pub mod online;
