@@ -41,15 +41,13 @@ pub fn span_and_remember(
     if chosen.len() < 2 {
         return Err(Error::Invalid("spanning needs two monitors or more".into()));
     }
-    let (width, height) =
-        image::image_dimensions(path).map_err(|e| Error::Image(format!("{}: {e}", path.display())))?;
+    let mut preparation = crate::render::Preparation::default();
+    let (width, height) = preparation.inspect(path)?;
     if let Some((layout, bezel)) = ask.layout {
         settings.span_layout.extend(layout);
         settings.span_bezel = bezel;
     }
     settings.span_monitors = chosen.clone();
-    store.save_settings(&settings)?;
-    let settings = store.load_settings()?;
     let placed: Vec<crate::span::Placed> =
         crate::span::arrangement(&connected, &settings.span_layout, settings.span_bezel)
             .into_iter()
@@ -57,25 +55,78 @@ pub fn span_and_remember(
             .collect();
     let look = look.sanitized();
     let cuts = crate::span::cuts(&placed, width, height, &look);
-    // The same picture again (a new look): no new history.
-    for (m, _) in &cuts {
-        store.set_current(m, path)?;
-    }
-    let places = placed.iter().map(|p| (p.name.clone(), p.rect)).collect();
-    store.set_span(path, look, &cuts, places)?;
-    // Read after the cuts are saved: each monitor is shown its part.
     let backend = Backend::new(store);
     let backend = if adjusting_span {
         backend.without_transition()
     } else {
         backend
     };
-    let fits = Fits::load(store);
-    let mut report = ApplyReport::default();
-    for (m, _) in &cuts {
-        match backend.apply(runner, m, path, fits.of(m, path)) {
-            Ok(()) => report.applied.push(m.clone()),
-            Err(e) => report.failed.push((m.clone(), e.to_string())),
+    let mut outputs = Vec::new();
+    for (monitor, cut) in &cuts {
+        let adjust = crate::settings::Adjust {
+            span: Some(*cut),
+            flip: look.flip,
+            ..Default::default()
+        };
+        outputs.push(crate::render::Output {
+            monitor: monitor.clone(),
+            picture: preparation.picture(&store.dirs().cache, path, &adjust, None)?,
+        });
+    }
+    let rendered = backend.apply_batch(runner, outputs)?;
+    let mut report = ApplyReport {
+        applied: rendered.applied,
+        failed: rendered.failed,
+    };
+    if report.applied.is_empty() {
+        return Ok(report);
+    }
+    // Commit only confirmed outputs. A partial span becomes standalone cuts;
+    // failed outputs retain their paths, adjustments and history.
+    let remember = || -> Result<()> {
+        let mut state = store.load_state()?;
+        if state
+            .span
+            .as_ref()
+            .is_some_and(|s| report.applied.iter().any(|m| s.covers(m)))
+        {
+            state.span = None;
+        }
+        for (monitor, cut) in &cuts {
+            if !report.applied.contains(monitor) {
+                continue;
+            }
+            crate::store::remember_current(&mut state, monitor, path);
+            state.adjust.insert(
+                monitor.clone(),
+                crate::settings::Adjust {
+                    span: Some(*cut),
+                    flip: look.flip,
+                    ..Default::default()
+                },
+            );
+        }
+        let complete = report.applied.len() == cuts.len();
+        if complete {
+            state.span = Some(crate::settings::Spanned {
+                path: path.into(),
+                look,
+                monitors: cuts.iter().map(|(m, _)| m.clone()).collect(),
+                places: placed.iter().map(|p| (p.name.clone(), p.rect)).collect(),
+            });
+        }
+        store.save_state(&state)?;
+        crate::transform::prune(&store.dirs().cache, &state);
+        if complete {
+            store.save_settings(&settings)?;
+        }
+        Ok(())
+    };
+    if let Err(e) = remember() {
+        for monitor in std::mem::take(&mut report.applied) {
+            report
+                .failed
+                .push((monitor, format!("shown, but could not save span state: {e}")));
         }
     }
     Ok(report)

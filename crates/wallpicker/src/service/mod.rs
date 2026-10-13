@@ -13,3 +13,4 @@ pub mod wallpapers;
 pub mod workspaces;
 
 pub mod presets;
+pub mod renderer;

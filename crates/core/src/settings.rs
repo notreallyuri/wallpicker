@@ -80,6 +80,8 @@ pub struct Settings {
     pub theme_monitor: Option<String>,
     /// Native renderer transition.
     pub transition: Transition,
+    /// Animated (GIF/WebP) wallpaper playback.
+    pub animation: Animation,
     /// Online details show the original image (else one fitted to 1600 px,
     /// which costs a fraction of the memory: an 8K original decoded is 130 MB).
     pub full_previews: bool,
@@ -141,6 +143,7 @@ impl Default for Settings {
             theme_from_wallpaper: true,
             theme_monitor: None,
             transition: Transition::default(),
+            animation: Animation::default(),
             snapshot_dir: None,
             full_previews: false,
             noctalia_previous_scheme: None,
@@ -247,6 +250,42 @@ pub const TRANSITIONS: [(&str, &str); 13] = [
     ("random", "A different one each time"),
     ("none", "None (instant)"),
 ];
+
+/// Animated wallpaper playback, experimental until its resource defaults are
+/// measured. Off (or without hardware EGL), an animated wallpaper is shown as
+/// its first frame.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct Animation {
+    pub enabled: bool,
+    /// Every animation holds its frame; independent of the session lock.
+    pub paused: bool,
+    /// Presentations per second at most, on each monitor (0: as often as
+    /// the display refreshes). A slower animation keeps its own pace.
+    pub max_fps: u32,
+}
+
+impl Default for Animation {
+    fn default() -> Self {
+        Animation {
+            enabled: false,
+            paused: false,
+            max_fps: 60,
+        }
+    }
+}
+
+impl Animation {
+    pub const MAX_FPS: u32 = 240;
+
+    /// The time between presentations `max_fps` allows (zero: no cap).
+    pub fn interval(&self) -> std::time::Duration {
+        match self.max_fps.min(Self::MAX_FPS) {
+            0 => std::time::Duration::ZERO,
+            fps => std::time::Duration::from_secs(1) / fps,
+        }
+    }
+}
 
 /// Native renderer transition preferences.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -833,5 +872,18 @@ mod tests {
         assert_eq!(serde_json::to_string(&FitMode::Cover).unwrap(), "\"cover\"");
         let m: FitMode = serde_json::from_str("\"contain\"").unwrap();
         assert_eq!(m.as_str(), "contain");
+    }
+
+    #[test]
+    fn animation_frame_rate_cap() {
+        use std::time::Duration;
+        let at = |max_fps| Animation { max_fps, ..Default::default() }.interval();
+        assert_eq!(Animation::default().max_fps, 60);
+        assert_eq!(at(25), Duration::from_millis(40));
+        assert_eq!(at(0), Duration::ZERO);
+        assert_eq!(at(10_000), at(Animation::MAX_FPS));
+        // Saved before the setting existed: the default cap.
+        let old: Animation = serde_json::from_str(r#"{"enabled":true}"#).unwrap();
+        assert_eq!((old.enabled, old.max_fps), (true, 60));
     }
 }

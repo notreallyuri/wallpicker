@@ -15,6 +15,7 @@ pub(super) async fn call(state: &AppState, out: &Out, name: &str, params: &Value
     let changed = |result: CmdResult<Value>| {
         if result.is_ok() {
             out.event("library-changed", value!(null));
+            out.event("presets-changed", value!(null));
         }
         result
     };

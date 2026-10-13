@@ -1,7 +1,7 @@
 //! settings.*: options (what the form offers: from core), save (announcing
 //! `settings-changed`, and `state-changed`: a changed fit re-applies
-//! the wallpapers), conflicts and stop_program (other programs drawing
-//! wallpapers).
+//! the wallpapers), pause_animation (at once, outside the form), conflicts
+//! and stop_program (other programs drawing wallpapers).
 
 use serde_json::{Value, json as value};
 use wallpicker_core::colors::{HUES, TONES};
@@ -21,6 +21,16 @@ pub(super) async fn call(state: &AppState, out: &Out, name: &str, params: &Value
                 if result.is_ok() {
                     out.event("settings-changed", value!(null));
                     out.event("state-changed", value!(null));
+                }
+                result
+            }
+            Err(e) => Err(e),
+        },
+        "pause_animation" => match param::<bool>(params, "paused") {
+            Ok(paused) => {
+                let result = json(service::pause_animation(state, paused).await);
+                if result.is_ok() {
+                    out.event("settings-changed", value!(null));
                 }
                 result
             }

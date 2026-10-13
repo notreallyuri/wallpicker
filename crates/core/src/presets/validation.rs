@@ -7,21 +7,29 @@ use std::collections::BTreeSet;
 pub(super) fn name(value: &str) -> Result<String> {
     let value = value.trim();
     if value.is_empty() || value.chars().count() > 100 || value.chars().any(char::is_control) {
-        return Err(Error::Invalid("preset name must contain 1–100 characters without control characters".into()));
+        return Err(Error::Invalid(
+            "preset name must contain 1–100 characters without control characters".into(),
+        ));
     }
     Ok(value.to_owned())
 }
 
-pub(super) fn unique_name(items: &[Preset], value: &str, except: Option<&str>) -> Result<()> {
-    if items.iter().any(|p| Some(p.id.as_str()) != except && p.name.to_lowercase() == value.to_lowercase()) {
+pub(crate) fn unique_name(items: &[Preset], value: &str, except: Option<&str>) -> Result<()> {
+    if items
+        .iter()
+        .any(|p| Some(p.id.as_str()) != except && p.name.to_lowercase() == value.to_lowercase())
+    {
         return Err(Error::Invalid(format!("a preset named {value:?} already exists")));
     }
     Ok(())
 }
 
-pub(super) fn collection(saved: &Collection) -> Result<()> {
+pub(crate) fn collection(saved: &Collection) -> Result<()> {
     if saved.version != FORMAT {
-        return Err(Error::Invalid(format!("unsupported preset format version {}", saved.version)));
+        return Err(Error::Invalid(format!(
+            "unsupported preset format version {}",
+            saved.version
+        )));
     }
     let mut ids = BTreeSet::new();
     for item in &saved.items {

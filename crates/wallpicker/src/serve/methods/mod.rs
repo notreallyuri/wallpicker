@@ -7,6 +7,7 @@ mod files;
 mod library;
 mod online;
 mod presets;
+mod renderer;
 mod settings;
 mod slideshow;
 mod wallpapers;
@@ -31,6 +32,7 @@ pub(super) async fn call(state: &AppState, out: &Out, method: &str, params: Valu
         "backup" => backup::call(state, out, name, &params).await,
         "files" => files::call(name, &params).await,
         "wallpapers" => wallpapers::call(state, out, name, &params).await,
+        "renderer" => renderer::call(name).await,
         _ => None,
     };
     result.unwrap_or_else(|| Err(format!("no method {method}")))

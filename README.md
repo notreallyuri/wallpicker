@@ -91,13 +91,18 @@ Noctalia is optional, for wallpaper-derived colors.
   immediately. Wallpaper selections, Previous and preset application use the configured transition.
 - **Wallpaper presets**: the Presets tab saves, applies, updates, renames and deletes named
   setups, with responsive preview cards and reports for missing files/displays. Search by name
-  with Ctrl+F; each card's ⋯ menu holds Update, Rename and Delete. Ctrl+4 opens it;
+  with Ctrl+F; each card's ⋯ menu holds Update, Rename, Reassign monitors and Delete. Ctrl+4 opens it;
   `wallpicker --open presets` opens the picker there. From the command line, save a named setup of
   wallpaper assignments, fit, zoom, pan, flips and span canvas layout with
   `wallpicker presets save "Night"`. `wallpicker presets list` shows its ID;
   `wallpicker presets apply p1` restores it using your current transition.
   `update p1` replaces its snapshot, `rename p1 "Work"` changes its name and `delete p1`
-  removes it. Add `--json` for scripts. Disconnected monitors are skipped; an incomplete span
+  removes it. **Reassign monitors…** previews a one-to-one mapping for renamed or replaced
+  connectors, retaining wallpapers, adjustments and span positions. Saving edits the preset;
+  Apply shows it afterward. Connector swaps are supported. From the CLI, preview with
+  `wallpicker presets reassign p1 DP-1=DP-3 --preview`, then remove `--preview` to save.
+  Unspecified monitors stay unchanged; destinations may be disconnected for future setups.
+  Add `--json` for scripts. Disconnected monitors are skipped; an incomplete span
   is skipped as a group. Missing/unreadable images needed by connected assignments prevent
   any wallpaper changes. Backend failures can leave a partial application and are reported;
   only successful assignments are remembered. The compositor's monitor layout is untouched.
@@ -142,11 +147,13 @@ Noctalia is optional, for wallpaper-derived colors.
   white, grey or black), the most of it first. Each pixel is named by the nearest of a set of
   reference colors, so skin and wood aren't "red", gold is yellow and light pink is pink. Read
   from the thumbnails once, then cached. `wallpicker colors [COLOR]`.
-- **Backup** (Settings → Backup): your favorites, tags and fits are copied before the first change
+- **Backup** (Settings → Backup): your favorites, tags, fits and presets are copied before the first change
   of each day (the last 14 kept; restore any of them), in a folder you can choose (a synced one
   makes them off-machine backups). **Export…** and **Import…** use the system's file dialog; an
-  import is merged (or replaces the library) and finds wallpapers that moved, by their place
+  import is merged (or replaces the library and presets) and finds wallpapers that moved, by their place
   inside your wallpaper folders or by name and size.
+  Older library-only backups leave presets untouched. Missing preset images retain their
+  saved paths and are reported; exports contain configuration, not wallpaper files.
   `wallpicker backup export|import|snapshots|restore`, `settings set snapshot_dir=…`.
 - **Monitors** (the chevron after "All" in the top bar): a drawer with each monitor bigger, showing
   its wallpaper in the monitor's own shape and the file; click one to make it the target, or ↶ to
@@ -269,6 +276,9 @@ wallpicker filters yandere set questionable=true            # or: filters yander
 wallpicker settings
 wallpicker settings set thumb_width=480 "folders=~/Pictures/wpp
 ~/Pictures/more"                                            # one folder per line
+wallpicker settings set animation.enabled=true              # play GIF/animated WebP (experimental)
+wallpicker settings set animation.paused=true               # hold every animation's frame
+wallpicker settings set animation.max_fps=30                # new frames a second at most (0: the display's)
 ```
 
 Wrong keys or values change nothing. The Wallhaven API key is never printed and can only be set
@@ -314,6 +324,24 @@ monitor's own pixels whatever its scale.
   monitor's refresh rate. The configured duration applies to each effect. Shader transitions
   load EGL and Wayland EGL libraries at runtime and fall back to Fade if hardware GLES is
   unavailable; without compositor alpha-modifier support, changes are instant.
+- **Animated wallpapers** (experimental; Settings → Animated wallpapers, or `wallpicker settings
+  set animation.enabled=true`): GIF and animated WebP play on the GPU, shared by every monitor
+  showing them, and keep playing through zoom, pan and flips. Off, or without hardware EGL, they
+  show their first frame. **Pause** (that section, a monitor's card in the drawer, or
+  `animation.paused=true`) holds every frame at once. **Frame rate** caps new frames per
+  second on each monitor (`animation.max_fps`, default 60; 0: the display's refresh). The
+  daemon follows these at once (edits of the settings file by hand within a second) and plays
+  the saved animations again when it starts. The drawer and that section show what each
+  monitor's animation is doing (playing, fps, paused, resting, a still and why). A monitor
+  plugged in later plays its animation too. While
+  no monitor showing an animation asks for frames (locked, powered off) it rests: nothing is
+  decoded, and it continues from the same frame afterwards. Limits are provisional: up to four decoders, each a separate process
+  capped at 64 MiB plus four frames of address space (97 MiB at 1080p, 196 MiB at 4K), and
+  files up to 64 MiB.
+- **Renderer usage** (Settings → Performance): the daemon's share of the GPU's time and the GPU
+  memory it holds (from the kernel's DRM client statistics: amdgpu, Intel and others; NVIDIA's
+  own driver doesn't report them), the whole GPU's busy percentage (AMD), its CPU and memory,
+  and the animation decoders'.
 - Only one program should draw the wallpaper: stop hyprpaper, awww and Noctalia's own wallpaper
   (Settings warns about them).
 
@@ -426,13 +454,64 @@ packaging/          the launcher entry and the icon
 scripts/            install-local.sh, ui-check.sh, memory.sh, open-timing.sh
 ```
 
+The shared `wallpicker_core::media` foundation detects JPEG/PNG/GIF/WebP by content and
+provides metadata, a representative RGBA frame and sequential composited frames:
+
+```rust
+let source = media::Source::open(path, media::Limits::default())?;
+let first_frame = source.representative()?;
+let frames = source.frames()?; // One pass; reopen to repeat with a clean canvas.
+```
+
+GIF disposal and WebP blending/disposal have deterministic fixtures, including lossy WebP
+and alpha patches. Metadata caching uses file identity and subsecond timestamps. Input,
+dimensions, frame bytes and frame count have limits; codec scratch-memory limits remain
+best effort when calling the core API directly. `wallpicker::decoding` adds isolated Linux
+decoder processes with hard address-space limits, admission reservations, bounded frame
+queues, pause and cancellation. It repeats from a fresh decoder at loop boundaries and
+preserves source timing. `wallpicker::preparation` validates complete batches and owns one
+paused worker/first frame per shared animated source, with identity checks before handoff
+and cleanup on preflight failure. Static daemon requests use the same preparation path.
+The daemon plays animations when the experimental `animation.enabled` setting is on; off,
+an animated wallpaper is shown as its first frame.
+See the [implementation design](docs/animated-wallpapers.md) and
+[worker qualification](docs/decoder-workers.md) for integration and resource measurements.
+
+`renderer/gpu/playback` provides persistent EGL surface primitives, shared source textures
+and GPU fitting/framing/flips with alpha-correct filtering. Headless EGL pixel checks pass;
+the renderer host also passes actual Wayland/GPU playback and transition lifecycle checks on private
+virtual outputs. See [Wayland playback host](docs/wayland-playback.md) and
+[GPU playback primitives](docs/gpu-playback.md) for the tested scope and memory accounting.
+
+`wallpicker::playback` owns prepared source sessions with monotonic timing, bounded catch-up,
+independent pause reasons and late-error freezing. Per-output pacing decisions combine
+callback backpressure and explicit rate caps without retaining frame histories. Deterministic
+clock tests and real-worker tests pass. Its calloop adapter drives deadlines and callback
+tickets through a host draw hook and retires workers off-loop with bounded admission.
+The Wayland host connects those hooks for qualified playback and live geometry adjustments
+that reuse the source clock and texture. Incoming transitions hold frame zero until the exact
+endpoint callback on each output, then start the shared clock. Without hardware EGL, the
+qualified path displays a budgeted representative still and releases its decoder. Public
+daemon acceptance and playback policy remain open. See
+[playback scheduling](docs/playback-scheduling.md).
+
+`wallpicker_core::render` carries original sources and portable geometry through versioned
+batch requests. Apply, presets, spans, Previous, adjustments and restoration use this path;
+static transformed files remain cached. Resized framed outputs rebuild from their original
+source. Span state/history updates only for successful outputs, with partial spans retained
+as standalone cuts. Application IDs and apply/adjust/restore intent are runtime metadata.
+The new client requires a daemon with render protocol version 1 and reports when it needs
+a restart. Animated requests retain their original identities; with playback off the
+renderer shows their first frame. Static preflight reads image headers (presets decode every image completely); a
+source that can't be prepared fails only its own monitor.
+
 ## Troubleshooting
 
 - **"Could not list monitors"**: output discovery needs access to your Wayland session
   (`WAYLAND_DISPLAY` and `XDG_RUNTIME_DIR`). Hyprland adds workspace/focus metadata when available.
 - **Applying fails**: run `wallpicker daemon` in a terminal to see renderer errors. The compositor
   needs wlr-layer-shell; stop other wallpaper programs if they cover wallpicker's surfaces.
-- **Thumbnails show "No preview"**: the image couldn't be decoded (PNG, JPEG and WebP are
+- **Thumbnails show "No preview"**: the image couldn't be decoded (PNG, JPEG, WebP and GIF are
   supported).
 - **The picker doesn't open**: `qs` (quickshell) must be installed; `qs log -p
   ~/.local/share/wallpicker/ui` shows the last run's log. "the interface isn't installed": run

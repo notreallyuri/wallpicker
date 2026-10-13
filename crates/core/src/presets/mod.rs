@@ -6,12 +6,15 @@ mod apply;
 mod capture;
 mod commit;
 mod plan;
+mod reassign;
+#[cfg(test)]
+mod reassign_tests;
 #[cfg(test)]
 mod span_tests;
 mod storage;
 #[cfg(test)]
 mod tests;
-mod validation;
+pub(crate) mod validation;
 
 use crate::settings::{FitMode, Flip, SpanLook, SpanPoint};
 use serde::{Deserialize, Serialize};
@@ -21,6 +24,7 @@ use std::path::PathBuf;
 pub const FORMAT: u32 = 1;
 
 pub use apply::{ApplyReport, apply};
+pub use reassign::{MonitorMapping, reassign};
 
 /// A stable identity and an explicitly saved setup; not linked to live state.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -70,15 +74,19 @@ pub struct PresetSpan {
     pub bezel: u32,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-struct Collection {
-    version: u32,
-    next_id: u64,
-    items: Vec<Preset>,
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Collection {
+    pub version: u32,
+    pub next_id: u64,
+    pub items: Vec<Preset>,
 }
 
 impl Default for Collection {
     fn default() -> Self {
-        Self { version: FORMAT, next_id: 1, items: Vec::new() }
+        Self {
+            version: FORMAT,
+            next_id: 1,
+            items: Vec::new(),
+        }
     }
 }

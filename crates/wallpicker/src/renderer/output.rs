@@ -24,22 +24,17 @@ impl OutputHandler for State {
             return;
         };
         let surface = self.compositor.create_surface(qh);
-        let viewport = self
-            .viewporter
-            .as_ref()
-            .map(|v| v.get_viewport(&surface, qh, Quiet));
-        let layer = self.layer_shell.create_layer_surface(
-            qh,
-            surface,
-            Layer::Background,
-            Some("wallpicker"),
-            Some(&output),
-        );
+        let viewport = self.viewporter.as_ref().map(|v| v.get_viewport(&surface, qh, Quiet));
+        let layer =
+            self.layer_shell
+                .create_layer_surface(qh, surface, Layer::Background, Some("wallpicker"), Some(&output));
         layer.set_anchor(Anchor::all());
         layer.set_exclusive_zone(-1);
         layer.set_keyboard_interactivity(KeyboardInteractivity::None);
         layer.commit();
         self.screens.push(Screen {
+            animation: None,
+            incoming: None,
             id: info.id,
             name,
             output,
@@ -52,29 +47,24 @@ impl OutputHandler for State {
             frame_pending: false,
             generation: 0,
             drawn: None,
+            render_error: None,
             waiting: Vec::new(),
         });
     }
 
-    fn update_output(
-        &mut self,
-        _: &Connection,
-        _: &QueueHandle<Self>,
-        output: wl_output::WlOutput,
-    ) {
+    fn update_output(&mut self, _: &Connection, _: &QueueHandle<Self>, output: wl_output::WlOutput) {
         // A new mode, scale or turn: drawn again if its pixels changed.
         if let Some(i) = self.screens.iter().position(|s| s.output == output) {
             self.redraw(i, false);
+            self.refresh_animation_transition(i);
         }
     }
 
-    fn output_destroyed(
-        &mut self,
-        _: &Connection,
-        _: &QueueHandle<Self>,
-        output: wl_output::WlOutput,
-    ) {
-        self.screens.retain(|s| s.output != output);
+    fn output_destroyed(&mut self, _: &Connection, _: &QueueHandle<Self>, output: wl_output::WlOutput) {
+        if let Some(i) = self.screens.iter().position(|s| s.output == output) {
+            self.disconnect_animation(i);
+            self.screens.remove(i);
+        }
     }
 }
 

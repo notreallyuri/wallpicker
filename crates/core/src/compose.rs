@@ -15,7 +15,10 @@ use crate::settings::FitMode;
 /// The picture at `path`, decoded (what [`compose`] fits; the renderer keeps
 /// it a moment, for the next monitor).
 pub fn open(path: &Path) -> Result<RgbImage> {
-    let img = image::open(path).map_err(|e| Error::Image(format!("{}: {e}", path.display())))?;
+    let img = image::ImageReader::open(path)?
+        .with_guessed_format()?
+        .decode()
+        .map_err(|e| Error::Image(format!("{}: {e}", path.display())))?;
     Ok(img.into_rgb8())
 }
 
@@ -38,10 +41,19 @@ pub fn compose(src: &RgbImage, width: u32, height: u32, fit: Option<FitMode>) ->
             // u64: 8K × 8K overflows u32.
             let wider = u64::from(iw) * u64::from(height) > u64::from(ih) * u64::from(width);
             let scaled = |a: u32, b: u32, c: u32| (u64::from(a) * u64::from(b) / u64::from(c)).max(1) as u32;
-            let (sw, sh) = if wider { (width, scaled(ih, width, iw)) } else { (scaled(iw, height, ih), height) };
+            let (sw, sh) = if wider {
+                (width, scaled(ih, width, iw))
+            } else {
+                (scaled(iw, height, ih), height)
+            };
             let mut out = RgbImage::from_pixel(width, height, Rgb([0, 0, 0]));
             let picture = resize(src, sw, sh, false);
-            image::imageops::replace(&mut out, &picture, i64::from((width - sw) / 2), i64::from((height - sh) / 2));
+            image::imageops::replace(
+                &mut out,
+                &picture,
+                i64::from((width - sw) / 2),
+                i64::from((height - sh) / 2),
+            );
             out
         }
         FitMode::Tile => RgbImage::from_fn(width, height, |x, y| *src.get_pixel(x % iw, y % ih)),
@@ -58,7 +70,9 @@ fn resize(src: &RgbImage, width: u32, height: u32, middle: bool) -> RgbImage {
         options = options.fit_into_destination(Some((0.5, 0.5)));
     }
     // Both RGB, neither empty: nothing for it to refuse.
-    Resizer::new().resize(src, &mut out, &options).expect("resizing RGB to RGB");
+    Resizer::new()
+        .resize(src, &mut out, &options)
+        .expect("resizing RGB to RGB");
     out
 }
 
@@ -70,6 +84,53 @@ pub fn xrgb(img: &RgbImage) -> Vec<u8> {
         out.extend_from_slice(&[b, g, r, 0xff]);
     }
     out
+}
+
+/// A straight-alpha frame composited onto black, as [`geometry`] expects it.
+pub fn flatten(src: &image::RgbaImage) -> RgbImage {
+    RgbImage::from_fn(src.width(), src.height(), |x, y| {
+        let [r, g, b, a] = src.get_pixel(x, y).0;
+        [r, g, b]
+            .map(|c| ((u16::from(c) * u16::from(a) + 127) / 255) as u8)
+            .into()
+    })
+}
+
+/// Apply portable geometry to an already decoded representative still. Alpha
+/// must be composited onto black before calling this RGB-only fitting path.
+pub fn geometry(src: &RgbImage, geometry: crate::render::Geometry, size: (u32, u32)) -> Result<Vec<u8>> {
+    use crate::render::View;
+    geometry.validate_for_source(src.dimensions())?;
+    if src.width() == 0
+        || src.height() == 0
+        || size.0 == 0
+        || size.1 == 0
+        || size.0 > 16384
+        || size.1 > 16384
+        || u64::from(size.0) * u64::from(size.1) * 4 > 64 * 1024 * 1024
+    {
+        return Err(Error::Image("invalid representative dimensions".into()));
+    }
+    let region = match geometry.view {
+        View::Full => None,
+        View::Region { x, y, width, height } => Some((x, y, width, height)),
+        View::Frame { .. } => Some(geometry.adjust(size).frame.unwrap().rect(src.width(), src.height())),
+    };
+    let mut image = if let Some((x, y, w, h)) = region {
+        // Crop before filtering so a standalone cut cannot sample adjacent
+        // source pixels outside its selected region.
+        let cropped = image::imageops::crop_imm(src, x, y, w, h).to_image();
+        compose(&cropped, size.0, size.1, Some(FitMode::Fill))
+    } else {
+        src.clone()
+    };
+    if geometry.flip.h {
+        image::imageops::flip_horizontal_in_place(&mut image);
+    }
+    if geometry.flip.v {
+        image::imageops::flip_vertical_in_place(&mut image);
+    }
+    Ok(xrgb(&compose(&image, size.0, size.1, geometry.fit)))
 }
 
 #[cfg(test)]

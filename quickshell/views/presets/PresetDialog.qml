@@ -14,7 +14,7 @@ Dialog {
     Connections {
         target: Presets
         function onEditingChanged() {
-            if (!Presets.editing) return;
+            if (!Presets.editing || Presets.editing.action === "reassign") return;
             dialog.edit = Presets.editing;
             Presets.error = "";
             name.text = dialog.edit.preset ? dialog.edit.preset.name : "";

@@ -90,6 +90,24 @@ mod tests {
     }
 
     #[test]
+    fn an_animation_is_thumbnailed_from_its_first_frame() {
+        let tmp = tempfile::tempdir().unwrap();
+        let src = tmp.path().join("moving.gif");
+        let mut encoder = image::codecs::gif::GifEncoder::new(fs::File::create(&src).unwrap());
+        for color in [[255, 0, 0, 255], [0, 0, 255, 255]] {
+            encoder
+                .encode_frame(image::Frame::new(image::RgbaImage::from_pixel(64, 32, image::Rgba(color))))
+                .unwrap();
+        }
+        drop(encoder);
+        let out = ensure_thumb(&tmp.path().join("cache"), &src, 32).unwrap();
+        let thumb = image::open(out).unwrap().to_rgb8();
+        assert_eq!(thumb.dimensions(), (32, 16));
+        let [r, _, b] = thumb.get_pixel(16, 8).0;
+        assert!(r > 200 && b < 50, "{r} {b}");
+    }
+
+    #[test]
     fn creates_a_smaller_cached_jpeg() {
         let tmp = tempfile::tempdir().unwrap();
         let src = tmp.path().join("big.png");

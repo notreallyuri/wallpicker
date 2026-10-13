@@ -148,4 +148,5 @@ Item {
         onActivated: search.forceFocus()
     }
     PresetDialog {}
+    ReassignDialog {}
 }

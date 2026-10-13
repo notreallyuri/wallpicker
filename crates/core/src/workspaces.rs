@@ -60,6 +60,9 @@ pub fn sync(runner: &dyn Runner, store: &Store, last: &mut HashMap<String, Strin
         let state = store.load_state()?;
         let backend = Backend::from_settings(store);
         let fits = Fits::load(store);
+        let mut preparation = crate::render::Preparation::default();
+        let mut outputs = Vec::new();
+        let mut paths = HashMap::new();
         for (monitor, ws) in &now {
             if last.get(monitor) == Some(ws) {
                 continue;
@@ -70,13 +73,27 @@ pub fn sync(runner: &dyn Runner, store: &Store, last: &mut HashMap<String, Strin
             if !path.is_file() || state.current.get(monitor) == Some(path) {
                 continue;
             }
-            match backend.apply(runner, monitor, path, fits.of(monitor, path)) {
-                Ok(()) => {
-                    store.show_for_workspace(monitor, path)?;
-                    applied.push((monitor.clone(), path.clone()));
+            match backend.prepare(&mut preparation, monitor, path, fits.of(monitor, path)) {
+                Ok(output) => {
+                    outputs.push(output);
+                    paths.insert(monitor.clone(), path);
                 }
                 Err(e) => eprintln!("wallpicker: workspace {ws} on {monitor}: {e}"),
             }
+        }
+        // A failed request is said, like a failed monitor: `last` still moves on,
+        // so the next workspace event isn't stuck retrying it.
+        let report = backend.apply_batch(runner, outputs).unwrap_or_else(|e| {
+            let failed = paths.keys().map(|m| (m.clone(), e.to_string())).collect();
+            crate::render::Report { applied: Vec::new(), failed }
+        });
+        for monitor in report.applied {
+            let path = paths[&monitor];
+            store.show_for_workspace(&monitor, path)?;
+            applied.push((monitor, path.clone()));
+        }
+        for (monitor, error) in report.failed {
+            eprintln!("wallpicker: workspace wallpaper on {monitor}: {error}");
         }
     }
     *last = now;
@@ -358,5 +375,44 @@ mod tests {
         fake.ws.borrow_mut()[0].1 = "1";
         remember(&fake, &store, "DP-1", &a).unwrap();
         assert_eq!(store.load_settings().unwrap().workspaces.wallpapers["1"], a);
+    }
+
+    /// A daemon that refuses every request (e.g. an older render protocol).
+    struct Refusing(Fake, RefCell<u32>);
+
+    impl Runner for Refusing {
+        fn render(&self, _: &crate::render::Batch) -> Result<crate::render::Report> {
+            *self.1.borrow_mut() += 1;
+            Err(crate::Error::Invalid("restart the daemon".into()))
+        }
+
+        fn run(&self, program: &str, args: &[&str]) -> Result<String> {
+            self.0.run(program, args)
+        }
+    }
+
+    #[test]
+    fn a_refused_request_is_not_retried_on_every_event() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = Store::new(Dirs::under(tmp.path()));
+        let b = tmp.path().join("b.png");
+        image::RgbImage::new(4, 4).save(&b).unwrap();
+        let mut s = store.load_settings().unwrap();
+        s.workspaces.enabled = true;
+        s.workspaces.wallpapers.insert("3".into(), b);
+        store.save_settings(&s).unwrap();
+        let runner = Refusing(
+            Fake {
+                ws: RefCell::new(vec![("DP-1", "3")]),
+                calls: RefCell::new(vec![]),
+            },
+            RefCell::new(0),
+        );
+        let mut last = HashMap::new();
+        assert!(sync(&runner, &store, &mut last).unwrap().is_empty());
+        assert_eq!(last["DP-1"], "3");
+        assert!(sync(&runner, &store, &mut last).unwrap().is_empty());
+        assert_eq!(*runner.1.borrow(), 1);
+        assert!(store.load_state().unwrap().current.is_empty());
     }
 }

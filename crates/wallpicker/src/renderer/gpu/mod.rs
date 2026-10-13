@@ -1,10 +1,13 @@
-//! Incoming-image shader transitions, presented directly to Wayland via EGL.
-//! No per-frame CPU blending or GPU readback; textures are uploaded once.
+//! Shader transitions and persistent playback drawing resources over EGL/GLES.
+//! Transitions upload once; playback updates source textures without CPU fitting
+//! or GPU readback. Wayland scheduling belongs to the renderer owner.
 
 mod context;
 mod native;
 mod program;
 mod target;
+// Instantiated lazily by the animated Wayland host; static sessions need none.
+pub(super) mod playback;
 
 use context::Context;
 use glow::HasContext;
@@ -20,6 +23,10 @@ pub(super) struct Device {
 impl Device {
     pub(super) fn new(connection: &Connection) -> Result<Rc<Self>, String> {
         let context = Context::new(connection)?;
+        Self::from_context(context, false)
+    }
+
+    fn from_context(context: Context, allow_software: bool) -> Result<Rc<Self>, String> {
         // SAFETY: GLES context is current; EGL returns valid procedure addresses.
         let gl = unsafe {
             glow::Context::from_loader_function(|name| {
@@ -33,13 +40,19 @@ impl Device {
         // on the CPU. The caller falls back to the existing compositor fade.
         let renderer = unsafe { gl.get_parameter_string(glow::RENDERER) };
         let lower = renderer.to_lowercase();
-        if ["llvmpipe", "softpipe", "swrast", "software"]
-            .iter()
-            .any(|s| lower.contains(s))
+        if !allow_software
+            && ["llvmpipe", "softpipe", "swrast", "software"]
+                .iter()
+                .any(|s| lower.contains(s))
         {
             return Err(format!("software GLES renderer: {renderer}"));
         }
         eprintln!("wallpicker: shader transitions on {renderer}");
         Ok(Rc::new(Self { context, gl }))
+    }
+
+    #[cfg(test)]
+    fn headless() -> Result<Rc<Self>, String> {
+        Self::from_context(Context::headless()?, true)
     }
 }

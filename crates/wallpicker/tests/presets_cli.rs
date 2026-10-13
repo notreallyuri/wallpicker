@@ -20,11 +20,7 @@ fn run(root: &TempDir, args: &[&str]) -> Output {
 
 fn json(root: &TempDir, args: &[&str]) -> serde_json::Value {
     let output = run(root, args);
-    assert!(
-        output.status.success(),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
     serde_json::from_slice(&output.stdout).unwrap()
 }
 
@@ -37,15 +33,10 @@ fn cli_preset_crud_roundtrip_and_errors() {
         data: root.path().join("data/wallpicker"),
         cache: root.path().join("cache/wallpicker"),
     });
-    assert_eq!(
-        json(&root, &["presets", "list", "--json"]),
-        serde_json::json!([])
-    );
+    assert_eq!(json(&root, &["presets", "list", "--json"]), serde_json::json!([]));
     assert!(!run(&root, &["presets", "save", "Empty"]).status.success());
     let mut state = State::default();
-    state
-        .current
-        .insert("DP-1".into(), root.path().join("source.png"));
+    state.current.insert("DP-1".into(), root.path().join("source.png"));
     store.save_state(&state).unwrap();
     let saved = json(&root, &["presets", "save", "Matching pair", "--json"]);
     let id = saved["id"].as_str().unwrap();
@@ -54,31 +45,34 @@ fn cli_preset_crud_roundtrip_and_errors() {
     let renamed = json(&root, &["presets", "rename", id, "Night", "--json"]);
     assert_eq!(renamed["id"], id);
     assert_eq!(renamed["name"], "Night");
-    state
-        .current
-        .insert("DP-1".into(), root.path().join("changed.png"));
+    state.current.insert("DP-1".into(), root.path().join("changed.png"));
     store.save_state(&state).unwrap();
     let updated = json(&root, &["presets", "update", id, "--json"]);
     assert_eq!(
         updated["monitors"]["DP-1"]["wallpaper"],
         root.path().join("changed.png").to_str().unwrap()
     );
+    let preview = json(&root, &["presets", "reassign", id, "DP-1=DP-3", "--preview", "--json"]);
+    assert_eq!(preview["monitors"]["DP-3"], updated["monitors"]["DP-1"]);
+    assert_eq!(json(&root, &["presets", "list", "--json"])[0], updated);
+    assert!(
+        !run(&root, &["presets", "reassign", id, "DP-1=DP-3", "DP-1=DP-4"])
+            .status
+            .success()
+    );
+    assert!(
+        !run(&root, &["presets", "reassign", id, "unknown=DP-4"])
+            .status
+            .success()
+    );
+    let reassigned = json(&root, &["presets", "reassign", id, "DP-1=DP-3", "--json"]);
+    assert_eq!(reassigned, preview);
+    assert_eq!(store.load_state().unwrap().current, state.current);
     assert!(!run(&root, &["presets", "save", "night"]).status.success());
-    assert!(
-        !run(&root, &["presets", "apply", "nonexistent"])
-            .status
-            .success()
-    );
+    assert!(!run(&root, &["presets", "apply", "nonexistent"]).status.success());
     assert!(!run(&root, &["presets", "rename", id]).status.success());
-    assert!(
-        !run(&root, &["presets", "save", "Name", "--invalid"])
-            .status
-            .success()
-    );
+    assert!(!run(&root, &["presets", "save", "Name", "--invalid"]).status.success());
     assert!(run(&root, &["presets", "--help"]).status.success());
     assert!(run(&root, &["presets", "delete", id]).status.success());
-    assert_eq!(
-        json(&root, &["presets", "list", "--json"]),
-        serde_json::json!([])
-    );
+    assert_eq!(json(&root, &["presets", "list", "--json"]), serde_json::json!([]));
 }

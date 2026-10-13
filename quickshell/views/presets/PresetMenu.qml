@@ -23,6 +23,12 @@ Menu {
         text: "Rename…"
         onTriggered: Presets.editing = {action: "rename", preset: menu.preset}
     }
+    Action {
+        text: "Reassign monitors…"
+        description: "Move saved assignments to other displays"
+        icon: "monitor"
+        onTriggered: Presets.editing = {action: "reassign", preset: menu.preset}
+    }
     MenuSeparator {}
     Action {
         text: "Delete preset…"

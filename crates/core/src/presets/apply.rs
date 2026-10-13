@@ -28,17 +28,17 @@ pub fn apply(runner: &dyn Runner, store: &Store, id: &str) -> Result<ApplyReport
         skipped: plan.skipped.clone(),
         ..Default::default()
     };
-    for entry in &plan.entries {
-        let fit = if entry.adjust.frame.is_some() || entry.adjust.span.is_some() {
-            None
-        } else {
-            entry.adjust.fit
-        };
-        match backend.apply_prepared(runner, &entry.monitor, &entry.shown, fit) {
-            Ok(()) => report.applied.push(entry.monitor.clone()),
-            Err(e) => report.failed.push((entry.monitor.clone(), e.to_string())),
-        }
-    }
+    let outputs = plan
+        .entries
+        .iter()
+        .map(|entry| crate::render::Output {
+            monitor: entry.monitor.clone(),
+            picture: entry.picture.clone(),
+        })
+        .collect();
+    let rendered = backend.apply_batch(runner, outputs)?;
+    report.applied = rendered.applied;
+    report.failed = rendered.failed;
     if let Err(e) = commit::remember(store, &preset, &plan, &report.applied) {
         for monitor in std::mem::take(&mut report.applied) {
             report

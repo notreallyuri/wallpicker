@@ -252,6 +252,8 @@ struct SettingsOutput {
     slideshow: settings::Slideshow,
     /// Native renderer transition.
     transition: settings::Transition,
+    /// Animated wallpaper playback (experimental).
+    animation: settings::Animation,
     /// Other programs drawing wallpapers besides the backend (they fight).
     other_wallpaper_programs: Vec<String>,
     close_to_tray: bool,
@@ -281,6 +283,8 @@ const SETTINGS_USAGE: &str = "usage: wallpicker settings [--json]\n       \
      slideshow.color (empty: any) slideshow.night.enabled slideshow.night.from slideshow.night.to (HH:MM)\n\
      slideshow.night.favorites slideshow.night.tags slideshow.night.any slideshow.night.folder slideshow.night.color\n\
      transition.kind transition.duration_ms\n\
+     animation.enabled (experimental; off: animated wallpapers show their first frame) animation.paused\n\
+     animation.max_fps (presentations per second, 0: the display's refresh)\n\
      The Wallhaven API key is set in the app.";
 
 /// `wallpicker settings [--json]`, `settings set KEY=VALUE...`.
@@ -301,6 +305,7 @@ pub fn settings(args: &[String]) -> i32 {
             if let Err(e) = store.save_settings(&s) {
                 return fail(&e);
             }
+            wallpicker_core::daemon::settings_changed();
             // Apply changed fits immediately.
             let after = wallpapers::Fits::load(&store);
             if let Err(e) = wallpapers::reapply(&SystemRunner, &store, &|m, p| before.of(m, p) != after.of(m, p)) {
@@ -324,6 +329,7 @@ fn print_settings(s: &Settings) -> i32 {
         monitor_fits: s.monitor_fits.iter().map(|(m, f)| (m.clone(), f.as_str())).collect(),
         slideshow: s.slideshow.clone(),
         transition: s.transition.clone(),
+        animation: s.animation,
         other_wallpaper_programs: wallpapers::conflicts(&wallpicker_core::cmd::SystemRunner),
         close_to_tray: s.close_to_tray,
         thumb_width: s.thumb_width,
@@ -397,6 +403,15 @@ fn set_settings(s: &mut Settings, pairs: &[String]) -> Result<(), String> {
                     return Err(format!("{key}: {value}? one of {}", known.join(", ")));
                 }
                 next.transition.kind = value.to_string();
+            }
+            "animation.enabled" => next.animation.enabled = boolean(key, value)?,
+            "animation.paused" => next.animation.paused = boolean(key, value)?,
+            "animation.max_fps" => {
+                next.animation.max_fps = value
+                    .parse::<u32>()
+                    .ok()
+                    .filter(|f| *f <= settings::Animation::MAX_FPS)
+                    .ok_or_else(|| format!("{key}: presentations per second from 1 to 240 (0: the display's), not {value:?}"))?;
             }
             "transition.duration_ms" => {
                 next.transition.duration_ms = value.parse().map_err(|_| format!("{key}: a number of milliseconds"))?;

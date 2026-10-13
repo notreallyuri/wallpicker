@@ -47,6 +47,13 @@ pub fn ask(request: &Value) -> Result<Value> {
     }
 }
 
+/// Tell a running daemon the settings were just saved, so it follows them
+/// now (a pause holds the frame you saw) rather than at its next look. It
+/// looks every second anyway: not running, or not answering, is fine.
+pub fn settings_changed() {
+    let _ = ask(&json!({ "cmd": "settings_changed" }));
+}
+
 /// Show `path` on `monitor` through the daemon's renderer, coming in with
 /// `transition` (the renderer's kinds: the others fade), starting the
 /// daemon first if it isn't running.

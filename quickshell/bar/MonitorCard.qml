@@ -1,5 +1,6 @@
 // A monitor's card in the drawer: the monitor bigger, showing its
-// wallpaper; its name, size and the file; Adjust and Previous (on this
+// wallpaper; its name, size and the file (and what an animated one is
+// doing); Pause/Resume (every animation), Adjust and Previous (on this
 // monitor only). A click picks it as where a click applies.
 import QtQuick
 import QtQuick.Layouts
@@ -12,6 +13,7 @@ DrawerCard {
     required property var monitor
     readonly property string name: monitor.name
     readonly property string shown: Monitors.current[name] || ""
+    readonly property var animation: Playback.of(name)
 
     picked: Monitors.selection === name || Monitors.selection === Monitors.all
     onClicked: Monitors.select(name)
@@ -57,6 +59,33 @@ DrawerCard {
                 font.family: Theme.font
                 font.pixelSize: 12
             }
+            // An animated wallpaper: what it's doing.
+            RowLayout {
+                visible: card.animation !== null
+                spacing: 4
+                Icon {
+                    name: "film"
+                    size: 12
+                    color: Theme.primary
+                }
+                Text {
+                    Layout.fillWidth: true
+                    text: Playback.describe(card.animation)
+                    elide: Text.ElideRight
+                    color: Theme.primary
+                    font.family: Theme.font
+                    font.pixelSize: 12
+                    font.weight: Font.DemiBold
+                }
+            }
+        }
+        Btn {
+            visible: card.animation !== null && ["playing", "paused", "hidden"].indexOf(card.animation.state) >= 0
+            variant: "ghost"
+            icon: Playback.paused ? "play" : "pause"
+            implicitHeight: 32
+            tip: Playback.paused ? "Resume every animated wallpaper" : "Pause every animated wallpaper (each holds its frame)"
+            onClicked: Playback.setPaused(!Playback.paused)
         }
         Btn {
             variant: "ghost"

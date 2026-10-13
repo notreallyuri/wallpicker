@@ -29,7 +29,7 @@ impl Desktop {
             .unwrap()
             .save(&green)
             .unwrap();
-        let renderer = Renderer::start(Arc::new(move |_| Some((red.clone(), None)))).unwrap();
+        let renderer = Renderer::start(Arc::new(move |_| Some((red.clone(), None).into()))).unwrap();
         let mut this = Self {
             renderer,
             dir,

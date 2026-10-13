@@ -2,7 +2,7 @@
 
 use super::gpu::Target;
 use super::image::Want;
-use super::{Picture, Reply, Transition};
+use super::{Reply, Transition};
 use smithay_client_toolkit::reexports::client::protocol::{wl_buffer, wl_output, wl_surface};
 use smithay_client_toolkit::reexports::protocols::wp::alpha_modifier::v1::client::wp_alpha_modifier_surface_v1::WpAlphaModifierSurfaceV1;
 use smithay_client_toolkit::reexports::protocols::wp::viewporter::client::wp_viewport::WpViewport;
@@ -12,6 +12,8 @@ use std::time::Instant;
 
 /// One output's background surface.
 pub(super) struct Screen {
+    pub(super) animation: Option<super::animation::Active>,
+    pub(super) incoming: Option<super::animation::Incoming>,
     /// The output's global name.
     pub(super) id: u32,
     pub(super) name: String,
@@ -24,7 +26,7 @@ pub(super) struct Screen {
     pub(super) shown: Want,
     /// A picture on its way, and how it comes in: it's what's shown once
     /// drawn (a file that can't be read changes nothing).
-    pub(super) asked: Option<(Picture, Option<Transition>)>,
+    pub(super) asked: Option<(Want, Option<Transition>)>,
     /// A transition on its way.
     pub(super) overlay: Option<Overlay>,
     /// At most one animation callback on the opaque parent surface.
@@ -33,6 +35,7 @@ pub(super) struct Screen {
     pub(super) generation: u64,
     /// The size in pixels of what it shows (None: nothing yet).
     pub(super) drawn: Option<(u32, u32)>,
+    pub(super) render_error: Option<String>,
     /// Shows waiting for the picture to be up.
     pub(super) waiting: Vec<Reply>,
 }
@@ -100,6 +103,8 @@ impl Drop for Screen {
         self.answer(Err(format!("{} was disconnected", self.name)));
         // Release the temporary layer and its protocol objects as well.
         self.overlay.take();
+        self.incoming.take();
+        self.animation.take();
         if let Some(v) = &self.viewport {
             v.destroy();
         }

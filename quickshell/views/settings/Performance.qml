@@ -1,6 +1,7 @@
 // Settings → Performance: what the picker uses right now (memory of the
-// interface and of its backend, `wallpicker serve`; CPU), refreshed every
-// 2 s; the effects that cost the most (at once); full-size previews (saved
+// interface and of its backend, `wallpicker serve`; CPU) and what the
+// wallpaper renderer does (the daemon's GPU time and memory, CPU, animation
+// decoders), refreshed every 2 s; the effects that cost the most (at once); full-size previews (saved
 // with the form).
 import QtQuick
 import QtQuick.Layouts
@@ -15,8 +16,37 @@ ColumnLayout {
     /// {interface_mb, backend_mb, total_mb, cpu}; null until read.
     property var usage: null
 
+    /// The daemon's (services/renderer `Usage`); null until read.
+    property var renderer: null
+
     function poll() {
         Backend.request("app.usage", {}, u => section.usage = u, () => {});
+        Backend.request("renderer.usage", {}, u => section.renderer = u, () => {});
+    }
+    /// "0.3%", "12%"; "…" before there's a rate (the first poll).
+    function percent(v) {
+        return v === null || v === undefined ? "…" : (v < 1 ? v.toFixed(1) : Math.round(v)) + "%";
+    }
+    function mb(v) {
+        return Math.round(v) + " MB";
+    }
+    /// [label, value] rows for the renderer card.
+    readonly property var rendererRows: {
+        const r = renderer;
+        if (!r)
+            return [];
+        if (!r.running)
+            return [["wallpicker daemon", "not running"]];
+        const regions = Object.keys(r.gpu_memory_mb || {}).map(k => k.toUpperCase() + " " + mb(r.gpu_memory_mb[k]));
+        const rows = [["GPU time", r.gpu_reported ? percent(r.gpu) : "not reported by this GPU driver"]];
+        if (regions.length > 0)
+            rows.push(["GPU memory", regions.join(" · ")]);
+        if (r.gpu_busy !== null && r.gpu_busy !== undefined)
+            rows.push(["Whole GPU busy (every program)", r.gpu_busy + "%"]);
+        rows.push(["CPU (of one core)", percent(r.cpu)]);
+        rows.push(["Memory", mb(r.memory_mb) + " (+ " + mb(r.libraries_mb) + " shared libraries)"]);
+        rows.push(["Animation decoders", r.decoders === 0 ? "none running" : r.decoders + " · " + percent(r.decoders_cpu) + " CPU · " + mb(r.decoders_memory_mb)]);
+        return rows;
     }
     Component.onCompleted: poll()
     Timer {
@@ -89,6 +119,67 @@ ColumnLayout {
                     font.family: Theme.font
                     font.pixelSize: 13
                 }
+            }
+        }
+    }
+    Rectangle {
+        Layout.fillWidth: true
+        visible: section.renderer !== null
+        implicitHeight: rendererColumn.implicitHeight + 32
+        radius: 18
+        color: Theme.a(Theme.card, 0.6)
+        ColumnLayout {
+            id: rendererColumn
+            x: 16
+            y: 16
+            width: parent.width - 32
+            spacing: 8
+            RowLayout {
+                Text {
+                    Layout.fillWidth: true
+                    text: "Wallpaper renderer"
+                    color: Theme.foreground
+                    font.family: Theme.font
+                    font.pixelSize: 14
+                    font.weight: Font.Bold
+                }
+                Text {
+                    // The headline: GPU time, what animations cost most.
+                    visible: !!section.renderer && section.renderer.running && section.renderer.gpu_reported
+                    text: section.renderer ? section.percent(section.renderer.gpu) + " GPU" : ""
+                    color: Theme.foreground
+                    font.family: Theme.font
+                    font.pixelSize: 22
+                    font.weight: Font.ExtraBold
+                }
+            }
+            Repeater {
+                model: section.rendererRows
+                RowLayout {
+                    required property var modelData
+                    Text {
+                        Layout.fillWidth: true
+                        text: modelData[0]
+                        color: Theme.mutedForeground
+                        font.family: Theme.font
+                        font.pixelSize: 13
+                    }
+                    Text {
+                        text: modelData[1]
+                        color: Theme.foreground
+                        font.family: Theme.font
+                        font.pixelSize: 13
+                    }
+                }
+            }
+            Text {
+                Layout.fillWidth: true
+                visible: !!section.renderer && section.renderer.running
+                text: "wallpicker daemon: its share of the GPU's time and the memory it holds there, as the kernel counts them. Animations are decoded in separate processes."
+                wrapMode: Text.Wrap
+                color: Theme.mutedForeground
+                font.family: Theme.font
+                font.pixelSize: 12
             }
         }
     }

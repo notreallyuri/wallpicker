@@ -229,6 +229,12 @@ QtObject {
         /// (monitor `arg`), filters (Online's), details (picture `arg`'s).
         function dialog(name: string, arg: string): string {
             switch (name) {
+            case "reassign": {
+                const preset = Presets.items.find(p => p.id === arg);
+                if (!preset) return "no preset " + arg;
+                Presets.editing = {action: "reassign", preset: preset};
+                break;
+            }
             case "settings":
                 Dialogs.openSettings(arg);
                 break;

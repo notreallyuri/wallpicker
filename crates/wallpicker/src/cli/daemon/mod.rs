@@ -3,7 +3,8 @@
 use std::io::{BufRead, BufReader, Read, Write};
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex, mpsc};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex, MutexGuard, mpsc};
 use std::time::Duration;
 
 use serde_json::{Value, json};
@@ -15,6 +16,9 @@ use wallpicker_core::workspaces;
 
 use super::{slideshow, usage_for};
 use crate::renderer::{Renderer, Transition};
+
+mod playback;
+mod render;
 
 const USAGE: &str = "usage: wallpicker daemon   follow workspaces and keep the slideshow on time (for an autostart)";
 
@@ -30,13 +34,13 @@ pub fn daemon(args: &[String]) -> i32 {
     if let Err(e) = store.upgrade_catalog() {
         eprintln!("wallpicker: could not update library.json's format: {e}");
     }
-    let drawing = Arc::new(Drawing {
-        store: store.clone(),
-        renderer: Mutex::new(None),
-    });
+    let (settings_tx, settings_rx) = mpsc::channel();
+    let drawing = Arc::new(Drawing::new(store.clone(), settings_tx));
     if let Err(e) = drawing.start() {
         eprintln!("wallpicker: can't draw the wallpapers: {e}");
     }
+    let following = drawing.clone();
+    std::thread::spawn(move || playback::follow(&following, &settings_rx));
     let answering = drawing.clone();
     std::thread::spawn(move || answer_all(&socket, &answering));
     let listener = store.clone();
@@ -83,9 +87,37 @@ fn claim() -> Option<UnixListener> {
 struct Drawing {
     store: Store,
     renderer: Mutex<Option<Renderer>>,
+    /// Decoder admission for animated wallpapers, shared by every request.
+    preparer: crate::preparation::Preparer,
+    /// The renderer started (again): its saved animations start as stills.
+    restarted: AtomicBool,
+    /// Held from deciding a change until it's queued (see [`Drawing::change`]).
+    changing: Mutex<()>,
+    /// Wakes [`playback::follow`]: the settings were just saved.
+    settings_changed: mpsc::Sender<()>,
 }
 
 impl Drawing {
+    fn new(store: Store, settings_changed: mpsc::Sender<()>) -> Self {
+        Drawing {
+            store,
+            renderer: Mutex::new(None),
+            preparer: playback::preparer(),
+            restarted: AtomicBool::new(false),
+            changing: Mutex::new(()),
+            settings_changed,
+        }
+    }
+
+    /// One wallpaper change at a time, until it's queued (not drawn: the
+    /// renderer takes its messages in order, and status then shows it on its
+    /// way). The daemon's own changes read what's shown and queue theirs with
+    /// it held, so a request can't come in between and be undone. Taken
+    /// before the renderer's lock, never while holding it.
+    fn change(&self) -> MutexGuard<'_, ()> {
+        self.changing.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
     /// `f` with the renderer, started first if it isn't running (or its
     /// connection went).
     fn with<T>(&self, f: impl FnOnce(&Renderer) -> Result<T, String>) -> Result<T, String> {
@@ -93,11 +125,23 @@ impl Drawing {
         if !renderer.as_ref().is_some_and(Renderer::running) {
             *renderer = None;
             let store = self.store.clone();
-            *renderer = Some(Renderer::start(Arc::new(move |m: &str| {
-                wallpapers::saved_for(&store, m)
-            }))?);
+            let application = wallpicker_core::render::application_id();
+            let animation = self.store.load_settings().map(|s| s.animation).unwrap_or_default();
+            let started = Renderer::start_with_playback(
+                Arc::new(move |m: &str| wallpapers::saved_for_application(&store, m, &application)),
+                playback::renderer_options(animation),
+            )?;
+            started.pause(animation.paused)?;
+            self.restarted.store(true, Ordering::SeqCst);
+            *renderer = Some(started);
         }
         f(renderer.as_ref().expect("just started"))
+    }
+
+    /// `f` with the renderer, only if it's running (None otherwise).
+    fn if_running<T>(&self, f: impl FnOnce(&Renderer) -> Result<T, String>) -> Option<T> {
+        let renderer = self.renderer.lock().unwrap_or_else(|e| e.into_inner());
+        f(renderer.as_ref().filter(|r| r.running())?).ok()
     }
 
     fn start(&self) -> Result<(), String> {
@@ -130,6 +174,14 @@ fn answer(stream: UnixStream, drawing: &Drawing) -> std::io::Result<()> {
 
 fn respond(request: &Value, drawing: &Drawing) -> Result<Value, String> {
     match request.get("cmd").and_then(Value::as_str) {
+        Some("capabilities") => Ok(json!({"render_version": wallpicker_core::render::VERSION,
+            "animated_playback": playback::enabled(drawing)})),
+        Some("render") => render::render(request, drawing),
+        // Answered at once; the follower reads them on its own thread.
+        Some("settings_changed") => {
+            let _ = drawing.settings_changed.send(());
+            Ok(json!({ "ok": true }))
+        }
         Some("show") => {
             let monitor = request
                 .get("monitor")
@@ -140,6 +192,12 @@ fn respond(request: &Value, drawing: &Drawing) -> Result<Value, String> {
             if !path.is_absolute() {
                 return Err(format!("not an absolute path: {}", path.display()));
             }
+            if wallpicker_core::render::Preparation::default()
+                .is_animated(&path)
+                .map_err(|e| e.to_string())?
+            {
+                return Err(wallpicker_core::render::PLAYBACK_UNAVAILABLE.into());
+            }
             let fit: Option<FitMode> = serde_json::from_value(request.get("fit").cloned().unwrap_or(Value::Null))
                 .map_err(|e| format!("fit: {e}"))?;
             // {kind, duration_ms}, the settings' (none: a cut).
@@ -149,7 +207,10 @@ fn respond(request: &Value, drawing: &Drawing) -> Result<Value, String> {
                 Transition::from_setting(kind, ms.min(10_000) as u32)
             });
             // The wait is outside the lock: other monitors draw meanwhile.
-            let answer = drawing.with(|r| r.show(monitor, (path, fit), transition))?;
+            let answer = {
+                let _change = drawing.change();
+                drawing.with(|r| r.show(monitor, (path, fit), transition))?
+            };
             match answer.recv_timeout(Duration::from_secs(25)) {
                 Ok(result) => result.map(|()| json!({ "ok": true })),
                 Err(mpsc::RecvTimeoutError::Timeout) => Err("drawing it took too long".into()),
@@ -157,10 +218,15 @@ fn respond(request: &Value, drawing: &Drawing) -> Result<Value, String> {
             }
         }
         // Whether it draws, and what each monitor shows when it does.
-        Some("status") => match drawing.renderer.lock().unwrap_or_else(|e| e.into_inner()).as_ref() {
-            Some(r) if r.running() => r.status(),
-            _ => Ok(json!({ "ok": true, "screens": null })),
-        },
+        // Its pid: the picker reads the daemon's (and decoders') GPU and CPU use.
+        Some("status") => {
+            let mut status = match drawing.renderer.lock().unwrap_or_else(|e| e.into_inner()).as_ref() {
+                Some(r) if r.running() => r.status()?,
+                _ => json!({ "ok": true, "screens": null }),
+            };
+            status["pid"] = json!(std::process::id());
+            Ok(status)
+        }
         _ => Err("unknown request".into()),
     }
 }

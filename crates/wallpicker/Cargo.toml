@@ -33,6 +33,9 @@ wayland-client = { version = "0.31", features = ["system", "dlopen"] }
 khronos-egl = { version = "6", features = ["dynamic"] }
 glow = "0.17"
 libloading = "0.8"
+# Linux resource limits for isolated animation decoders.
+libc = "0.2"
 
 [dev-dependencies]
 tempfile = "3"
+gif = "0.14"

@@ -24,8 +24,10 @@ impl Store {
             validation::unique_name(&saved.items, &name, None)?;
             let id = format!("p{}", saved.next_id);
             let preset = self.capture_preset(id, name)?;
-            saved.next_id =
-                saved.next_id.checked_add(1).ok_or_else(|| Error::Invalid("preset IDs exhausted".into()))?;
+            saved.next_id = saved
+                .next_id
+                .checked_add(1)
+                .ok_or_else(|| Error::Invalid("preset IDs exhausted".into()))?;
             saved.items.push(preset.clone());
             Ok(preset)
         })
@@ -62,12 +64,14 @@ impl Store {
     fn capture_preset(&self, id: String, name: String) -> Result<Preset> {
         let state = self.load_state()?;
         if state.current.values().any(|p| p.starts_with(&self.dirs().cache)) {
-            return Err(Error::Invalid("presets require original wallpapers, not generated cache files".into()));
+            return Err(Error::Invalid(
+                "presets require original wallpapers, not generated cache files".into(),
+            ));
         }
         capture::capture(id, name, &state, &self.load_settings()?)
     }
 
-    fn preset_collection(&self) -> Result<Collection> {
+    pub fn preset_collection(&self) -> Result<Collection> {
         let saved = match fs::read(self.presets_path()) {
             Ok(bytes) => serde_json::from_slice(&bytes)?,
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Collection::default(),
@@ -77,7 +81,7 @@ impl Store {
         Ok(saved)
     }
 
-    fn edit_presets<T>(&self, change: impl FnOnce(&mut Collection) -> Result<T>) -> Result<T> {
+    pub(super) fn edit_presets<T>(&self, change: impl FnOnce(&mut Collection) -> Result<T>) -> Result<T> {
         fs::create_dir_all(&self.dirs().data)?;
         let lock = fs::OpenOptions::new()
             .read(true)
@@ -90,6 +94,7 @@ impl Store {
         let result = change(&mut saved)?;
         validation::collection(&saved)?;
         let bytes = serde_json::to_vec_pretty(&saved)?;
+        self.snapshot_catalog()?;
         atomic_write(&self.presets_path(), &bytes, false)?;
         // The stable lock file is kept; dropping the handle releases its lock.
         Ok(result)
@@ -97,5 +102,9 @@ impl Store {
 }
 
 fn find(saved: &Collection, id: &str) -> Result<usize> {
-    saved.items.iter().position(|p| p.id == id).ok_or_else(|| Error::Invalid(format!("no preset with ID {id:?}")))
+    saved
+        .items
+        .iter()
+        .position(|p| p.id == id)
+        .ok_or_else(|| Error::Invalid(format!("no preset with ID {id:?}")))
 }

@@ -12,8 +12,8 @@ use std::time::UNIX_EPOCH;
 use fast_image_resize::{FilterType, ResizeAlg, ResizeOptions, Resizer};
 use image::DynamicImage;
 
-use crate::settings::{Adjust, State};
 use crate::error::{Error, Result};
+use crate::settings::{Adjust, State};
 
 fn dir(cache: &Path) -> PathBuf {
     cache.join("transformed")
@@ -36,10 +36,17 @@ fn changes_pixels(adjust: &Adjust) -> bool {
 /// what was done, so a cached one is found again.
 fn copy_path(cache: &Path, src: &Path, adjust: &Adjust) -> Result<PathBuf> {
     let meta = fs::metadata(src)?;
-    let mtime = meta.modified().ok().and_then(|t| t.duration_since(UNIX_EPOCH).ok()).map_or(0, |d| d.as_secs());
+    let mtime = meta
+        .modified()
+        .ok()
+        .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
+        .map_or(0, |d| d.as_secs());
     let png = src.extension().is_some_and(|e| e.eq_ignore_ascii_case("png"));
     let frame = match (adjust.span, adjust.frame) {
-        (Some(c), _) => format!("-s{}-{}-{}x{}-{}x{}", c.x, c.y, c.width, c.height, c.out_width, c.out_height),
+        (Some(c), _) => format!(
+            "-s{}-{}-{}x{}-{}x{}",
+            c.x, c.y, c.width, c.height, c.out_width, c.out_height
+        ),
         (None, Some(f)) => format!("-z{}x{}y{}-{}x{}", f.zoom, f.x, f.y, f.width, f.height),
         (None, None) => String::new(),
     };
@@ -65,7 +72,31 @@ pub fn shown_file(cache: &Path, src: &Path, adjust: &Adjust) -> Result<PathBuf> 
     if out.is_file() {
         return Ok(out);
     }
-    let mut img = image::open(src).map_err(|e| Error::Image(format!("{}: {e}", src.display())))?;
+    let img = render(src, adjust)?;
+    fs::create_dir_all(dir(cache))?;
+    let tmp = out.with_extension("tmp");
+    let saved = if png {
+        img.save_with_format(&tmp, image::ImageFormat::Png)
+    } else {
+        fs::File::create(&tmp)
+            .map_err(image::ImageError::IoError)
+            .and_then(|f| {
+                let mut enc = image::codecs::jpeg::JpegEncoder::new_with_quality(std::io::BufWriter::new(f), 95);
+                enc.encode_image(&img.to_rgb8())
+            })
+    };
+    saved.map_err(|e| Error::Image(e.to_string()))?;
+    fs::rename(&tmp, &out)?;
+    Ok(out)
+}
+
+/// Apply static geometry in memory, also used to rebuild a resized output from
+/// its original source rather than stretching an old prepared frame.
+pub fn render(src: &Path, adjust: &Adjust) -> Result<DynamicImage> {
+    let mut img = image::ImageReader::open(src)?
+        .with_guessed_format()?
+        .decode()
+        .map_err(|e| Error::Image(format!("{}: {e}", src.display())))?;
     if let Some(cut) = adjust.span {
         let (iw, ih) = (img.width(), img.height());
         let (x, y) = (cut.x.min(iw.saturating_sub(1)), cut.y.min(ih.saturating_sub(1)));
@@ -82,19 +113,7 @@ pub fn shown_file(cache: &Path, src: &Path, adjust: &Adjust) -> Result<PathBuf> 
     if flip.v {
         img = img.flipv();
     }
-    fs::create_dir_all(dir(cache))?;
-    let tmp = out.with_extension("tmp");
-    let saved = if png {
-        img.save_with_format(&tmp, image::ImageFormat::Png)
-    } else {
-        fs::File::create(&tmp).map_err(image::ImageError::IoError).and_then(|f| {
-            let mut enc = image::codecs::jpeg::JpegEncoder::new_with_quality(std::io::BufWriter::new(f), 95);
-            enc.encode_image(&img.to_rgb8())
-        })
-    };
-    saved.map_err(|e| Error::Image(e.to_string()))?;
-    fs::rename(&tmp, &out)?;
-    Ok(out)
+    Ok(img)
 }
 
 /// `img`'s `(x, y, w, h)` scaled to `width`×`height`, its pixel type kept
@@ -108,7 +127,9 @@ fn cut_and_scale(img: &DynamicImage, (x, y, w, h): (u32, u32, u32, u32), width: 
         .crop(f64::from(x), f64::from(y), f64::from(w), f64::from(h));
     match Resizer::new().resize(img, &mut out, &options) {
         Ok(()) => out,
-        Err(_) => img.crop_imm(x, y, w, h).resize_exact(width, height, image::imageops::FilterType::Lanczos3),
+        Err(_) => img
+            .crop_imm(x, y, w, h)
+            .resize_exact(width, height, image::imageops::FilterType::Lanczos3),
     }
 }
 
@@ -119,7 +140,9 @@ pub fn prune(cache: &Path, state: &State) {
         .iter()
         .filter_map(|(m, src)| {
             let adjust = state.adjust_for(m, src);
-            changes_pixels(&adjust).then(|| copy_path(cache, src, &adjust).ok()).flatten()
+            changes_pixels(&adjust)
+                .then(|| copy_path(cache, src, &adjust).ok())
+                .flatten()
         })
         .collect();
     if let Ok(entries) = fs::read_dir(dir(cache)) {
@@ -143,13 +166,31 @@ mod tests {
         // Left half red, right half blue, 400×300.
         let mut img = image::RgbImage::new(400, 300);
         for (x, _, p) in img.enumerate_pixels_mut() {
-            *p = if x < 200 { image::Rgb([255, 0, 0]) } else { image::Rgb([0, 0, 255]) };
+            *p = if x < 200 {
+                image::Rgb([255, 0, 0])
+            } else {
+                image::Rgb([0, 0, 255])
+            };
         }
         img.save(&src).unwrap();
         let cache = tmp.path().join("cache");
         // Zoomed into the right quarter: all blue, at the monitor's size.
-        let frame = crate::settings::Frame { zoom: 400, x: 900, y: 500, width: 160, height: 90 };
-        let out = shown_file(&cache, &src, &Adjust { frame: Some(frame), ..Default::default() }).unwrap();
+        let frame = crate::settings::Frame {
+            zoom: 400,
+            x: 900,
+            y: 500,
+            width: 160,
+            height: 90,
+        };
+        let out = shown_file(
+            &cache,
+            &src,
+            &Adjust {
+                frame: Some(frame),
+                ..Default::default()
+            },
+        )
+        .unwrap();
         let out = image::open(&out).unwrap().to_rgb8();
         assert_eq!(out.dimensions(), (160, 90));
         assert_eq!(out.get_pixel(0, 45), &image::Rgb([0, 0, 255]));
@@ -159,15 +200,25 @@ mod tests {
     #[test]
     fn scaling_keeps_the_pixel_type() {
         // 16 bits with alpha: the fast path, the type kept.
-        let rgba16 = DynamicImage::ImageRgba16(image::ImageBuffer::from_pixel(40, 20, image::Rgba([0, 0, 65535, 32768])));
+        let rgba16 = DynamicImage::ImageRgba16(image::ImageBuffer::from_pixel(
+            40,
+            20,
+            image::Rgba([0, 0, 65535, 32768]),
+        ));
         let out = cut_and_scale(&rgba16, (10, 0, 20, 20), 8, 8);
-        assert_eq!((out.width(), out.height(), out.color()), (8, 8, image::ColorType::Rgba16));
+        assert_eq!(
+            (out.width(), out.height(), out.color()),
+            (8, 8, image::ColorType::Rgba16)
+        );
         let p = out.to_rgba16().get_pixel(4, 4).0;
         assert!(p[2] > 65000 && p[3].abs_diff(32768) < 300, "{p:?}");
         // Floats: image's own scaling.
         let float = DynamicImage::ImageRgb32F(image::ImageBuffer::from_pixel(40, 20, image::Rgb([1.0, 0.0, 0.0])));
         let out = cut_and_scale(&float, (0, 0, 40, 20), 10, 5);
-        assert_eq!((out.width(), out.height(), out.color()), (10, 5, image::ColorType::Rgb32F));
+        assert_eq!(
+            (out.width(), out.height(), out.color()),
+            (10, 5, image::ColorType::Rgb32F)
+        );
     }
 
     #[test]
@@ -177,12 +228,19 @@ mod tests {
         // Left half red, right half blue.
         let mut img = image::RgbImage::new(4, 2);
         for (x, _, p) in img.enumerate_pixels_mut() {
-            *p = if x < 2 { image::Rgb([255, 0, 0]) } else { image::Rgb([0, 0, 255]) };
+            *p = if x < 2 {
+                image::Rgb([255, 0, 0])
+            } else {
+                image::Rgb([0, 0, 255])
+            };
         }
         img.save(&src).unwrap();
         let cache = tmp.path().join("cache");
 
-        let with = |h, v| Adjust { flip: Flip { h, v }, ..Default::default() };
+        let with = |h, v| Adjust {
+            flip: Flip { h, v },
+            ..Default::default()
+        };
         assert_eq!(shown_file(&cache, &src, &with(false, false)).unwrap(), src);
         let h = shown_file(&cache, &src, &with(true, false)).unwrap();
         let out = image::open(&h).unwrap().to_rgb8();
