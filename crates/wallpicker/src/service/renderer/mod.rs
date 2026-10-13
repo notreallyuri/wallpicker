@@ -16,8 +16,10 @@ use crate::{CmdResult, err};
 /// A monitor's animation, while it shows one.
 #[derive(Debug, Serialize, PartialEq)]
 pub struct Monitor {
-    /// playing, paused, still (playback off when applied), unavailable (no
-    /// hardware EGL), frozen (a decoding error), preparing or replacing.
+    /// playing, paused, hidden (not on screen: locked, powered off, covered),
+    /// still (its first frame: playback off, or it couldn't start),
+    /// unavailable (no hardware EGL), frozen (a decoding error), preparing or
+    /// replacing.
     pub state: String,
     /// Presentations per second since the previous poll.
     pub fps: Option<f32>,

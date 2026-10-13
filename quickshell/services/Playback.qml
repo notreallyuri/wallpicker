@@ -16,7 +16,7 @@ Singleton {
     readonly property bool enabled: !!(Settings.data.animation && Settings.data.animation.enabled)
     readonly property bool paused: !!(Settings.data.animation && Settings.data.animation.paused)
     /// Some monitor plays an animation (or holds it paused): pausing does something.
-    readonly property bool playing: data !== null && Object.keys(data.monitors || {}).some(n => ["playing", "paused"].indexOf(data.monitors[n].state) >= 0)
+    readonly property bool playing: data !== null && Object.keys(data.monitors || {}).some(n => ["playing", "paused", "hidden"].indexOf(data.monitors[n].state) >= 0)
 
     /// `name`'s animation ({state, fps, reason}), null when it shows a picture.
     function of(name) {
@@ -31,8 +31,10 @@ Singleton {
             return "Playing" + (m.fps !== null && m.fps !== undefined ? " · " + Math.round(m.fps) + " fps" : "");
         case "paused":
             return "Paused";
+        case "hidden":
+            return "Resting while it's not on screen";
         case "still":
-            return "First frame: playback is off";
+            return playback.enabled ? "First frame" : "First frame: playback is off";
         case "unavailable":
             return "First frame: " + (m.reason || "no hardware GPU playback");
         case "frozen":

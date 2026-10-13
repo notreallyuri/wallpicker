@@ -80,7 +80,7 @@ DrawerCard {
             }
         }
         Btn {
-            visible: card.animation !== null && ["playing", "paused"].indexOf(card.animation.state) >= 0
+            visible: card.animation !== null && ["playing", "paused", "hidden"].indexOf(card.animation.state) >= 0
             variant: "ghost"
             icon: Playback.paused ? "play" : "pause"
             implicitHeight: 32

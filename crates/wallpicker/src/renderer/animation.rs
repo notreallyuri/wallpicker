@@ -673,7 +673,18 @@ impl State {
             .as_deref()
             .or_else(|| runtime.output_error(active.target))
             .or_else(|| source.and_then(|s| s.error()));
-        json!({ "state": if error.is_some() { "frozen" } else if screen.incoming.is_some() { "replacing" } else if source.is_some_and(|s| s.running()) { "playing" } else { "paused" },
+        let state = if error.is_some() {
+            "frozen"
+        } else if screen.incoming.is_some() {
+            "replacing"
+        } else if source.is_some_and(|s| s.running()) {
+            "playing"
+        } else if source.is_some_and(|s| s.paused_by(PauseReason::Hidden) && !s.paused_by(PauseReason::Manual)) {
+            "hidden" // Locked, powered off or covered.
+        } else {
+            "paused"
+        };
+        json!({ "state": state,
             "generation": active.target.session, "output_generation": active.target.output,
             "geometry": active.geometry,
             "sequence": source.map(|s| s.current().sequence), "uploaded_sequence": active.texture.sequence(),

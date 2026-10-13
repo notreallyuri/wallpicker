@@ -222,3 +222,38 @@ fn paused_output_schedules_nothing_and_failed_swap_does_not_consume_gate() {
     assert_eq!(output.plan(ms(20), 7, 1, false), Decision::Idle);
     assert_eq!(output.plan(ms(20), 7, 1, true), Decision::WakeAt(ms(30)));
 }
+
+#[test]
+fn a_source_is_hidden_once_every_output_waits_a_second_for_its_callback() {
+    let mut shown = OutputPacer::new(target(1), ms(0));
+    let mut covered = OutputPacer::new(target(2), ms(0));
+    assert_eq!(visibility([], ms(0)), Visibility::Shown);
+    assert_eq!(visibility([covered.waiting_since()], ms(0)), Visibility::Shown);
+    let first = ticket(covered.plan(ms(100), 7, 0, true));
+    assert!(covered.presented(first, ms(100)));
+    assert_eq!(covered.waiting_since(), Some(ms(100)));
+    assert_eq!(visibility([covered.waiting_since()], ms(500)), Visibility::HiddenAt(ms(1100)));
+    assert_eq!(visibility([covered.waiting_since()], ms(1100)), Visibility::Hidden);
+    // One output still asking for frames keeps the source shown.
+    let drawn = ticket(shown.plan(ms(0), 7, 0, true));
+    assert!(shown.presented(drawn, ms(0)));
+    assert!(shown.frame_callback(drawn));
+    assert_eq!(
+        visibility([shown.waiting_since(), covered.waiting_since()], ms(5000)),
+        Visibility::Shown
+    );
+    // Both waiting: hidden when the later one has waited long enough.
+    let drawn = ticket(shown.plan(ms(600), 7, 1, true));
+    assert!(shown.presented(drawn, ms(600)));
+    assert_eq!(
+        visibility([shown.waiting_since(), covered.waiting_since()], ms(1100)),
+        Visibility::HiddenAt(ms(1600))
+    );
+    // Its callback arrives: shown again.
+    assert!(covered.frame_callback(first));
+    assert_eq!(covered.waiting_since(), None);
+    assert_eq!(
+        visibility([shown.waiting_since(), covered.waiting_since()], ms(9000)),
+        Visibility::Shown
+    );
+}

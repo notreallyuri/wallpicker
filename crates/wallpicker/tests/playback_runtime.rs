@@ -181,6 +181,40 @@ fn real_timers_keep_fast_output_moving_while_other_callback_is_stalled() {
 }
 
 #[test]
+fn a_source_rests_while_its_callbacks_are_withheld_and_resumes_without_catching_up() {
+    let (mut event_loop, mut host, preparer) = setup(1);
+    let tmp = tempfile::tempdir().unwrap();
+    let source = fixtures::webp(&tmp.path().join("source.webp"), 2, 1);
+    let session = prepare(&host, &preparer, &source);
+    let generation = insert(&mut host, session);
+    let output = host.driver.attach(generation, 1, Duration::ZERO).unwrap();
+    host.driver.set_paused(generation, PauseReason::Transition, false);
+    until(&mut event_loop, &mut host, |h| h.drawn.last().is_some_and(|t| t.sequence() >= 2));
+    // Locked or powered off: the compositor stops answering.
+    host.stalled = Some(output);
+    let hidden = |h: &TestHost| h.driver.source(generation).unwrap().paused_by(PauseReason::Hidden);
+    until(&mut event_loop, &mut host, |h| h.drawn.last().unwrap().target() == output && hidden(h));
+    drain(&mut event_loop, &mut host);
+    assert!(!host.driver.timer_armed());
+    let held = host.driver.source(generation).unwrap().current().sequence;
+    let drawn = host.drawn.len();
+    event_loop
+        .dispatch(Some(Duration::from_millis(300)), &mut host)
+        .unwrap();
+    assert_eq!(host.driver.source(generation).unwrap().current().sequence, held);
+    assert_eq!(host.drawn.len(), drawn);
+    // Its callback comes: it continues from the frame it stopped at.
+    host.stalled = None;
+    host.driver.signals().frame_callback(*host.drawn.last().unwrap());
+    until(&mut event_loop, &mut host, |h| h.drawn.len() > drawn + 1);
+    assert!(!hidden(&host));
+    assert_eq!(host.drawn[drawn].sequence(), held);
+    assert_eq!(host.drawn[drawn + 1].sequence(), held + 1);
+    host.driver.detach(output);
+    until(&mut event_loop, &mut host, |h| h.driver.admitted() == 0);
+}
+
+#[test]
 fn retirement_counts_against_admission_and_stale_events_cannot_touch_replacement() {
     let (mut event_loop, mut host, preparer) = setup(1);
     let tmp = tempfile::tempdir().unwrap();

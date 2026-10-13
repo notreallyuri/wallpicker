@@ -121,8 +121,14 @@ def daemon_scenario(root, base, env, source=None):
     Image.new("RGB", (64, 36), (255, 255, 0)).save(still)
 
     def cli(*arguments):
-        subprocess.run([wallpicker, *arguments], env=env, check=True, timeout=60,
-                       stdout=subprocess.DEVNULL)
+        return subprocess.run([wallpicker, *arguments], env=env, check=True, timeout=60,
+                              stdout=subprocess.PIPE, text=True).stdout
+
+    def kscreen(*arguments):
+        # Only ever the private KWin: WAYLAND_DISPLAY and the bus are its own.
+        # (It hangs on Qt's offscreen platform.)
+        subprocess.run(["kscreen-doctor", *arguments], env={**env, "QT_QPA_PLATFORM": "wayland"}, check=True, timeout=30,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     def ask(request):
         with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as connection:
@@ -229,8 +235,50 @@ def daemon_scenario(root, base, env, source=None):
         wait("playing before restart", playing)
         stop(daemon)
         daemon = start()
-        wait("playing after restart", playing)
+        status = wait("playing after restart", playing)
         print("daemon restart: saved animation plays again")
+        monitors = [s["monitor"] for s in status["screens"]]
+
+        # A monitor connected later shows its saved animation, playing.
+        kscreen(f"output.{monitors[1]}.disable")
+        wait("one monitor", lambda st, sc: len(sc) == 1 and states(sc) == {"playing"})
+        kscreen(f"output.{monitors[1]}.enable")
+        wait("reconnected monitor playing",
+             lambda st, sc: len(sc) == 2 and all(s["size"] for s in sc) and states(sc) == {"playing"})
+        print("monitor reconnected: its animation plays")
+
+        # Hidden outputs (locked, powered off) are covered by the runtime test
+        # with withheld callbacks: KWin's virtual outputs ignore DPMS, and KWin
+        # keeps answering surfaces covered by a window.
+
+        cli("span", str(moving), "--monitors", ",".join(monitors))
+        spanned = lambda st, sc: (states(sc) == {"playing"} and len({json.dumps(s["playback"]["geometry"]) for s in sc}) == 2
+                                  and all(s["playback"]["presentations"] >= 2 for s in sc))
+        wait("span playing", spanned)
+        print("span: each monitor plays its part")
+
+        preset = json.loads(cli("presets", "save", "moving span", "--json"))["id"]
+        cli("apply", str(still))
+        wait("static", lambda st, sc: states(sc) == {None} and st["playback_workers"] == 0)
+        cli("presets", "apply", preset)
+        wait("preset playing", spanned)
+        print("preset: the spanned animation plays again")
+
+        cli("apply", str(still))
+        wait("static", lambda st, sc: states(sc) == {None} and st["playback_workers"] == 0)
+        cli("previous")
+        wait("previous playing", lambda st, sc: states(sc) == {"playing"})
+        print("previous: back to the animation, playing")
+
+        library = base / "library"
+        library.mkdir()
+        shutil.copy(moving, library / moving.name)
+        cli("settings", "set", f"folders={library}")
+        cli("apply", str(still))
+        wait("static", lambda st, sc: states(sc) == {None} and st["playback_workers"] == 0)
+        cli("random", "--folder", str(library))
+        wait("random playing", playing)
+        print("random: the animation plays")
     except BaseException:
         print((base / "daemon.log").read_text()[-10000:])
         raise

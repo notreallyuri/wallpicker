@@ -2,9 +2,13 @@
 //! (lazily: nothing is allocated until the first one); the `animation` settings
 //! decide whether a request does. Off, an animated wallpaper is its first frame.
 
+use std::collections::BTreeSet;
 use std::num::NonZeroUsize;
+use std::path::PathBuf;
 use std::sync::atomic::Ordering;
-use std::time::{Duration, Instant};
+use std::time::Duration;
+
+use serde_json::Value;
 
 use wallpicker_core::media::Limits;
 use wallpicker_core::render::{Batch, Intent, Preparation};
@@ -51,11 +55,16 @@ pub(super) fn preparer() -> Preparer {
 }
 
 /// Follow the `animation` settings, however they're edited: pause, resume and
-/// the frame-rate cap right away, and show the saved animated wallpapers again (playing, or as
-/// stills) when playback is turned on or off, or the renderer started again.
+/// the frame-rate cap right away. With playback on, an animated wallpaper
+/// shown as a still starts playing: the renderer started again, a monitor was
+/// connected (it shows its saved wallpaper as a still), or playback was just
+/// turned on. Turned off, what plays becomes its first frame.
 pub(super) fn follow(drawing: &Drawing) {
     let settings = || drawing.store.load_settings().map(|s| s.animation);
     let mut last = settings().unwrap_or_default();
+    // The stills playback was tried for, so one that can't play (it fell
+    // back to a still) isn't tried again every second.
+    let mut tried: BTreeSet<Still> = BTreeSet::new();
     loop {
         std::thread::sleep(Duration::from_secs(1));
         // A settings file being written can't be read for a moment.
@@ -66,9 +75,27 @@ pub(super) fn follow(drawing: &Drawing) {
         if now.max_fps != last.max_fps {
             drawing.if_running(|r| r.set_interval(now.interval()));
         }
-        let restarted = drawing.restarted.swap(false, Ordering::SeqCst);
-        if now.enabled != last.enabled || (restarted && now.enabled) {
-            restore(drawing);
+        if drawing.restarted.swap(false, Ordering::SeqCst) || now.enabled != last.enabled {
+            tried.clear();
+        }
+        let shown = animated(drawing);
+        if now.enabled {
+            let stills: BTreeSet<Still> = shown
+                .into_iter()
+                .filter_map(|(still, how)| (how == Shown::Still).then_some(still))
+                .collect();
+            tried.retain(|still| stills.contains(still));
+            let new: Vec<Still> = stills.difference(&tried).cloned().collect();
+            if !new.is_empty() {
+                show(drawing, &new);
+                tried.extend(new);
+            }
+        } else if last.enabled {
+            let playing: Vec<Still> = shown
+                .into_iter()
+                .filter_map(|(still, how)| (how == Shown::Playing).then_some(still))
+                .collect();
+            show(drawing, &playing);
         }
         last = now;
     }
@@ -78,15 +105,65 @@ pub(super) fn enabled(drawing: &Drawing) -> bool {
     drawing.store.load_settings().is_ok_and(|s| s.animation.enabled)
 }
 
-/// The saved animated wallpapers, through the normal request path: its policy
-/// decides whether they play. Static wallpapers are left as they are.
-fn restore(drawing: &Drawing) {
-    let Ok(state) = drawing.store.load_state() else { return };
+#[derive(Debug, PartialEq)]
+enum Shown {
+    /// Its first frame, though it could play.
+    Still,
+    /// Playing, paused, being prepared or replaced, or frozen by an error.
+    Playing,
+}
+
+/// An animated wallpaper on a monitor, while that monitor stays connected
+/// (its output's global is new when it's connected again).
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+struct Still {
+    monitor: String,
+    global: u64,
+    source: PathBuf,
+}
+
+/// Configured monitors showing an animated wallpaper, and how.
+fn animated(drawing: &Drawing) -> Vec<(Still, Shown)> {
+    let status = drawing.if_running(|r| r.status()).unwrap_or_default();
+    animated_in(&status)
+}
+
+fn animated_in(status: &Value) -> Vec<(Still, Shown)> {
+    let mut shown = Vec::new();
+    for screen in status["screens"].as_array().into_iter().flatten() {
+        let (Some(monitor), Some(global), Some(source), Some(state)) = (
+            screen["monitor"].as_str(),
+            screen["global"].as_u64(),
+            screen["source"].as_str(),
+            screen["playback"]["state"].as_str(),
+        ) else {
+            continue;
+        };
+        let how = match state {
+            _ if screen["size"].is_null() => continue,
+            "still" => Shown::Still,
+            // Without hardware EGL nothing plays.
+            "unavailable" => continue,
+            _ => Shown::Playing,
+        };
+        let still = Still {
+            monitor: monitor.into(),
+            global,
+            source: source.into(),
+        };
+        shown.push((still, how));
+    }
+    shown
+}
+
+/// Animated wallpapers on these monitors again, through the normal request
+/// path: its policy decides whether they play.
+fn show(drawing: &Drawing, shown: &[Still]) {
     let fits = Fits::load(&drawing.store);
     let backend = Backend::from_settings(&drawing.store).restoring();
     let mut preparation = Preparation::default();
     let mut outputs = Vec::new();
-    for (monitor, path) in &state.current {
+    for Still { monitor, source: path, .. } in shown {
         if !preparation.is_animated(path).unwrap_or(false) {
             continue;
         }
@@ -98,17 +175,6 @@ fn restore(drawing: &Drawing) {
     if outputs.is_empty() {
         return;
     }
-    // A starting renderer finds its monitors in a moment; one that isn't
-    // connected has nothing to show.
-    let deadline = Instant::now() + Duration::from_secs(5);
-    let present = loop {
-        let present = screens(drawing);
-        if outputs.iter().all(|o| present.contains(&o.monitor)) || Instant::now() >= deadline {
-            break present;
-        }
-        std::thread::sleep(Duration::from_millis(100));
-    };
-    outputs.retain(|o| present.contains(&o.monitor));
     let instant = Transition {
         kind: "none".into(),
         duration_ms: 0,
@@ -123,14 +189,35 @@ fn restore(drawing: &Drawing) {
     }
 }
 
-/// Monitors the renderer has configured.
-fn screens(drawing: &Drawing) -> Vec<String> {
-    let status = drawing.if_running(|r| r.status()).unwrap_or_default();
-    status["screens"]
-        .as_array()
-        .into_iter()
-        .flatten()
-        .filter(|s| !s["size"].is_null())
-        .filter_map(|s| s["monitor"].as_str().map(String::from))
-        .collect()
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn animated_wallpapers_and_how_they_show() {
+        let screen = |n: u64, size: Value, playback: Value| {
+            json!({ "monitor": format!("DP-{n}"), "global": 40 + n, "size": size,
+                "source": format!("/w/{n}.gif"), "playback": playback })
+        };
+        let status = json!({ "screens": [
+            screen(1, json!([1920, 1080]), json!({ "state": "still" })),
+            screen(2, json!([1920, 1080]), json!({ "state": "playing" })),
+            screen(3, json!([1920, 1080]), json!({ "state": "paused" })),
+            // Not configured yet, no hardware EGL, a static wallpaper.
+            screen(4, Value::Null, json!({ "state": "still" })),
+            screen(5, json!([1920, 1080]), json!({ "state": "unavailable" })),
+            screen(6, json!([1920, 1080]), Value::Null),
+        ]});
+        let still = |n: u64| Still {
+            monitor: format!("DP-{n}"),
+            global: 40 + n,
+            source: format!("/w/{n}.gif").into(),
+        };
+        assert_eq!(
+            animated_in(&status),
+            [(still(1), Shown::Still), (still(2), Shown::Playing), (still(3), Shown::Playing)]
+        );
+        assert!(animated_in(&Value::Null).is_empty());
+    }
 }

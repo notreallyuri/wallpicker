@@ -95,11 +95,43 @@ impl OutputPacer {
         true
     }
 
+    /// When the presentation still waiting for its frame callback was made.
+    pub fn waiting_since(&self) -> Option<Duration> {
+        self.pending.and(self.last_presented).map(|(_, when)| when)
+    }
+
     pub fn frame_callback(&mut self, ticket: Ticket) -> bool {
         if self.pending != Some(ticket) {
             return false;
         }
         self.pending = None;
         true
+    }
+}
+
+/// A compositor that stops asking an output for frames (locked, powered off,
+/// covered) doesn't show it: after this long, its source pauses.
+pub const HIDDEN_AFTER: Duration = Duration::from_secs(1);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Visibility {
+    Shown,
+    Hidden,
+    /// Hidden from then on, unless a frame callback arrives first.
+    HiddenAt(Duration),
+}
+
+/// A source's visibility from its outputs' [`OutputPacer::waiting_since`]: it
+/// is hidden once every one has waited [`HIDDEN_AFTER`] for its callback.
+pub fn visibility(waiting: impl IntoIterator<Item = Option<Duration>>, now: Duration) -> Visibility {
+    let mut hidden_at = None;
+    for since in waiting {
+        let Some(since) = since else { return Visibility::Shown };
+        hidden_at = hidden_at.max(Some(since.saturating_add(HIDDEN_AFTER)));
+    }
+    match hidden_at {
+        None => Visibility::Shown,
+        Some(at) if at <= now => Visibility::Hidden,
+        Some(at) => Visibility::HiddenAt(at),
     }
 }

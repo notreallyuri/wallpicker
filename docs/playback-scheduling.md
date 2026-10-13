@@ -27,8 +27,11 @@ delays with a provisional 10 ms minimum; the timeline also guards its public inp
 - An empty overdue decoder queue suppresses its timer. A subsequent worker notification
   retries the read and starts the newly available frame at `now`, without catch-up debt.
 - Pause preserves the remaining duration by shifting the deadline on resume. Transition,
-  manual, session-lock and no-visible-output reasons are independent; decoding resumes only
-  after every reason clears. These are ownership APIs, not wired user controls/lock detection.
+  manual, session-lock, no-visible-output and hidden reasons are independent; decoding resumes
+  only after every reason clears. Manual is the user's pause (`animation.paused`); hidden is
+  set by the runtime when every healthy output has waited `HIDDEN_AFTER` (1 s) for its frame
+  callback (`pacing::visibility`), and cleared by the next callback. Session-lock is unused:
+  a locked compositor stops answering, which hidden covers.
   Resuming a starved source schedules a retry, including when its worker notification was
   already handled during pause and no new notification would arrive from the full queue.
 - The source rejects stale worker wakes without changing its clock. Decoder generation and
@@ -77,8 +80,8 @@ redraws and frozen transition endpoints remain the lifecycle owner's responsibil
 existing calloop event loop. It owns source sessions and attached output gates. Its `Signals`
 provide the callback passed to `Preparer::prepare` and an entry point for tagged compositor
 callbacks. Late worker wakes, replaced target callbacks and obsolete timer serials are ignored.
-Source and output-cap deadlines share the same timer; empty, frozen and paused owners leave
-it disarmed. A cap crossed while another output is drawing schedules another dispatch.
+Source, output-cap and hidden deadlines share the same timer; empty, frozen, paused and hidden
+owners leave it disarmed. A cap crossed while another output is drawing schedules another dispatch.
 
 The host implements `present(ticket)`: borrow the source's current pixels, reuse/upload the
 shared texture, draw the target, associate a Wayland callback with that ticket, and swap. The
@@ -102,15 +105,17 @@ contains no Wayland or GPU objects, so their destruction order remains the host'
 
 ## Validation and remaining integration
 
-Twelve deterministic tests exercise variable/minimum delays, bounded catch-up, starvation,
-pause phase, backwards/overflow inputs, early callbacks, caps, slow outputs, generation and
-serial rejection, paused outputs and failed swaps. Five real-worker integration tests exercise
-GIF/WebP repetition shared by two output gates, independent pause reasons, a SIGSTOP/SIGCONT
-decoder stall, replacement notifications, late corruption and reservation cleanup. Injected
-source time avoids timing-dependent animation assertions; only worker delivery has a timeout.
-Six additional tests run the actual calloop adapter with real decoder workers and a recording
+Fourteen deterministic tests exercise variable/minimum delays, bounded catch-up, starvation,
+pause phase, backwards/overflow inputs, early callbacks, caps (and changing them), hidden
+outputs, slow outputs, generation and serial rejection, paused outputs and failed swaps. Five
+real-worker integration tests exercise GIF/WebP repetition shared by two output gates,
+independent pause reasons, a SIGSTOP/SIGCONT decoder stall, replacement notifications, late
+corruption and reservation cleanup. Injected source time avoids timing-dependent animation
+assertions; only worker delivery has a timeout.
+Seven additional tests run the actual calloop adapter with real decoder workers and a recording
 draw hook. They verify timer-driven shared playback, idle/frozen behavior, stalled callbacks,
-partial draw failure, replacement generations, bounded retirement, shutdown and responsiveness
+resting while every callback is withheld, partial draw failure, replacement generations,
+bounded retirement, shutdown and responsiveness
 while a deliberately blocked decoder pump prevents cleanup from completing.
 Two further adapter tests cover per-output suspension during replacement and unbinding a
 configured member while an unconfigured member still needs the shared source. The explicit
@@ -129,5 +134,6 @@ output target while keeping the outgoing one active until the adjusted swap succ
 The representative-still fallback releases decoders on the caller and does not create the
 playback runtime when EGL initialization fails. See [fallback ownership](representative-fallback.md).
 
-Still required: daemon/session acceptance, controls and session-lock
-signals. Desktop timing, hotplug, shutdown and resource measurements remain acceptance work.
+The daemon accepts animations behind `animation.enabled`, with pause and frame-rate controls,
+and plays them again on monitors connected later. Desktop timing, lock/DPMS behavior on
+Hyprland, shutdown and resource measurements remain acceptance work.

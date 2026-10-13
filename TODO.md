@@ -124,8 +124,11 @@ identity and the renderer shows their first frame.
 - [x] Share decoding and a playback clock within a multi-output application; each output
   draws its own geometry behind its callback gate. Qualify shared uploads, independent
   reapplication, partial failure, scale/rotation and output removal on virtual outputs.
-- [ ] Qualify shared playback on physical outputs with different refresh rates. Restore
-  playback on hotplugged outputs (they currently show the first frame until reapplied).
+- [ ] Qualify shared playback on physical outputs with different refresh rates.
+- [x] Restore playback on hotplugged outputs: the daemon plays an animated wallpaper shown as
+  a still on a (re)connected monitor, once per output global (a quick replug counts as new),
+  so one that can't play isn't retried every second. Qualified with kscreen-doctor
+  disable/enable on private outputs.
 - [x] Preserve source sessions, application identity and playback position during live
   geometry adjustments in the qualified renderer path. Validate without new decoder workers,
   share existing textures, acknowledge the adjusted swap and reject mismatched live sources.
@@ -137,8 +140,10 @@ identity and the renderer shows their first frame.
 - [x] Connect transition handoff and adjustment reuse to daemon acceptance; qualify apply,
   adjust, pause/resume, off/on, static return and daemon restart through the real daemon/CLI
   on private outputs (`test-playback-headless.py --daemon [--source FILE]`).
-- [ ] Qualify mixed static/animated feature flows: presets, spans, Previous, slideshow and
-  workspace changes with playback on.
+- [x] Qualify mixed static/animated feature flows with playback on: spans, presets (of a
+  span), Previous and random (the slideshow's path) through the daemon scenario, with the
+  generated WebP and the 4K GIF.
+- [ ] Slideshow timer and workspace changes with playback on (need Hyprland: desktop check).
 - [x] Without working hardware EGL, show the representative still frame and report playback
   as unavailable in the qualified renderer path. Reuse prepared pixels, cancel decoders on
   the caller, bound retained RGB/fitting storage, and preserve geometry on resize/adjustment.
@@ -172,10 +177,14 @@ identity and the renderer shows their first frame.
   2.3% daemon CPU, 7.6% decoder CPU of one core; `wallpicker-test-4k.gif` for 4K).
   Set byte budgets for decoder working memory, queues and texture copies; verify bounded
   memory over long loops and rapid replacement, including codecs' internal allocations.
-- [ ] Pause decoding/presentation on session lock and resume without a catch-up burst. Evaluate
-  per-output fullscreen detection separately: Wayland output discovery does not provide it.
-  Start with supported Hyprland signals, define conservative fallback when visibility is
-  unknown, and leave KDE detection to the compatibility work. Manual pause must always work.
+- [x] Rest while hidden: when every output of a source has waited 1 s for its frame callback
+  (locked, powered off; compositors that skip covered surfaces too), the source pauses
+  (`PauseReason::Hidden`, status "hidden") and continues from its held frame without a
+  catch-up burst once a callback arrives. Runtime test with withheld callbacks.
+- [ ] Check it on the Hyprland desktop (hyprlock, DPMS off, a fullscreen window): KWin keeps
+  answering covered surfaces and its virtual outputs ignore DPMS, so the private scenario
+  can't. Evaluate per-output fullscreen detection only if Hyprland keeps answering covered
+  wallpapers. Manual pause must always work.
 - [ ] Static-only sessions retain sleeping event loops and no persistent playback workers or
   textures. Measure power/resource impact before selecting default playback limits.
 

@@ -163,6 +163,8 @@ impl State {
                     .map(|s| {
                         json!({
                             "monitor": s.name,
+                            // New when it's connected again.
+                            "global": s.id,
                             "size": s.size,
                             "pixels": s.drawn,
                             "render_error": s.render_error,

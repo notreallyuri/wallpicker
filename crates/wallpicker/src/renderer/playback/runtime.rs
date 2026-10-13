@@ -2,7 +2,7 @@
 //! this module owns source clocks, output gates, notifications and retirement.
 mod cleanup;
 
-use super::{Decision, OutputPacer, PauseReason, SourceSession, Target, Ticket};
+use super::{Decision, OutputPacer, PauseReason, SourceSession, Target, Ticket, Visibility, visibility};
 use crate::decoding::Worker;
 use crate::preparation::Session;
 use cleanup::Cleanup;
@@ -325,15 +325,26 @@ impl<H: Host> Runtime<H> {
         let runtime = host.playback();
         let now = runtime.epoch.elapsed();
         for (generation, source) in &mut runtime.sources {
-            if !runtime
-                .outputs
-                .iter()
-                .any(|(t, o)| t.session == *generation && o.error.is_none() && !o.suspended)
-            {
+            if !Self::eligible(&runtime.outputs, *generation).any(|_| true) {
                 source.set_paused(PauseReason::NoVisibleOutputs, true, now);
+            }
+            // Hidden, it decodes nothing; shown again, it continues from
+            // where it stopped (no catch-up).
+            let waiting = Self::eligible(&runtime.outputs, *generation).map(|o| o.pacer.waiting_since());
+            let hidden = visibility(waiting, now) == Visibility::Hidden;
+            if source.paused_by(PauseReason::Hidden) != hidden {
+                source.set_paused(PauseReason::Hidden, hidden, now);
             }
         }
         runtime.arm();
+    }
+
+    /// The outputs a source can present to.
+    fn eligible(outputs: &BTreeMap<Target, Output>, generation: u64) -> impl Iterator<Item = &Output> {
+        outputs
+            .iter()
+            .filter(move |(t, o)| t.session == generation && o.error.is_none() && !o.suspended)
+            .map(|(_, o)| o)
     }
 
     fn arm(&mut self) {
@@ -357,7 +368,13 @@ impl<H: Host> Runtime<H> {
                 _ => None,
             }
         });
-        let next = source_deadlines.chain(output_deadlines).min();
+        let hidden_deadlines = self.sources.keys().filter_map(|generation| {
+            match visibility(Self::eligible(&self.outputs, *generation).map(|o| o.pacer.waiting_since()), now) {
+                Visibility::HiddenAt(at) => Some(at),
+                _ => None,
+            }
+        });
+        let next = source_deadlines.chain(output_deadlines).chain(hidden_deadlines).min();
         if self.timer.as_ref().map(|(at, _, _)| *at) == next {
             return;
         }

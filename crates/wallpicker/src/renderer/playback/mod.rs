@@ -6,7 +6,7 @@ mod runtime;
 mod session;
 mod timeline;
 
-pub use pacing::{Decision, OutputPacer, Target, Ticket};
+pub use pacing::{Decision, HIDDEN_AFTER, OutputPacer, Target, Ticket, Visibility, visibility};
 pub use runtime::{Host, Runtime, Signals};
 pub use session::{PauseReason, SourceSession};
 pub use timeline::{Advance, MAX_CATCH_UP, Timeline};

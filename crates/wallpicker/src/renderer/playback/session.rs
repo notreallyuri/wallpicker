@@ -12,6 +12,8 @@ pub enum PauseReason {
     Manual = 2,
     SessionLock = 4,
     NoVisibleOutputs = 8,
+    /// The compositor stopped asking for frames ([`super::Visibility`]).
+    Hidden = 16,
 }
 
 /// One current source frame and one clock, irrespective of output count. The
@@ -58,6 +60,9 @@ impl SourceSession {
     }
     pub fn running(&self) -> bool {
         self.pauses == 0 && self.error.is_none()
+    }
+    pub fn paused_by(&self, reason: PauseReason) -> bool {
+        self.pauses & reason as u8 != 0
     }
     pub fn next_deadline(&self) -> Option<Duration> {
         self.timeline.next_deadline()
