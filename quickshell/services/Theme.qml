@@ -36,7 +36,9 @@ Singleton {
     readonly property color input: border
     readonly property color star: "#facc15"
 
-    readonly property string font: fonts.objectAt(0) && fonts.objectAt(0).status === FontLoader.Ready ? fonts.objectAt(0).name : "sans-serif"
+    // Its own loader: a binding on the Instantiator's objectAt() is never
+    // re-evaluated, so it stayed "sans-serif".
+    readonly property string font: regular.status === FontLoader.Ready ? regular.name : "sans-serif"
 
     // --radius: 0.9rem, and Tailwind's steps from it.
     readonly property real radius: 14.4
@@ -84,9 +86,12 @@ Singleton {
 
     // The app's Nunito is one variable font, and Qt only uses its default
     // (light) weight: fixed weights cut from it (fonttools varLib.instancer).
+    // The other weights join the same family.
+    property FontLoader regular: FontLoader {
+        source: Qt.resolvedUrl("../fonts/Nunito-400.ttf")
+    }
     Instantiator {
-        id: fonts
-        model: [400, 500, 600, 700, 800, 900]
+        model: [500, 600, 700, 800, 900]
         FontLoader {
             required property int modelData
             source: Qt.resolvedUrl("../fonts/Nunito-" + modelData + ".ttf")
