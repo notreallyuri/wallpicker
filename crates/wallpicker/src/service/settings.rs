@@ -26,6 +26,7 @@ pub async fn save(state: &AppState, mut settings: Settings) -> CmdResult<Setting
         // Pausing acts at once (pause_animation); a form opened before mustn't undo it.
         settings.animation.paused = on_disk.animation.paused;
         store.save_settings(&settings)?;
+        wallpicker_core::daemon::settings_changed();
         let saved = store.load_settings()?;
         let after = wallpapers::Fits::load(&store);
         if let Err(e) = wallpapers::reapply(&SystemRunner, &store, &|m, p| before.of(m, p) != after.of(m, p)) {
@@ -43,6 +44,7 @@ pub async fn pause_animation(state: &AppState, paused: bool) -> CmdResult<Settin
         let mut settings = store.load_settings()?;
         settings.animation.paused = paused;
         store.save_settings(&settings)?;
+        wallpicker_core::daemon::settings_changed();
         store.load_settings()
     })
     .await

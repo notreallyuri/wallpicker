@@ -34,12 +34,13 @@ pub fn daemon(args: &[String]) -> i32 {
     if let Err(e) = store.upgrade_catalog() {
         eprintln!("wallpicker: could not update library.json's format: {e}");
     }
-    let drawing = Arc::new(Drawing::new(store.clone()));
+    let (settings_tx, settings_rx) = mpsc::channel();
+    let drawing = Arc::new(Drawing::new(store.clone(), settings_tx));
     if let Err(e) = drawing.start() {
         eprintln!("wallpicker: can't draw the wallpapers: {e}");
     }
     let following = drawing.clone();
-    std::thread::spawn(move || playback::follow(&following));
+    std::thread::spawn(move || playback::follow(&following, &settings_rx));
     let answering = drawing.clone();
     std::thread::spawn(move || answer_all(&socket, &answering));
     let listener = store.clone();
@@ -92,16 +93,19 @@ struct Drawing {
     restarted: AtomicBool,
     /// Held from deciding a change until it's queued (see [`Drawing::change`]).
     changing: Mutex<()>,
+    /// Wakes [`playback::follow`]: the settings were just saved.
+    settings_changed: mpsc::Sender<()>,
 }
 
 impl Drawing {
-    fn new(store: Store) -> Self {
+    fn new(store: Store, settings_changed: mpsc::Sender<()>) -> Self {
         Drawing {
             store,
             renderer: Mutex::new(None),
             preparer: playback::preparer(),
             restarted: AtomicBool::new(false),
             changing: Mutex::new(()),
+            settings_changed,
         }
     }
 
@@ -173,6 +177,11 @@ fn respond(request: &Value, drawing: &Drawing) -> Result<Value, String> {
         Some("capabilities") => Ok(json!({"render_version": wallpicker_core::render::VERSION,
             "animated_playback": playback::enabled(drawing)})),
         Some("render") => render::render(request, drawing),
+        // Answered at once; the follower reads them on its own thread.
+        Some("settings_changed") => {
+            let _ = drawing.settings_changed.send(());
+            Ok(json!({ "ok": true }))
+        }
         Some("show") => {
             let monitor = request
                 .get("monitor")

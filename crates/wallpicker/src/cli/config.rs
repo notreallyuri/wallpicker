@@ -305,6 +305,7 @@ pub fn settings(args: &[String]) -> i32 {
             if let Err(e) = store.save_settings(&s) {
                 return fail(&e);
             }
+            wallpicker_core::daemon::settings_changed();
             // Apply changed fits immediately.
             let after = wallpapers::Fits::load(&store);
             if let Err(e) = wallpapers::reapply(&SystemRunner, &store, &|m, p| before.of(m, p) != after.of(m, p)) {

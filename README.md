@@ -330,9 +330,10 @@ monitor's own pixels whatever its scale.
   show their first frame. **Pause** (that section, a monitor's card in the drawer, or
   `animation.paused=true`) holds every frame at once. **Frame rate** caps new frames per
   second on each monitor (`animation.max_fps`, default 60; 0: the display's refresh). The
-  daemon follows these within a second and plays the saved animations again when it starts.
-  The drawer and that section show what each monitor's animation is doing (playing, fps,
-  paused, resting, a still and why). A monitor plugged in later plays its animation too. While
+  daemon follows these at once (edits of the settings file by hand within a second) and plays
+  the saved animations again when it starts. The drawer and that section show what each
+  monitor's animation is doing (playing, fps, paused, resting, a still and why). A monitor
+  plugged in later plays its animation too. While
   no monitor showing an animation asks for frames (locked, powered off) it rests: nothing is
   decoded, and it continues from the same frame afterwards. Limits are provisional: up to four decoders, each a separate process
   capped at 64 MiB plus four frames of address space (97 MiB at 1080p, 196 MiB at 4K), and

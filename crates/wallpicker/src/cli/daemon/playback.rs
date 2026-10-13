@@ -6,6 +6,7 @@ use std::collections::BTreeSet;
 use std::num::NonZeroUsize;
 use std::path::PathBuf;
 use std::sync::atomic::Ordering;
+use std::sync::mpsc;
 use std::time::Duration;
 
 use serde_json::Value;
@@ -60,14 +61,21 @@ pub(super) fn preparer() -> Preparer {
 /// shown as a still starts playing: the renderer started again, a monitor was
 /// connected (it shows its saved wallpaper as a still), or playback was just
 /// turned on. Turned off, what plays becomes its first frame.
-pub(super) fn follow(drawing: &Drawing) {
+///
+/// Every second, or at once when `saved` says the settings were just saved
+/// (the picker and the command line do): a pause a second late holds a
+/// later frame than the one you saw.
+pub(super) fn follow(drawing: &Drawing, saved: &mpsc::Receiver<()>) {
     let settings = || drawing.store.load_settings().map(|s| s.animation);
     let mut last = settings().unwrap_or_default();
     // The stills playback was tried for, so one that can't play (it fell
     // back to a still) isn't tried again every second.
     let mut tried: BTreeSet<Still> = BTreeSet::new();
     loop {
-        std::thread::sleep(Duration::from_secs(1));
+        if saved.recv_timeout(Duration::from_secs(1)).is_ok() {
+            // One look covers saves made meanwhile.
+            while saved.try_recv().is_ok() {}
+        }
         // A settings file being written can't be read for a moment.
         let Ok(now) = settings() else { continue };
         if now.paused != last.paused {
