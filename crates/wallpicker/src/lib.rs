@@ -6,6 +6,7 @@
 
 pub mod backup;
 pub mod cli;
+pub mod decoding;
 pub mod noctalia_colors;
 mod renderer;
 pub mod rt;

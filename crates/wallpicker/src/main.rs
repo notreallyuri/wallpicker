@@ -4,6 +4,7 @@ fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
 
     match args.first().map(String::as_str) {
+        Some("__decode") => std::process::exit(wallpicker::decoding::child_main()),
         Some("list") => std::process::exit(wallpicker::cli::list(&args[1..])),
         Some("apply") => std::process::exit(wallpicker::cli::apply(&args[1..])),
         Some("span") => std::process::exit(wallpicker::cli::span(&args[1..])),
