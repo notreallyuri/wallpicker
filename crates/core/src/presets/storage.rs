@@ -81,7 +81,7 @@ impl Store {
         Ok(saved)
     }
 
-    fn edit_presets<T>(&self, change: impl FnOnce(&mut Collection) -> Result<T>) -> Result<T> {
+    pub(super) fn edit_presets<T>(&self, change: impl FnOnce(&mut Collection) -> Result<T>) -> Result<T> {
         fs::create_dir_all(&self.dirs().data)?;
         let lock = fs::OpenOptions::new()
             .read(true)

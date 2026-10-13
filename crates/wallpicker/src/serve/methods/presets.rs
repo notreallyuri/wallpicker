@@ -4,6 +4,25 @@ use crate::{AppState, CmdResult, service};
 use serde_json::{Value, json};
 
 pub(super) async fn call(state: &AppState, out: &Out, name: &str, params: &Value) -> Option<CmdResult<Value>> {
+    if matches!(name, "reassign" | "preview_reassignment") {
+        let args = (|| {
+            Ok::<_, String>((
+                param(params, "id")?,
+                param(params, "mapping")?,
+                param(params, "expected")?,
+            ))
+        })();
+        let result = match args {
+            Ok((id, mapping, expected)) => {
+                service::presets::reassign(state, id, mapping, expected, name == "preview_reassignment").await
+            }
+            Err(error) => Err(error),
+        };
+        if result.is_ok() && name == "reassign" {
+            out.event("presets-changed", json!(null));
+        }
+        return Some(result);
+    }
     if !matches!(name, "list" | "save" | "update" | "rename" | "delete" | "apply") {
         return None;
     }

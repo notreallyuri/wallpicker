@@ -91,13 +91,18 @@ Noctalia is optional, for wallpaper-derived colors.
   immediately. Wallpaper selections, Previous and preset application use the configured transition.
 - **Wallpaper presets**: the Presets tab saves, applies, updates, renames and deletes named
   setups, with responsive preview cards and reports for missing files/displays. Search by name
-  with Ctrl+F; each card's ⋯ menu holds Update, Rename and Delete. Ctrl+4 opens it;
+  with Ctrl+F; each card's ⋯ menu holds Update, Rename, Reassign monitors and Delete. Ctrl+4 opens it;
   `wallpicker --open presets` opens the picker there. From the command line, save a named setup of
   wallpaper assignments, fit, zoom, pan, flips and span canvas layout with
   `wallpicker presets save "Night"`. `wallpicker presets list` shows its ID;
   `wallpicker presets apply p1` restores it using your current transition.
   `update p1` replaces its snapshot, `rename p1 "Work"` changes its name and `delete p1`
-  removes it. Add `--json` for scripts. Disconnected monitors are skipped; an incomplete span
+  removes it. **Reassign monitors…** previews a one-to-one mapping for renamed or replaced
+  connectors, retaining wallpapers, adjustments and span positions. Saving edits the preset;
+  Apply shows it afterward. Connector swaps are supported. From the CLI, preview with
+  `wallpicker presets reassign p1 DP-1=DP-3 --preview`, then remove `--preview` to save.
+  Unspecified monitors stay unchanged; destinations may be disconnected for future setups.
+  Add `--json` for scripts. Disconnected monitors are skipped; an incomplete span
   is skipped as a group. Missing/unreadable images needed by connected assignments prevent
   any wallpaper changes. Backend failures can leave a partial application and are reported;
   only successful assignments are remembered. The compositor's monitor layout is untouched.

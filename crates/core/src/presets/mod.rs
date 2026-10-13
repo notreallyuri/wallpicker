@@ -6,6 +6,9 @@ mod apply;
 mod capture;
 mod commit;
 mod plan;
+mod reassign;
+#[cfg(test)]
+mod reassign_tests;
 #[cfg(test)]
 mod span_tests;
 mod storage;
@@ -21,6 +24,7 @@ use std::path::PathBuf;
 pub const FORMAT: u32 = 1;
 
 pub use apply::{ApplyReport, apply};
+pub use reassign::{MonitorMapping, reassign};
 
 /// A stable identity and an explicitly saved setup; not linked to live state.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
