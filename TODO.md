@@ -127,8 +127,10 @@ identity and the renderer shows their first frame.
 - [ ] Qualify shared playback on physical outputs with different refresh rates.
 - [x] Restore playback on hotplugged outputs: the daemon plays an animated wallpaper shown as
   a still on a (re)connected monitor, once per output global (a quick replug counts as new),
-  so one that can't play isn't retried every second. Qualified with kscreen-doctor
-  disable/enable on private outputs.
+  so one that can't play isn't retried every second. It reads what's shown and queues its
+  request under the daemon's change lock (every wallpaper change takes it until queued) and
+  leaves monitors with a change on its way alone, so a request made meanwhile isn't undone.
+  Qualified with kscreen-doctor disable/enable on private outputs.
 - [x] Preserve source sessions, application identity and playback position during live
   geometry adjustments in the qualified renderer path. Validate without new decoder workers,
   share existing textures, acknowledge the adjusted swap and reject mismatched live sources.

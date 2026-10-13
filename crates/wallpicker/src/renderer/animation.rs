@@ -94,6 +94,9 @@ impl Incoming {
     pub(super) fn transitioning(&self) -> bool {
         self.reveal.is_some()
     }
+    pub(super) fn source(&self) -> &std::path::Path {
+        &self.picture.picture.source
+    }
 }
 
 impl Drop for Incoming {

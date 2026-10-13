@@ -8,7 +8,7 @@ use wallpicker_core::{
     render::{Batch, Content, Intent, Report},
 };
 
-type PendingShow = (String, std::sync::mpsc::Receiver<Result<(), String>>);
+pub(super) type PendingShow = (String, std::sync::mpsc::Receiver<Result<(), String>>);
 
 enum Prepared {
     Apply(PreparedBatch),
@@ -36,23 +36,37 @@ pub(super) fn render(request: &Value, drawing: &Drawing) -> Result<Value, String
 
 /// Show `batch` and wait for every output's answer.
 pub(super) fn render_batch(batch: Batch, drawing: &Drawing) -> Result<Report, String> {
+    let answers = {
+        let _change = drawing.change();
+        submit(batch, drawing)?
+    };
+    Ok(collect(answers))
+}
+
+/// Queue `batch` (its preparation included); the caller holds
+/// [`Drawing::change`].
+pub(super) fn submit(batch: Batch, drawing: &Drawing) -> Result<Vec<PendingShow>, String> {
     if batch.outputs.is_empty() {
         batch.validate().map_err(|e| e.to_string())?;
-        return Ok(Report::default());
+        return Ok(Vec::new());
     }
     let animated = batch
         .outputs
         .iter()
         .any(|o| matches!(o.picture.content, Content::Animated { .. }));
-    let answers = if animated && batch.intent != Intent::Adjust && super::playback::enabled(drawing) {
-        play(batch, drawing)?
+    if animated && batch.intent != Intent::Adjust && super::playback::enabled(drawing) {
+        play(batch, drawing)
     } else {
         let prepared = prepare(batch)?;
         drawing.with(|renderer| match prepared {
             Prepared::Apply(prepared) => renderer.show_batch(prepared),
             Prepared::Adjust(prepared) => renderer.adjust_batch(prepared),
-        })?
-    };
+        })
+    }
+}
+
+/// Every output's answer, waited for without holding anything.
+pub(super) fn collect(answers: Vec<PendingShow>) -> Report {
     let deadline = Instant::now() + Duration::from_secs(25);
     let mut report = Report::default();
     for (monitor, answer) in answers {
@@ -64,7 +78,7 @@ pub(super) fn render_batch(batch: Batch, drawing: &Drawing) -> Result<Report, St
                 .push((monitor, format!("renderer did not confirm application: {error}"))),
         }
     }
-    Ok(report)
+    report
 }
 
 /// Decoder workers start under the renderer lock, so their notifications go to

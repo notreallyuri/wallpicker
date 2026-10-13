@@ -165,6 +165,10 @@ impl State {
                             "monitor": s.name,
                             // New when it's connected again.
                             "global": s.id,
+                            // A new picture is on its way; an animation
+                            // on its way is "incoming" (and in "playback").
+                            "changing": s.asked.is_some(),
+                            "incoming": s.incoming.as_ref().map(|a| a.source()),
                             "size": s.size,
                             "pixels": s.drawn,
                             "render_error": s.render_error,

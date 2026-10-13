@@ -16,6 +16,7 @@ use wallpicker_core::settings::{Animation, Transition};
 use wallpicker_core::wallpapers::{Backend, Fits};
 
 use super::Drawing;
+use super::render::PendingShow;
 use crate::decoding::{self, Budget};
 use crate::preparation::Preparer;
 use crate::renderer::PlaybackOptions;
@@ -78,24 +79,34 @@ pub(super) fn follow(drawing: &Drawing) {
         if drawing.restarted.swap(false, Ordering::SeqCst) || now.enabled != last.enabled {
             tried.clear();
         }
-        let shown = animated(drawing);
-        if now.enabled {
-            let stills: BTreeSet<Still> = shown
-                .into_iter()
-                .filter_map(|(still, how)| (how == Shown::Still).then_some(still))
-                .collect();
-            tried.retain(|still| stills.contains(still));
-            let new: Vec<Still> = stills.difference(&tried).cloned().collect();
-            if !new.is_empty() {
-                show(drawing, &new);
+        let answers = {
+            // What's shown can't change until this follow-up is queued.
+            let _change = drawing.change();
+            let shown = animated(drawing);
+            if now.enabled {
+                let stills: BTreeSet<Still> = shown
+                    .into_iter()
+                    .filter_map(|(still, how)| (how == Shown::Still).then_some(still))
+                    .collect();
+                tried.retain(|still| stills.contains(still));
+                let new: Vec<Still> = stills.difference(&tried).cloned().collect();
+                let answers = show(drawing, &new);
                 tried.extend(new);
+                answers
+            } else if last.enabled {
+                let playing: Vec<Still> = shown
+                    .into_iter()
+                    .filter_map(|(still, how)| (how == Shown::Playing).then_some(still))
+                    .collect();
+                show(drawing, &playing)
+            } else {
+                Vec::new()
             }
-        } else if last.enabled {
-            let playing: Vec<Still> = shown
-                .into_iter()
-                .filter_map(|(still, how)| (how == Shown::Playing).then_some(still))
-                .collect();
-            show(drawing, &playing);
+        };
+        if !answers.is_empty() {
+            for (monitor, error) in super::render::collect(answers).failed {
+                eprintln!("wallpicker: animated wallpaper on {monitor}: {error}");
+            }
         }
         last = now;
     }
@@ -131,16 +142,18 @@ fn animated(drawing: &Drawing) -> Vec<(Still, Shown)> {
 fn animated_in(status: &Value) -> Vec<(Still, Shown)> {
     let mut shown = Vec::new();
     for screen in status["screens"].as_array().into_iter().flatten() {
+        // An animation on its way is what the monitor will show.
         let (Some(monitor), Some(global), Some(source), Some(state)) = (
             screen["monitor"].as_str(),
             screen["global"].as_u64(),
-            screen["source"].as_str(),
+            screen["incoming"].as_str().or(screen["source"].as_str()),
             screen["playback"]["state"].as_str(),
         ) else {
             continue;
         };
         let how = match state {
-            _ if screen["size"].is_null() => continue,
+            // Not configured yet, or another picture is on its way.
+            _ if screen["size"].is_null() || screen["changing"] == true => continue,
             "still" => Shown::Still,
             // Without hardware EGL nothing plays.
             "unavailable" => continue,
@@ -156,9 +169,13 @@ fn animated_in(status: &Value) -> Vec<(Still, Shown)> {
     shown
 }
 
-/// Animated wallpapers on these monitors again, through the normal request
-/// path: its policy decides whether they play.
-fn show(drawing: &Drawing, shown: &[Still]) {
+/// Queue the animated wallpapers on these monitors again, through the normal
+/// request path: its policy decides whether they play. The caller holds
+/// [`Drawing::change`].
+fn show(drawing: &Drawing, shown: &[Still]) -> Vec<PendingShow> {
+    if shown.is_empty() {
+        return Vec::new();
+    }
     let fits = Fits::load(&drawing.store);
     let backend = Backend::from_settings(&drawing.store).restoring();
     let mut preparation = Preparation::default();
@@ -173,20 +190,16 @@ fn show(drawing: &Drawing, shown: &[Still]) {
         }
     }
     if outputs.is_empty() {
-        return;
+        return Vec::new();
     }
     let instant = Transition {
         kind: "none".into(),
         duration_ms: 0,
     };
-    match super::render::render_batch(Batch::new(Intent::Restore, instant, outputs), drawing) {
-        Ok(report) => {
-            for (monitor, error) in report.failed {
-                eprintln!("wallpicker: animated wallpaper on {monitor}: {error}");
-            }
-        }
-        Err(e) => eprintln!("wallpicker: animated wallpapers: {e}"),
-    }
+    super::render::submit(Batch::new(Intent::Restore, instant, outputs), drawing).unwrap_or_else(|e| {
+        eprintln!("wallpicker: animated wallpapers: {e}");
+        Vec::new()
+    })
 }
 
 #[cfg(test)]
@@ -200,7 +213,7 @@ mod tests {
             json!({ "monitor": format!("DP-{n}"), "global": 40 + n, "size": size,
                 "source": format!("/w/{n}.gif"), "playback": playback })
         };
-        let status = json!({ "screens": [
+        let mut status = json!({ "screens": [
             screen(1, json!([1920, 1080]), json!({ "state": "still" })),
             screen(2, json!([1920, 1080]), json!({ "state": "playing" })),
             screen(3, json!([1920, 1080]), json!({ "state": "paused" })),
@@ -209,6 +222,14 @@ mod tests {
             screen(5, json!([1920, 1080]), json!({ "state": "unavailable" })),
             screen(6, json!([1920, 1080]), Value::Null),
         ]});
+        // A still with another picture on its way is left to that request.
+        let mut changing = screen(7, json!([1920, 1080]), json!({ "state": "still" }));
+        changing["changing"] = json!(true);
+        status["screens"].as_array_mut().unwrap().push(changing);
+        // Turned off while another animation is prepared: that one's still.
+        let mut incoming = screen(8, json!([1920, 1080]), json!({ "state": "preparing" }));
+        incoming["incoming"] = json!("/w/next.gif");
+        status["screens"].as_array_mut().unwrap().push(incoming);
         let still = |n: u64| Still {
             monitor: format!("DP-{n}"),
             global: 40 + n,
@@ -216,7 +237,18 @@ mod tests {
         };
         assert_eq!(
             animated_in(&status),
-            [(still(1), Shown::Still), (still(2), Shown::Playing), (still(3), Shown::Playing)]
+            [
+                (still(1), Shown::Still),
+                (still(2), Shown::Playing),
+                (still(3), Shown::Playing),
+                (
+                    Still {
+                        source: "/w/next.gif".into(),
+                        ..still(8)
+                    },
+                    Shown::Playing
+                ),
+            ]
         );
         assert!(animated_in(&Value::Null).is_empty());
     }

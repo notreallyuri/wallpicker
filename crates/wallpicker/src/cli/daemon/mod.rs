@@ -4,7 +4,7 @@ use std::io::{BufRead, BufReader, Read, Write};
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex, mpsc};
+use std::sync::{Arc, Mutex, MutexGuard, mpsc};
 use std::time::Duration;
 
 use serde_json::{Value, json};
@@ -90,6 +90,8 @@ struct Drawing {
     preparer: crate::preparation::Preparer,
     /// The renderer started (again): its saved animations start as stills.
     restarted: AtomicBool,
+    /// Held from deciding a change until it's queued (see [`Drawing::change`]).
+    changing: Mutex<()>,
 }
 
 impl Drawing {
@@ -99,7 +101,17 @@ impl Drawing {
             renderer: Mutex::new(None),
             preparer: playback::preparer(),
             restarted: AtomicBool::new(false),
+            changing: Mutex::new(()),
         }
+    }
+
+    /// One wallpaper change at a time, until it's queued (not drawn: the
+    /// renderer takes its messages in order, and status then shows it on its
+    /// way). The daemon's own changes read what's shown and queue theirs with
+    /// it held, so a request can't come in between and be undone. Taken
+    /// before the renderer's lock, never while holding it.
+    fn change(&self) -> MutexGuard<'_, ()> {
+        self.changing.lock().unwrap_or_else(|e| e.into_inner())
     }
 
     /// `f` with the renderer, started first if it isn't running (or its
@@ -186,7 +198,10 @@ fn respond(request: &Value, drawing: &Drawing) -> Result<Value, String> {
                 Transition::from_setting(kind, ms.min(10_000) as u32)
             });
             // The wait is outside the lock: other monitors draw meanwhile.
-            let answer = drawing.with(|r| r.show(monitor, (path, fit), transition))?;
+            let answer = {
+                let _change = drawing.change();
+                drawing.with(|r| r.show(monitor, (path, fit), transition))?
+            };
             match answer.recv_timeout(Duration::from_secs(25)) {
                 Ok(result) => result.map(|()| json!({ "ok": true })),
                 Err(mpsc::RecvTimeoutError::Timeout) => Err("drawing it took too long".into()),

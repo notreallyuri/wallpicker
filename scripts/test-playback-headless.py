@@ -247,6 +247,18 @@ def daemon_scenario(root, base, env, source=None):
              lambda st, sc: len(sc) == 2 and all(s["size"] for s in sc) and states(sc) == {"playing"})
         print("monitor reconnected: its animation plays")
 
+        # A wallpaper applied as a monitor comes back isn't undone by the
+        # daemon playing what that monitor had.
+        kscreen(f"output.{monitors[1]}.disable")
+        wait("one monitor", lambda st, sc: len(sc) == 1)
+        kscreen(f"output.{monitors[1]}.enable")
+        wait("reconnected", lambda st, sc: len(sc) == 2 and all(s["size"] for s in sc))
+        cli("apply", str(still), "--monitor", monitors[1])
+        time.sleep(2.5)  # The daemon looks every second.
+        screen = next(s for s in ask({"cmd": "status"})["screens"] if s["monitor"] == monitors[1])
+        assert screen["source"] == str(still) and screen["playback"] is None, screen
+        print("applied while reconnecting: kept")
+
         # Hidden outputs (locked, powered off) are covered by the runtime test
         # with withheld callbacks: KWin's virtual outputs ignore DPMS, and KWin
         # keeps answering surfaces covered by a window.
