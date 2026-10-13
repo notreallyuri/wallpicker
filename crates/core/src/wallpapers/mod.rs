@@ -20,7 +20,7 @@ mod span;
 pub use apply::apply_and_remember;
 pub use conflicts::{conflicts, stop_program};
 pub use drawing::{Backend, Fits};
-pub use restore::{RestoreReport, apply_previous, reapply, restore, restore_with, saved_for};
+pub use restore::{RestoreReport, apply_previous, reapply, restore, restore_with, saved_for, saved_for_application};
 pub use span::{SpanAsk, SpanLayout, SpanMonitor, span_and_remember, span_layout};
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize)]
 pub struct ApplyReport {

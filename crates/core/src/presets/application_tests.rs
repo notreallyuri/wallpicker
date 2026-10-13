@@ -199,7 +199,7 @@ fn standalone_source_regions_rebuild_output_dimensions() {
     let entry = plan.entries.iter().find(|e| e.monitor == "DP-1").unwrap();
     let cut = entry.adjust.span.unwrap();
     assert_eq!((cut.out_width, cut.out_height, cut.x, cut.y), (12, 16, 4, 2));
-    assert_eq!(image::image_dimensions(&entry.shown).unwrap(), (12, 16));
+    assert_eq!(image::image_dimensions(entry.picture.static_file().unwrap().0).unwrap(), (12, 16));
     preset.monitors.get_mut("DP-1").unwrap().region.as_mut().unwrap().width = 100;
     assert!(plan::prepare(&store, &preset, &desktop.outputs).is_err());
 }

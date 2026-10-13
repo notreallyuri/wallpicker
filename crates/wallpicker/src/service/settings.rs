@@ -23,6 +23,8 @@ pub async fn save(state: &AppState, mut settings: Settings) -> CmdResult<Setting
         settings.snapshot_dir = on_disk.snapshot_dir;
         // Workspace wallpapers change as you apply (and from their own list).
         settings.workspaces.wallpapers = on_disk.workspaces.wallpapers;
+        // Pausing acts at once (pause_animation); a form opened before mustn't undo it.
+        settings.animation.paused = on_disk.animation.paused;
         store.save_settings(&settings)?;
         let saved = store.load_settings()?;
         let after = wallpapers::Fits::load(&store);
@@ -30,6 +32,18 @@ pub async fn save(state: &AppState, mut settings: Settings) -> CmdResult<Setting
             eprintln!("wallpicker: could not re-apply the wallpapers: {e}");
         }
         Ok(saved)
+    })
+    .await
+}
+
+/// Pause or resume every animated wallpaper; the daemon follows at once.
+pub async fn pause_animation(state: &AppState, paused: bool) -> CmdResult<Settings> {
+    let store = state.store.clone();
+    blocking(move || {
+        let mut settings = store.load_settings()?;
+        settings.animation.paused = paused;
+        store.save_settings(&settings)?;
+        store.load_settings()
     })
     .await
 }
@@ -51,6 +65,9 @@ fn check(s: &Settings) -> CmdResult<()> {
     let set_folders = [&s.slideshow.folder, &s.slideshow.night.folder];
     if set_folders.iter().any(|f| f.as_deref().is_some_and(|p| !placeable(p))) {
         return Err("A slideshow folder must be an absolute path (or start with ~).".into());
+    }
+    if s.animation.max_fps > wallpicker_core::settings::Animation::MAX_FPS {
+        return Err("The animation frame rate goes up to 240 (0: the display's).".into());
     }
     if s.wallhaven_username
         .as_deref()

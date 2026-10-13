@@ -17,36 +17,40 @@
 //! on the layer surface itself and the temporary layer dropped. Without the
 //! protocol it needs (`wp_alpha_modifier_v1`), a cut.
 
+mod animation;
 mod drawing;
+mod fallback;
 mod gpu;
 mod image;
 mod layer;
 mod output;
+pub mod playback;
 mod protocol;
 mod screen;
 mod state;
 mod transition;
 
 #[cfg(test)]
+mod animation_tests;
+#[cfg(test)]
 mod gpu_tests;
 #[cfg(test)]
 mod tests;
 
-use std::path::PathBuf;
-use std::sync::{Arc, mpsc};
+use std::sync::{Arc, Mutex, mpsc};
 use std::thread::JoinHandle;
 use std::time::Duration;
 
 use serde_json::Value;
 use smithay_client_toolkit::reexports::calloop::channel::{self, Sender};
-use wallpicker_core::settings::FitMode;
 
+pub(crate) use animation::Options as PlaybackOptions;
 use image::{Made, map_big_allocations};
 use state::setup;
 pub use transition::Transition;
 
-/// A file to show and its fit.
-pub type Picture = (PathBuf, Option<FitMode>);
+/// Original source, prepared content, geometry and application intent.
+pub type Picture = wallpicker_core::render::Selection;
 
 /// What a monitor shows in the saved state, as the renderer gets it
 /// (`wallpapers::saved_for`).
@@ -54,8 +58,26 @@ pub type Saved = Arc<dyn Fn(&str) -> Option<Picture> + Send + Sync>;
 
 /// How a show went: Ok once the monitor has the picture.
 type Reply = mpsc::Sender<Result<(), String>>;
+type PendingShow = (String, mpsc::Receiver<Result<(), String>>);
 
 enum Msg {
+    Adjust {
+        batch: wallpicker_core::render::Batch,
+        reply: mpsc::Sender<Vec<PendingShow>>,
+    },
+    Animation {
+        handoff: Arc<Mutex<Option<crate::preparation::Handoff>>>,
+        reply: mpsc::Sender<Result<animation::Admission, String>>,
+    },
+    Fallback {
+        prepared: fallback::Prepared,
+        reply: mpsc::Sender<Vec<PendingShow>>,
+    },
+    Decoded(u64),
+    Presented(playback::Ticket, Result<(), String>),
+    Pause(bool),
+    Interval(Duration),
+    Batch(Vec<Msg>),
     Show {
         monitor: String,
         picture: Picture,
@@ -77,13 +99,129 @@ enum Msg {
 pub struct Renderer {
     tx: Sender<Msg>,
     thread: Option<JoinHandle<()>>,
+    animation_enabled: bool,
 }
 
 impl Renderer {
-    /// Connect to the Wayland session and start drawing (each monitor what
-    /// `saved` says it shows). An error when there's no session, or it
-    /// lacks the layer shell.
+    /// Queue the whole batch in one event-loop message. Preparation and protocol
+    /// checks happen before any output is changed; replies remain per output.
+    pub fn show_batch(&self, prepared: crate::preparation::PreparedBatch) -> Result<Vec<PendingShow>, String> {
+        if !prepared.sessions().is_empty() && self.animation_enabled {
+            let batch = prepared.batch();
+            if batch.intent == wallpicker_core::render::Intent::Adjust {
+                return Err("animated adjustments require worker-free PreparedAdjustment preflight".into());
+            }
+            // Caller keeps ownership through GPU/admission validation. Rejection
+            // leaves workers here, so cleanup never joins on the Wayland loop.
+            let handoff = Arc::new(Mutex::new(Some(prepared.handoff()?)));
+            let (reply, answer) = mpsc::channel();
+            self.tx
+                .send(Msg::Animation {
+                    handoff: handoff.clone(),
+                    reply,
+                })
+                .map_err(|_| "the renderer has stopped".to_string())?;
+            let result = answer
+                .recv()
+                .map_err(|_| "the renderer stopped during admission".to_string())?;
+            return match result? {
+                animation::Admission::Accepted(answers) => Ok(answers),
+                animation::Admission::Fallback(offer) => {
+                    let loan = handoff
+                        .lock()
+                        .unwrap()
+                        .take()
+                        .ok_or("fallback handoff already consumed")?;
+                    // RGB conversion and decoder cancellation/join happen on
+                    // this caller, before any fallback output is changed.
+                    let prepared = offer.prepare(loan)?;
+                    let (reply, answer) = mpsc::channel();
+                    self.tx
+                        .send(Msg::Fallback { prepared, reply })
+                        .map_err(|_| "the renderer has stopped".to_string())?;
+                    answer
+                        .recv()
+                        .map_err(|_| "the renderer stopped during fallback".to_string())
+                }
+            };
+        }
+        // Without playback, animated outputs are drawn as their first frame.
+        // Dropping any sessions releases workers/reservations on this caller thread.
+        let batch = prepared.handoff()?.batch;
+        let transition = if batch.intent == wallpicker_core::render::Intent::Adjust {
+            None
+        } else {
+            Transition::from_setting(&batch.transition.kind, batch.transition.duration_ms.min(10_000))
+        };
+        let mut messages = Vec::new();
+        let mut answers = Vec::new();
+        for output in &batch.outputs {
+            let (reply, answer) = mpsc::channel();
+            messages.push(Msg::Show {
+                monitor: output.monitor.clone(),
+                picture: batch.selection(output.picture.clone()),
+                transition,
+                reply,
+            });
+            answers.push((output.monitor.clone(), answer));
+        }
+        self.tx
+            .send(Msg::Batch(messages))
+            .map_err(|_| "the renderer has stopped".to_string())?;
+        Ok(answers)
+    }
+
+    /// Adjust live geometry without creating a decoder or restarting its clock.
+    /// Replies acknowledge the first successful swap of each adjusted output.
+    pub fn adjust_batch(&self, prepared: crate::preparation::PreparedAdjustment) -> Result<Vec<PendingShow>, String> {
+        let batch = prepared.handoff()?;
+        let (reply, answer) = mpsc::channel();
+        self.tx
+            .send(Msg::Adjust { batch, reply })
+            .map_err(|_| "the renderer has stopped".to_string())?;
+        answer
+            .recv()
+            .map_err(|_| "the renderer stopped during adjustment".to_string())
+    }
+
+    /// Without playback: animations are only ever their first frame.
+    #[cfg(test)]
     pub fn start(saved: Saved) -> Result<Renderer, String> {
+        Self::start_inner(saved, None)
+    }
+
+    /// Connect to the Wayland session and start drawing (each monitor what
+    /// `saved` says it shows), able to play prepared animations. Nothing is
+    /// allocated for playback until the first one. An error when there's no
+    /// session, or it lacks the layer shell.
+    pub(crate) fn start_with_playback(saved: Saved, options: PlaybackOptions) -> Result<Renderer, String> {
+        Self::start_inner(saved, Some(options))
+    }
+
+    /// Hold (or release) every animation's frame, including later ones.
+    pub(crate) fn pause(&self, paused: bool) -> Result<(), String> {
+        self.tx
+            .send(Msg::Pause(paused))
+            .map_err(|_| "the renderer has stopped".to_string())
+    }
+
+    /// At most one presentation per `interval` on each output (zero: as
+    /// often as the display refreshes), for playing animations too.
+    pub(crate) fn set_interval(&self, interval: Duration) -> Result<(), String> {
+        self.tx
+            .send(Msg::Interval(interval))
+            .map_err(|_| "the renderer has stopped".to_string())
+    }
+
+    /// Decoder notifications for [`crate::preparation::Preparer::prepare`].
+    pub(crate) fn decoder_wake(&self) -> Arc<dyn Fn(u64) + Send + Sync> {
+        let tx = self.tx.clone();
+        Arc::new(move |generation| {
+            let _ = tx.send(Msg::Decoded(generation));
+        })
+    }
+
+    fn start_inner(saved: Saved, options: Option<animation::Options>) -> Result<Renderer, String> {
         map_big_allocations();
         let (tx, rx) = channel::channel();
         let loop_tx = tx.clone();
@@ -92,7 +230,7 @@ impl Renderer {
             .name("renderer".into())
             .spawn(move || {
                 let run = || -> Result<(), String> {
-                    let (mut event_loop, mut state) = setup(rx, loop_tx, saved)?;
+                    let (mut event_loop, mut state) = setup(rx, loop_tx, saved, options)?;
                     let _ = ready_tx.send(Ok(()));
                     while state.running {
                         event_loop.dispatch(None, &mut state).map_err(|e| e.to_string())?;
@@ -111,6 +249,7 @@ impl Renderer {
             Ok(Ok(())) => Ok(Renderer {
                 tx,
                 thread: Some(thread),
+                animation_enabled: options.is_some(),
             }),
             Ok(Err(e)) => Err(e),
             Err(_) => Err("the renderer stopped while starting".into()),
@@ -127,14 +266,14 @@ impl Renderer {
     pub fn show(
         &self,
         monitor: String,
-        picture: Picture,
+        picture: impl Into<Picture>,
         transition: Option<Transition>,
     ) -> Result<mpsc::Receiver<Result<(), String>>, String> {
         let (reply, answer) = mpsc::channel();
         self.tx
             .send(Msg::Show {
                 monitor,
-                picture,
+                picture: picture.into(),
                 transition,
                 reply,
             })

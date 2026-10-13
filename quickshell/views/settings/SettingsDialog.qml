@@ -49,6 +49,13 @@ DialogFrame {
             blurb: "A wallpaper for each Hyprland workspace, put on as you switch to it."
         },
         {
+            slug: "animation",
+            label: "Animated wallpapers",
+            group: "App",
+            file: "Animation.qml",
+            blurb: "GIF and animated WebP wallpapers: whether they play, how fast, and what each monitor's is doing."
+        },
+        {
             slug: "performance",
             label: "Performance",
             group: "App",

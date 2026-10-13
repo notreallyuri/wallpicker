@@ -101,7 +101,7 @@ fn pss_mb(pid: u32) -> u32 {
 }
 
 /// CPU time (user + system, in clock ticks of 1/100 s) of `pids` together.
-fn cpu_ticks(pids: &[u32]) -> u64 {
+pub(super) fn cpu_ticks(pids: &[u32]) -> u64 {
     pids.iter()
         .filter_map(|pid| {
             let stat = std::fs::read_to_string(format!("/proc/{pid}/stat")).ok()?;

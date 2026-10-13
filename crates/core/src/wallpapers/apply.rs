@@ -12,19 +12,23 @@ pub fn apply_and_remember(runner: &dyn Runner, store: &Store, monitors: &[String
     // Read once, not per monitor.
     let backend = Backend::new(store);
     let fits = Fits::load(store);
-    let apply_one = |m: &str| backend.apply(runner, m, path, fits.of(m, path));
-
+    let mut preparation = crate::render::Preparation::default();
     let mut report = ApplyReport::default();
+    let mut outputs = Vec::new();
     for m in monitors {
-        match apply_one(m) {
-            Ok(()) => match store.set_current(m, path) {
-                Ok(()) => report.applied.push(m.clone()),
-                // The wallpaper is on screen; only the bookkeeping failed.
-                Err(e) => report
-                    .failed
-                    .push((m.clone(), format!("applied, but could not save state: {e}"))),
-            },
+        match backend.prepare(&mut preparation, m, path, fits.of(m, path)) {
+            Ok(output) => outputs.push(output),
             Err(e) => report.failed.push((m.clone(), e.to_string())),
+        }
+    }
+    let rendered = backend.apply_batch(runner, outputs)?;
+    report.failed.extend(rendered.failed);
+    for m in rendered.applied {
+        match store.set_current(&m, path) {
+            Ok(()) => report.applied.push(m),
+            Err(e) => report
+                .failed
+                .push((m, format!("applied, but could not save state: {e}"))),
         }
     }
     Ok(report)

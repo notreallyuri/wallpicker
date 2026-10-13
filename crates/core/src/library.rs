@@ -2,8 +2,9 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
-/// File extensions the renderer and thumbnailer can decode.
-pub const IMAGE_EXTENSIONS: &[&str] = &["png", "jpg", "jpeg", "webp"];
+/// File extensions the renderer and thumbnailer can decode. Content decides
+/// what plays: GIF and WebP may be animated (thumbnails use the first frame).
+pub const IMAGE_EXTENSIONS: &[&str] = &["png", "jpg", "jpeg", "webp", "gif"];
 
 pub fn is_supported_image(path: &Path) -> bool {
     path.extension()
@@ -509,7 +510,8 @@ mod tests {
     fn extension_check_is_case_insensitive() {
         assert!(is_supported_image(Path::new("a.PNG")));
         assert!(is_supported_image(Path::new("/x/y.JpEg")));
-        assert!(!is_supported_image(Path::new("a.gif")));
+        assert!(is_supported_image(Path::new("a.GIF")));
+        assert!(!is_supported_image(Path::new("a.bmp")));
         assert!(!is_supported_image(Path::new("noext")));
     }
 

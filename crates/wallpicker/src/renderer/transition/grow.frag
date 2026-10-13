@@ -5,5 +5,5 @@ vec4 effect(vec2 uv) {
     float distanceToOrigin = length((uv - direction) * aspect);
     float feather = 1.0 / resolution.y;
     float coverage = 1.0 - smoothstep(radius - feather, radius + feather, distanceToOrigin);
-    return texture2D(image, uv) * coverage;
+    return picture(uv) * coverage;
 }

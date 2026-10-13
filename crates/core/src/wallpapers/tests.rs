@@ -102,7 +102,8 @@ fn native_fit_and_saved_adjustment_are_prepared_before_application() {
             },
         )
         .unwrap();
-    let (shown, fit) = saved_for(&store, "DP-1").unwrap();
+    let saved = saved_for(&store, "DP-1").unwrap();
+    let (shown, fit) = saved.picture.static_file().unwrap();
     assert_ne!(shown, path);
     assert_eq!(image::image_dimensions(shown).unwrap(), (8, 8));
     assert_eq!(fit, None);

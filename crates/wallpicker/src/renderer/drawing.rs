@@ -15,9 +15,9 @@ use smithay_client_toolkit::shell::wlr_layer::{Anchor, KeyboardInteractivity, La
 use smithay_client_toolkit::shm::raw::RawPool;
 
 impl State {
-    fn gpu_device(&mut self) -> Result<std::rc::Rc<Device>, String> {
-        if self.gpu_unavailable {
-            return Err("GPU initialization failed earlier in this session".into());
+    pub(super) fn gpu_device(&mut self) -> Result<std::rc::Rc<Device>, String> {
+        if let Some(error) = &self.gpu_unavailable {
+            return Err(error.clone());
         }
         if let Some(gpu) = &self.gpu {
             return Ok(gpu.clone());
@@ -28,7 +28,7 @@ impl State {
                 Ok(gpu)
             }
             Err(e) => {
-                self.gpu_unavailable = true;
+                self.gpu_unavailable = Some(e.clone());
                 Err(e)
             }
         }
@@ -49,13 +49,7 @@ impl State {
             )),
             _ => {
                 let scale = info.map_or(1, |i| i.scale_factor.max(1));
-                Some((
-                    (w * scale as u32, h * scale as u32),
-                    Place {
-                        logical: (w, h),
-                        scale,
-                    },
-                ))
+                Some(((w * scale as u32, h * scale as u32), Place { logical: (w, h), scale }))
             }
         }
     }
@@ -63,12 +57,7 @@ impl State {
     /// Put `made` on screen `i`, from a pool of its own (freed on release),
     /// coming in with `transition` over what it shows. False when it was
     /// made for another size.
-    pub(super) fn draw(
-        &mut self,
-        i: usize,
-        made: &Made,
-        transition: Option<Transition>,
-    ) -> Result<bool, String> {
+    pub(super) fn draw(&mut self, i: usize, made: &Made, transition: Option<Transition>) -> Result<bool, String> {
         let ((w, h), place) = match self.target(&self.screens[i]) {
             Some((px, place)) if px == made.size => (px, place),
             _ => return Ok(false),
@@ -91,8 +80,7 @@ impl State {
         let parent = screen.layer.wl_surface();
         // Nothing shown yet: nothing to come in over.
         let transition = transition.filter(|_| screen.drawn.is_some());
-        let (Some(mut transition), Some(alpha_modifier)) = (transition, &self.alpha_modifier)
-        else {
+        let (Some(mut transition), Some(alpha_modifier)) = (transition, &self.alpha_modifier) else {
             place.apply(parent, screen.viewport.as_ref());
             parent.attach(Some(&buffer), 0, 0);
             parent.damage_buffer(0, 0, w as i32, h as i32);
@@ -121,9 +109,9 @@ impl State {
         let surface = layer.wl_surface().clone();
         let alpha = alpha_modifier.get_surface(&surface, &self.qh, Quiet);
         let gpu = if transition.effect.shader().is_some() {
-            let result = self.gpu_device().and_then(|device| {
-                Target::new(device, &surface, (w, h), &made.pixels, transition.effect)
-            });
+            let result = self
+                .gpu_device()
+                .and_then(|device| Target::new(device, &surface, (w, h), &made.pixels, transition.effect));
             match result {
                 Ok(target) => Some(target),
                 Err(e) => {
@@ -181,8 +169,7 @@ impl State {
             o.endpoint_pending = t >= 1.0;
         } else {
             o.alpha.set_multiplier((t * f64::from(u32::MAX)) as u32);
-            o.surface
-                .damage_buffer(0, 0, o.size.0 as i32, o.size.1 as i32);
+            o.surface.damage_buffer(0, 0, o.size.0 as i32, o.size.1 as i32);
             o.surface.commit();
         }
         let parent = self.screens[i].layer.wl_surface();

@@ -4,6 +4,25 @@ use crate::error::{Error, Result};
 
 /// Runs external programs. A trait so tests can script `hyprctl` replies.
 pub trait Runner {
+    /// Apply one preflighted batch. Legacy test runners can implement individual
+    /// static shows (an animated output fails alone); production preserves the
+    /// whole request over IPC.
+    fn render(&self, batch: &crate::render::Batch) -> Result<crate::render::Report> {
+        batch.validate()?;
+        let mut report = crate::render::Report::default();
+        for output in &batch.outputs {
+            let shown = output
+                .picture
+                .static_file()
+                .and_then(|(path, fit)| self.show_wallpaper(&output.monitor, path, fit, &batch.transition));
+            match shown {
+                Ok(()) => report.applied.push(output.monitor.clone()),
+                Err(e) => report.failed.push((output.monitor.clone(), e.to_string())),
+            }
+        }
+        Ok(report)
+    }
+
     /// Apply a prepared wallpaper. Production uses the native daemon; tests inject a desktop.
     fn show_wallpaper(
         &self,
@@ -38,6 +57,10 @@ pub trait Runner {
 pub struct SystemRunner;
 
 impl Runner for SystemRunner {
+    fn render(&self, batch: &crate::render::Batch) -> Result<crate::render::Report> {
+        crate::render::transport::send(self, batch)
+    }
+
     fn show_wallpaper(
         &self,
         monitor: &str,

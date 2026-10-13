@@ -9,15 +9,14 @@ pub(super) struct Context {
     pub(super) config: egl::Config,
     context: Option<egl::Context>,
     scratch: Option<egl::Surface>,
-    _connection: Connection,
+    _connection: Option<Connection>,
 }
 
 impl Context {
     pub(super) fn new(connection: &Connection) -> Result<Self, String> {
         // SAFETY: load the standard EGL ABI, and use this live connection's
         // wl_display with the Wayland platform (EGL_KHR_platform_wayland).
-        let api = unsafe { egl::DynamicInstance::<egl::EGL1_5>::load_required() }
-            .map_err(|e| e.to_string())?;
+        let api = unsafe { egl::DynamicInstance::<egl::EGL1_5>::load_required() }.map_err(|e| e.to_string())?;
         let display = unsafe {
             api.get_platform_display(
                 0x31D8,
@@ -26,12 +25,35 @@ impl Context {
             )
         }
         .map_err(|e| e.to_string())?;
+        Self::initialize(
+            api,
+            display,
+            Some(connection.clone()),
+            egl::WINDOW_BIT | egl::PBUFFER_BIT,
+        )
+    }
+
+    #[cfg(test)]
+    pub(super) fn headless() -> Result<Self, String> {
+        // SAFETY: EGL_MESA_platform_surfaceless has no native display handle.
+        let api = unsafe { egl::DynamicInstance::<egl::EGL1_5>::load_required() }.map_err(|e| e.to_string())?;
+        let display = unsafe { api.get_platform_display(0x31DD, std::ptr::null_mut(), &[egl::NONE as egl::Attrib]) }
+            .map_err(|e| e.to_string())?;
+        Self::initialize(api, display, None, egl::PBUFFER_BIT)
+    }
+
+    fn initialize(
+        api: egl::DynamicInstance<egl::EGL1_5>,
+        display: egl::Display,
+        connection: Option<Connection>,
+        surface_type: egl::Int,
+    ) -> Result<Self, String> {
         api.initialize(display).map_err(|e| e.to_string())?;
         let config = match api.choose_first_config(
             display,
             &[
                 egl::SURFACE_TYPE,
-                egl::WINDOW_BIT | egl::PBUFFER_BIT,
+                surface_type,
                 egl::RENDERABLE_TYPE,
                 egl::OPENGL_ES2_BIT,
                 egl::RED_SIZE,
@@ -57,28 +79,17 @@ impl Context {
             config,
             context: None,
             scratch: None,
-            _connection: connection.clone(),
+            _connection: connection,
         };
-        this.api
-            .bind_api(egl::OPENGL_ES_API)
-            .map_err(|e| e.to_string())?;
+        this.api.bind_api(egl::OPENGL_ES_API).map_err(|e| e.to_string())?;
         this.context = Some(
             this.api
-                .create_context(
-                    display,
-                    config,
-                    None,
-                    &[egl::CONTEXT_CLIENT_VERSION, 2, egl::NONE],
-                )
+                .create_context(display, config, None, &[egl::CONTEXT_CLIENT_VERSION, 2, egl::NONE])
                 .map_err(|e| e.to_string())?,
         );
         this.scratch = Some(
             this.api
-                .create_pbuffer_surface(
-                    display,
-                    config,
-                    &[egl::WIDTH, 1, egl::HEIGHT, 1, egl::NONE],
-                )
+                .create_pbuffer_surface(display, config, &[egl::WIDTH, 1, egl::HEIGHT, 1, egl::NONE])
                 .map_err(|e| e.to_string())?,
         );
         this.current(None)?;

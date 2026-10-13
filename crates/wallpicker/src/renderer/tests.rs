@@ -94,7 +94,7 @@ fn live_fade_blends_pixels() {
     let green = dir.join("green.png");
     RgbImage::from_raw(1, 1, vec![255, 0, 0]).unwrap().save(&red).unwrap();
     RgbImage::from_raw(1, 1, vec![0, 255, 0]).unwrap().save(&green).unwrap();
-    let renderer = Renderer::start(Arc::new(move |_| Some((red.clone(), None)))).unwrap();
+    let renderer = Renderer::start(Arc::new(move |_| Some((red.clone(), None).into()))).unwrap();
     let deadline = Instant::now() + Duration::from_secs(10);
     loop {
         let status = renderer.status().unwrap();
