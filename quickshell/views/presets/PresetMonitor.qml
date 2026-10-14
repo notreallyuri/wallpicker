@@ -16,7 +16,9 @@ Item {
 
         LibraryThumb {
             width: tile.width
-            height: Math.round(width * 9 / 16)
+            height: Math.round(width * 10 / 16)
+            // Not connected: dimmed, it still applies where it can.
+            opacity: tile.connected || tile.missing ? 1 : 0.4
             path: tile.missing || tile.width < 32 ? "" : tile.wallpaper.wallpaper
             Icon {
                 visible: tile.missing
@@ -26,27 +28,34 @@ Item {
                 color: Theme.mutedForeground
             }
         }
-        Text {
+        // Its name, and its file (or why not) at the right.
+        Row {
             width: parent.width
-            text: tile.monitor
-            color: Theme.foreground
-            font.family: Theme.font
-            font.pixelSize: 13
-            font.bold: true
-            elide: Text.ElideRight
-        }
-        Text {
-            width: parent.width
-            text: tile.missing ? "Missing image" : tile.connected ? tile.wallpaper.wallpaper.split("/").pop() : "Disconnected"
-            elide: Text.ElideMiddle
-            color: tile.missing || !tile.connected ? "#fd4663" : Theme.mutedForeground
-            font.family: Theme.font
-            font.pixelSize: 12
+            spacing: 6
+            Text {
+                id: name
+                text: tile.monitor
+                color: tile.connected ? Theme.foreground : Theme.mutedForeground
+                font.family: Theme.font
+                font.pixelSize: 13
+                font.bold: true
+            }
+            Text {
+                width: parent.width - name.width - parent.spacing
+                anchors.baseline: name.baseline
+                horizontalAlignment: Text.AlignRight
+                text: tile.missing ? "Missing image" : tile.connected ? tile.wallpaper.wallpaper.split("/").pop() : "Not connected"
+                elide: Text.ElideMiddle
+                // A missing file is a problem; a monitor away isn't.
+                color: tile.missing ? Theme.destructive : Theme.mutedForeground
+                font.family: Theme.font
+                font.pixelSize: 12
+            }
         }
     }
     HoverHandler { id: hover }
     Tip {
-        text: tile.monitor + "\n" + tile.wallpaper.wallpaper + (tile.missing ? "\nMissing image" : "") + (!tile.connected ? "\nDisconnected" : "")
+        text: tile.monitor + "\n" + tile.wallpaper.wallpaper + (tile.missing ? "\nMissing image" : "") + (!tile.connected ? "\nNot connected: the rest of the preset still applies" : "")
         over: hover.hovered
     }
 }
