@@ -58,14 +58,10 @@ Item {
             visible: Collections.list === null
             size: 18
         }
-        Text {
+        // None, or they couldn't be listed: the view says so (EmptyState).
+        Item {
             visible: Collections.list !== null && (Collections.listError !== "" || Collections.list.length === 0)
             Layout.fillWidth: true
-            wrapMode: Text.Wrap
-            text: Collections.listError || "You have no collections yet."
-            color: Collections.listError ? "#fd4663" : Theme.mutedForeground
-            font.family: Theme.font
-            font.pixelSize: 14
         }
         Flow {
             visible: Collections.list !== null && Collections.list.length > 0

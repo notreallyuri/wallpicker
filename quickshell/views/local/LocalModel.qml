@@ -163,6 +163,15 @@ QtObject {
         shuffle = s;
     }
 
+    /// Everything shown again: no search, Favorites, color, tags or artists.
+    function clearFilters() {
+        query = "";
+        favoritesOnly = false;
+        color = "";
+        tagFilter = [];
+        artistFilter = [];
+    }
+
     function toggleTag(name) {
         tagFilter = toggled(tagFilter, name);
     }

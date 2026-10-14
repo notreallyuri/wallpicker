@@ -62,28 +62,15 @@ Item {
         follow: view.y
     }
 
-    Plate {
+    EmptyState {
         visible: Online.page !== null && !Online.loading && Online.results.length === 0
         anchors.centerIn: parent
-        padX: 24
-        padY: 14
-        Column {
-            spacing: 4
-            Text {
-                anchors.horizontalCenter: parent.horizontalCenter
-                text: "Nothing found"
-                color: Theme.foreground
-                font.family: Theme.font
-                font.pixelSize: 16
-                font.weight: Font.ExtraBold
-            }
-            Text {
-                text: "No wallpapers match these filters."
-                color: Theme.mutedForeground
-                font.family: Theme.font
-                font.pixelSize: 14
-            }
-        }
+        width: Math.min(440, view.width - 48)
+        icon: "search"
+        title: "Nothing found"
+        text: "No wallpapers match this search and these filters."
+        action: "Filters…"
+        onTriggered: Dialogs.onlineFilters = true
     }
 
     Shortcut {

@@ -125,7 +125,8 @@ Item {
                 GridLayout {
                     id: cards
                     width: grid.width - 16
-                    columns: Math.max(1, Math.min(3, Math.floor((width + 16) / 416)))
+                    // Four across at Comfortable, cards at least ~340 px.
+                    columns: Math.max(1, Math.min(4, Math.floor((width + 16) / 356)))
                     columnSpacing: 16
                     rowSpacing: 16
                     Repeater {

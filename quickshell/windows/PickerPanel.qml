@@ -104,10 +104,11 @@ PanelWindow {
         }
     }
 
-    // Esc closes the top menu or dialog; with none open, the picker.
+    // Esc closes the top menu or dialog, then the control panel floating
+    // over the grid; with none open, the picker.
     Shortcut {
         sequence: "Escape"
-        onActivated: if (!Dialogs.closeTop())
+        onActivated: if (!Dialogs.closeTop() && !picker.closePanel())
             overlay.dismissed()
     }
 }

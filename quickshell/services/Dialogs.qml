@@ -10,13 +10,13 @@ Singleton {
     /// The wallpaper asked to be moved to the trash ("" none).
     property string trashFor: ""
     property bool duplicates: false
-    /// The monitor being adjusted ("" none).
-    property string adjusting: ""
     /// The Span dialog: the picture ("" closed), and whether it's the span
     /// already shown (changes go on the monitors as they're made) or a new
     /// one (spanned with the dialog's Span button).
     property string spanPath: ""
     property bool spanShown: false
+    /// It opens arranging the monitors (the control panel's Arrange).
+    property bool spanArrange: false
     /// The Online provider's filters.
     property bool onlineFilters: false
     /// The Settings section shown ("" closed).
@@ -59,18 +59,30 @@ Singleton {
     function findDuplicates() {
         duplicates = true;
     }
+    /// Adjust what `monitor` shows: the control panel, on it.
     function adjust(monitor) {
-        adjusting = monitor;
+        Monitors.select(monitor);
+        Prefs.panelOpen = true;
     }
     /// Choose the monitors for `path` and arrange them, then span it.
     function spanAcross(path) {
         spanShown = false;
+        spanArrange = false;
         spanPath = path;
     }
-    /// Adjust the span shown: its look, its monitors and their places.
+    /// Adjust the span shown: the control panel, on it.
     function adjustSpan() {
         if (!Monitors.spanState)
             return;
+        Monitors.select(Monitors.spanTarget);
+        Prefs.panelOpen = true;
+    }
+    /// The span shown's monitors and their places: the Span dialog,
+    /// arranging.
+    function arrangeSpan() {
+        if (!Monitors.spanState)
+            return;
+        spanArrange = true;
         spanShown = true;
         spanPath = Monitors.spanState.path;
     }

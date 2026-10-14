@@ -1,8 +1,9 @@
 // A Local tile (ui/src/views/local/tile.rs): a rounded card holding the
-// picture (16:10, its own rounded corners) with the monitors showing it, the
-// name and size, the artists (a brush) then the tags; the star in the corner. Hover: lifts with the
-// bouncy ease, a primary ring and glow, the picture zooms 3%. A click
-// applies it.
+// picture (16:10, its own rounded corners; a film badge when it's
+// animated) with the monitors showing it, the name and size, the artists
+// (a brush) then the tags on one line (+N for the rest); the star in the
+// corner. Hover: lifts with the bouncy ease, a primary ring and glow, the
+// picture zooms 3%. A click applies it.
 import QtQuick
 import QtQuick.Effects
 import QtQuick.Layouts
@@ -107,10 +108,19 @@ Item {
                     asynchronous: true
                     cache: false
                     // Decoded at the size it's shown (in the screen's pixels: 1x at
-                    // scale 1; 2x took ~20 MB more), not the file's.
-                    sourceSize.width: picture.width * Screen.devicePixelRatio
+                    // scale 1; 2x took ~20 MB more), not the file's: in 128 px
+                    // steps, the old one shown until a new size is in, so the
+                    // grid resizing (the control panel) doesn't reload it at
+                    // every step.
+                    sourceSize.width: Math.ceil(picture.width * Screen.devicePixelRatio / 128) * 128
+                    retainWhileLoading: true
                     scale: tile.hovered ? 1.03 : 1
-                    opacity: status === Image.Ready ? 1 : 0
+                    // Fades in once, when it first comes in.
+                    property bool came: false
+                    onSourceChanged: came = false
+                    onStatusChanged: if (status === Image.Ready)
+                        came = true
+                    opacity: came ? 1 : 0
                     Behavior on scale {
                         NumberAnimation {
                             duration: Theme.duration
@@ -132,6 +142,36 @@ Item {
                         Badge {
                             required property string modelData
                             text: modelData
+                        }
+                    }
+                }
+                // Animated (GIF, WebP): a film badge; the thumbnail stays
+                // its first frame.
+                Rectangle {
+                    visible: (tile.img.frames || 0) > 1
+                    x: 8
+                    y: parent.height - height - 8
+                    width: animatedRow.implicitWidth + 15
+                    height: animatedRow.implicitHeight + 6
+                    radius: height / 2
+                    color: Theme.a(Theme.card, 0.8)
+                    Row {
+                        id: animatedRow
+                        x: 7
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 4
+                        Icon {
+                            anchors.verticalCenter: parent.verticalCenter
+                            name: "film"
+                            size: 12
+                        }
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: tile.img.name.split(".").pop().toUpperCase()
+                            color: Theme.foreground
+                            font.family: Theme.font
+                            font.pixelSize: 10
+                            font.weight: Font.Bold
                         }
                     }
                 }
@@ -184,28 +224,16 @@ Item {
                         }
                     }
                 }
-                Row {
+                // One line: the artists, then the tags, then +N.
+                BadgeLine {
                     visible: tile.tags.length > 0 || tile.artists.length > 0
                     Layout.fillWidth: true
-                    spacing: 4
-                    clip: true
-                    Repeater {
-                        model: tile.artists
-                        Badge {
-                            required property string modelData
-                            soft: true
-                            icon: "brush"
-                            text: modelData
-                        }
-                    }
-                    Repeater {
-                        model: tile.tags
-                        Badge {
-                            required property string modelData
-                            soft: true
-                            text: modelData
-                        }
-                    }
+                    items: tile.artists.map(a => ({
+                                text: a,
+                                icon: "brush"
+                            })).concat(tile.tags.map(t => ({
+                                text: t
+                            })))
                 }
             }
         }

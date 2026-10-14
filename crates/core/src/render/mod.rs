@@ -48,6 +48,15 @@ pub struct Picture {
     pub source: PathBuf,
     pub geometry: Geometry,
     pub content: Content,
+    /// An animated wallpaper held on its frame (its monitor's `paused`
+    /// adjustment): the renderer holds its playback while any monitor
+    /// showing it says so.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub paused: bool,
+}
+
+fn is_false(value: &bool) -> bool {
+    !value
 }
 
 impl Picture {
@@ -71,6 +80,7 @@ impl Picture {
                 fit,
                 prepared_size: None,
             },
+            paused: false,
         }
     }
 }

@@ -205,6 +205,21 @@ def daemon_scenario(root, base, env, source=None):
         assert status["screens"][0]["playback"]["generation"] == generation, status
         print("adjusted without a new decoder")
 
+        # Paused here (the control panel's Pause): one monitor's adjustment
+        # holds the shared session everywhere it's shown, in place; --play
+        # goes on with the same session.
+        cli("adjust", monitor, "--pause")
+        status = wait("paused here", lambda st, sc: states(sc) == {"paused"} and all(s["playback"]["held"] for s in sc))
+        assert status["screens"][0]["playback"]["generation"] == generation, status
+        held_at = [s["playback"]["sequence"] for s in status["screens"]]
+        time.sleep(1)
+        status = ask({"cmd": "status"})
+        assert [s["playback"]["sequence"] for s in status["screens"]] == held_at, status
+        cli("adjust", monitor, "--play")
+        status = wait("played again", lambda st, sc: states(sc) == {"playing"} and not any(s["playback"]["held"] for s in sc))
+        assert status["screens"][0]["playback"]["generation"] == generation, status
+        print("paused here and played again")
+
         cli("settings", "set", "animation.paused=true")
         status = wait("pause", lambda st, sc: states(sc) == {"paused"} and st["playback_paused"])
         held = [s["playback"]["sequence"] for s in status["screens"]]
@@ -237,6 +252,17 @@ def daemon_scenario(root, base, env, source=None):
         daemon = start()
         status = wait("playing after restart", playing)
         print("daemon restart: saved animation plays again")
+
+        # Paused here, it's restored paused: held from its first frame.
+        cli("adjust", status["screens"][0]["monitor"], "--pause")
+        wait("paused before restart", lambda st, sc: states(sc) == {"paused"})
+        stop(daemon)
+        daemon = start()
+        status = wait("paused after restart", lambda st, sc: states(sc) == {"paused"} and all(s["playback"]["held"] for s in sc))
+        assert all(s["playback"]["sequence"] == 0 for s in status["screens"]), status
+        cli("adjust", status["screens"][0]["monitor"], "--play")
+        status = wait("playing after paused restart", playing)
+        print("daemon restart: a paused animation comes back paused")
         monitors = [s["monitor"] for s in status["screens"]]
 
         # A monitor connected later shows its saved animation, playing.

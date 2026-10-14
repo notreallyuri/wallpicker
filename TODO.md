@@ -21,6 +21,8 @@ and git history.
 
 - [ ] **Animated wallpapers**: GIF/animated WebP first; implementation plan below. Video is
   a separate phase.
+- [ ] **UI updates** (`feat/ui-updates`): layout, the control panel, animated wallpapers in
+  the picker, a visual refresh; plan below.
 - [ ] **Wallpaper control panel**: per-monitor playback controls, first in Adjust, later a
   non-modal side panel; plan below.
 - [ ] **Lock and login screens**: use the current wallpaper for hyprlock and display-manager
@@ -159,9 +161,9 @@ identity and the renderer shows their first frame.
 - [x] Scan, thumbnail and apply GIF files (thumbnails use the first frame).
 - [ ] Media responses with animated classification, cached by file identity/modification and
   invalidated on changes; audit provider format checks.
-- [ ] Use first-frame thumbnails and an animated badge. Keep grid thumbnails still; load an
-  animated details preview only while visible, and release it when closed/hidden. Verify
-  Quickshell decoder/timing support; provide a still preview with explanation if unsupported.
+- [x] First-frame thumbnails and a film badge on animated tiles (the scan probes GIF/WebP for
+  their frame count: `LocalImage.frames`). Details shows the picture; an animated one plays
+  there (Qt's AnimatedImage at the preview's size) only while it's open, with its own pause.
 - [ ] Verify fits, frame adjustments, standalone cuts, spans, presets, Previous, slideshow,
   workspace automation and daemon restoration. Use the representative first frame for colors
   and Noctalia; do not retheme, append history or notify the picker on every animation frame.
@@ -223,33 +225,67 @@ identity and the renderer shows their first frame.
   hardware decoding, codec support, timestamp/seek/loop behavior, YUV conversion, GPU import
   and fallback cost. Local files first, muted playback; no audio/network streaming scope.
 
+## UI updates (planned 2026-10-13)
+
+Plan, findings and mockups: the Roadmap page of the
+[design system file](https://www.figma.com/design/gGlwX9OP3fJrNwAvSmChDC/?node-id=24-2).
+Keep the core components; change the layout around them. Mockups first, reviewed there.
+
+- [x] Load Nunito: `Theme.font` stayed "sans-serif" (a binding on the Instantiator's
+  `objectAt()` never re-ran), so the UI used the system sans since the Quickshell rewrite.
+- [x] Decided (2026-10-13): the Adjust dialog is retired for the panel; the panel opens on
+  demand from a toggle on the picker's right edge; it is resizable (drag its left edge);
+  Filters is a popover (a collapsible row mocked too, to compare).
+- [x] Stage 1 mockups final (2026-10-14): the drawer is removed (mockup A: monitors are
+  chosen in the bar's pills, adjusted in the panel); Filters as a popover (mockup C), with
+  the collapsible row (mockup D) as an alternative picked in Settings → Appearance.
+- [x] The open panel narrows the grid at Comfortable and Large (P1; columns animate, every
+  tile stays clickable) and overlays it at Compact (P4).
+- [x] Stage 2 and 3 mockups final (2026-10-14): "Stage 2 · Control panel" (P1–P4, P6; the
+  panel is a floating card with the tiles' hairline border) and "Stage 3 · Animated" (S1–S3).
+- [x] Stage 1, picker layout: the drawer is gone (the pills stay in the bar; right-click one
+  to adjust), Local's Filters button opens the tags and artists in a popover (or rows, Settings
+  → Appearance), Color/Flat/Random turn to icons when narrow. Online/Collections already had
+  the one-row card with Filters. The first tile row starts ~143 px down (was ~460).
+- [ ] Check stage 1 on the desktop (two monitors, a span, Compact size, the popover's keys).
+- [x] Stage 2, the control panel (panel/): a floating card beside the grid following the pills
+  (a monitor: preview/framing, Frame, Mirror, Fit, About; All: Mirror and Fit for every
+  monitor; the span: framing, Arrange → the Span dialog), footer Previous/Favorite/Details/
+  Stop spanning/Reset; edge toggle, resizable 320–560, floats over the grid at Compact (Esc).
+  The Adjust dialog is gone; right-clicking a pill opens the panel on it.
+- [ ] Check stage 2 on the desktop: two monitors, All, a span (framing, Arrange, Stop
+  spanning), resizing, and the Framer at the panel's sizes.
+- [x] Stage 3, animated wallpapers in the picker: film badge on tiles, Details preview that
+  plays, the panel's Playback section (per-wallpaper pause), a play/pause mark on the pills.
+- [ ] Check stage 3 on the desktop: Pause/Play on a shared animation (both monitors), the pill
+  marks, a paused wallpaper across a restart, the Details preview of a 4K GIF (memory).
+- [x] Stage 4, visual refresh (mockups R1–R4): tiles keep their tags on one line (+N); preset
+  cards four across, On now and a calm Not connected; one EmptyState for empty/no-match/error
+  views and toasts with the same marks; Settings with section icons, grouped rows (Group,
+  Field `side`, ToggleField rows), a Notice, and Unsaved changes/Revert in the footer.
+- [ ] Check stage 4 on the desktop (On now with your monitors, every Settings page, toasts).
+
 ## Wallpaper control panel (planned 2026-10-12)
 
 Active controls are growing (frame, mirror, fit, now playback). Stage them: extend Adjust
 first, then promote its sections into a Wallpaper Engine-like side panel once it needs to stay
 open while browsing. Both host the same section components, so stage 2 moves no logic.
 
-### 1. Playback in Adjust
+### 1. Playback (built straight into the control panel, 2026-10-14)
 
-- [ ] A Playback section for the monitor's animation: pause/resume, state and fps, and why
-  it's a still. Hidden for static wallpapers.
-- [ ] Pause per wallpaper, not per output: monitors sharing one animation share one decoder
-  and clock, so pausing it holds it everywhere it's shown (the section names those monitors).
-  A new pause reason, independent of the global pause: either one holds it.
-- [ ] Temporary like adjustments: saved per monitor in `state.json`, cleared when that
-  monitor's wallpaper changes, restored by the daemon (restore starts it paused, no flash).
-- [ ] Daemon request and status: per-session pause in the renderer; `wallpicker adjust
-  MONITOR --pause|--play`; the drawer card's button pauses that wallpaper, with "pause all"
-  staying in Settings and the drawer's All card.
+- [x] A Playback section for the monitor's animation (panel/PlaybackSection.qml): state and
+  fps, Pause/Play, why it's a still, Try again after a decoding error. Only for animations.
+- [x] Pause per wallpaper: a `paused` adjustment (core `Adjust`, render `Picture`), held by a
+  new `PauseReason::Wallpaper` while any monitor showing the session says so; independent of
+  the global pause. Status reports `held`.
+- [x] Temporary like adjustments: in `state.json`, cleared with the wallpaper, restored paused
+  from its first frame (private-KWin check). `wallpicker adjust MONITOR --pause|--play`.
 
-### 2. Side panel (when Adjust outgrows a dialog)
+### 2. Side panel
 
-- [ ] Non-modal panel on the right, opened from a monitor's card or pill, one monitor at a
-  time with a switcher; the grid stays usable beside it and applying keeps it open. Esc and
-  the monitor drawer close it; Compact/720p sizes overlay the grid instead of narrowing it.
-- [ ] Sections: live preview, Frame/Mirror/Fit (from Adjust), Playback, wallpaper info (size,
-  frames, loop length, decoder memory), quick actions (Previous, favorite, details).
-- [ ] Decide then whether Adjust remains as the compact form or is replaced.
+- [x] Done as stage 2 of the UI updates (panel/): follows the pills (no switcher of its own),
+  reflows the grid, overlays at Compact, replaced the Adjust dialog and the drawer.
+- [ ] About: loop length and decoder memory (the probe gives the frame count only).
 
 ### Later playback options (not scheduled)
 

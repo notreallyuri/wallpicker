@@ -14,6 +14,8 @@ pub enum PauseReason {
     NoVisibleOutputs = 8,
     /// The compositor stopped asking for frames ([`super::Visibility`]).
     Hidden = 16,
+    /// Its wallpaper is paused on a monitor showing it (the control panel).
+    Wallpaper = 32,
 }
 
 /// One current source frame and one clock, irrespective of output count. The

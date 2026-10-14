@@ -81,6 +81,7 @@ fn prepare_with_wake(preparer: &Preparer, source: &Source, wake: Arc<dyn Fn(u64)
             monitor: "A".into(),
             picture: Picture {
                 source: source.path().into(),
+                paused: false,
                 geometry: Geometry::default(),
                 content: Content::Animated {
                     identity: source.identity().clone(),

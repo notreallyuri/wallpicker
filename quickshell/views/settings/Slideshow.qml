@@ -29,49 +29,63 @@ ColumnLayout {
 
     spacing: 20
 
-    ToggleField {
-        label: "Change the wallpaper by itself"
-        checked: !!section.s.enabled
-        onToggled: section.form.set("slideshow.enabled", !section.s.enabled)
-    }
-    Field {
-        label: "Every"
-        Select {
-            minWidth: 180
-            options: [["5", "5 minutes"], ["10", "10 minutes"], ["15", "15 minutes"], ["30", "30 minutes"], ["60", "1 hour"], ["120", "2 hours"], ["240", "4 hours"], ["480", "8 hours"], ["1440", "24 hours"]]
-            value: String(section.s.minutes || 30)
-            onPicked: v => section.form.set("slideshow.minutes", parseInt(v))
-        }
-    }
-    PickFields {
-        Layout.fillWidth: true
-        form: section.form
-        path: "slideshow"
-    }
-    Field {
-        visible: Monitors.list.length > 1
-        label: "On these monitors"
-        description: "None picked: all of them."
-        Flow {
+    Group {
+        title: "When"
+        ToggleField {
             Layout.fillWidth: true
-            spacing: 6
-            Repeater {
-                model: Monitors.list.map(m => m.name)
-                Chip {
-                    required property string modelData
-                    readonly property var picked: section.s.monitors || []
-                    text: modelData
-                    on: picked.includes(modelData)
-                    onClicked: section.form.set("slideshow.monitors", on ? picked.filter(m => m !== modelData) : picked.concat([modelData]))
-                }
+            label: "Change the wallpaper by itself"
+            checked: !!section.s.enabled
+            onToggled: section.form.set("slideshow.enabled", !section.s.enabled)
+        }
+        Field {
+            Layout.fillWidth: true
+            side: true
+            label: "Every"
+            Select {
+                minWidth: 180
+                options: [["5", "5 minutes"], ["10", "10 minutes"], ["15", "15 minutes"], ["30", "30 minutes"], ["60", "1 hour"], ["120", "2 hours"], ["240", "4 hours"], ["480", "8 hours"], ["1440", "24 hours"]]
+                value: String(section.s.minutes || 30)
+                onPicked: v => section.form.set("slideshow.minutes", parseInt(v))
             }
         }
     }
-    ToggleField {
+
+    Group {
+        title: "What"
+        PickFields {
+            Layout.fillWidth: true
+            form: section.form
+            path: "slideshow"
+        }
+    }
+    Group {
+        title: "Where"
         visible: Monitors.list.length > 1
-        label: "A different wallpaper on each monitor"
-        checked: !!section.s.each
-        onToggled: section.form.set("slideshow.each", !section.s.each)
+        Field {
+            Layout.fillWidth: true
+            label: "On these monitors"
+            description: "None picked: all of them."
+            Flow {
+                Layout.fillWidth: true
+                spacing: 6
+                Repeater {
+                    model: Monitors.list.map(m => m.name)
+                    Chip {
+                        required property string modelData
+                        readonly property var picked: section.s.monitors || []
+                        text: modelData
+                        on: picked.includes(modelData)
+                        onClicked: section.form.set("slideshow.monitors", on ? picked.filter(m => m !== modelData) : picked.concat([modelData]))
+                    }
+                }
+            }
+        }
+        ToggleField {
+            Layout.fillWidth: true
+            label: "A different wallpaper on each monitor"
+            checked: !!section.s.each
+            onToggled: section.form.set("slideshow.each", !section.s.each)
+        }
     }
 
     // The night: its own set, in its own hours.

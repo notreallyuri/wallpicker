@@ -1,8 +1,8 @@
 // A monitor (monitor_bar.rs's Screen): a dark bezel with a thin chin around
 // the screen, which shows its wallpaper in the monitor's own proportions
-// under a faint glare, on a tapered neck and a base. Sizes: "card" (the
-// drawer), "desk" (one of several on the All card: no base, the desk draws
-// one) and "big" (the Adjust dialog). An empty screen when nothing's set.
+// under a faint glare, on a tapered neck and a base. Sizes: "card",
+// "desk" (one of several on a desk: no base, the desk draws one) and "big"
+// (the Adjust dialog). An empty screen when nothing's set.
 // Children replace the wallpaper on the screen (the Adjust dialog's framer).
 import QtQuick
 import QtQuick.Effects
@@ -21,6 +21,9 @@ Item {
     /// The monitor's resolution, for its proportions.
     property real monitorWidth: 16
     property real monitorHeight: 9
+    /// As wide as this (the control panel's preview), up to 1.6 times its
+    /// size's screen; 0: its size's.
+    property real fitWidth: 0
     /// The screen's own contents, instead of `path`'s picture.
     default property alias screenContent: custom.data
     readonly property alias screen: screen
@@ -33,8 +36,9 @@ Item {
             desk: [56, 3, 6, 8, 5, 10, 24, 0, 0],
             big: [192, 6, 12, 14, 8, 20, 48, 8, 144]
         })[size]
-    readonly property real screenHeight: dims[0]
-    readonly property real screenWidth: Math.round(screenHeight * (monitorWidth > 0 && monitorHeight > 0 ? monitorWidth / monitorHeight : 16 / 9))
+    readonly property real ratio: monitorWidth > 0 && monitorHeight > 0 ? monitorWidth / monitorHeight : 16 / 9
+    readonly property real screenHeight: fitWidth > 0 ? Math.round(Math.min(dims[0] * 1.6, (fitWidth - 2 * dims[1]) / ratio)) : dims[0]
+    readonly property real screenWidth: Math.round(screenHeight * ratio)
     readonly property var flip: Monitors.adjustOf(monitor).flip
     /// Its part of a picture spanned across the monitors, and the
     /// picture's size: the screen shows that part (else the whole picture,
@@ -127,7 +131,10 @@ Item {
                 anchors.fill: parent
                 source: figure.thumb ? "file://" + figure.thumb : ""
                 fillMode: Image.PreserveAspectCrop
-                sourceSize.width: figure.screenWidth * Screen.devicePixelRatio
+                // In 128 px steps, the old one shown until a new size is in
+                // (the control panel's preview resizes with the panel).
+                sourceSize.width: Math.ceil(figure.screenWidth * Screen.devicePixelRatio / 128) * 128
+                retainWhileLoading: true
                 asynchronous: true
                 // Mirrored like it's shown (Adjust).
                 transform: Scale {

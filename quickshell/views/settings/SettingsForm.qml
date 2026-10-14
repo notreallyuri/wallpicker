@@ -11,12 +11,16 @@ QtObject {
 
     property var draft: ({})
     property bool saving: false
+    /// The draft as loaded (or last saved): it's unsaved when it differs.
+    property string loaded: "{}"
+    readonly property bool dirty: JSON.stringify(draft) !== loaded
     /// The settings' choices (settings.options): backends, fits...
     property var options: null
 
     /// A fresh draft from the saved settings.
     function load() {
         draft = JSON.parse(JSON.stringify(Settings.data || {}));
+        loaded = JSON.stringify(draft);
         if (!options)
             Backend.request("settings.options", {}, o => form.options = o);
     }
@@ -49,6 +53,7 @@ QtObject {
         }, saved => {
             form.saving = false;
             Settings.data = saved;
+            form.loaded = JSON.stringify(form.draft);
             Toasts.info("Settings saved");
             if (done)
                 done();

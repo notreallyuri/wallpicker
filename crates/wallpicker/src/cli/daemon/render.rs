@@ -163,6 +163,7 @@ mod tests {
                 monitor: "A".into(),
                 picture: Picture {
                     source: file,
+                    paused: false,
                     geometry: Default::default(),
                     content: wallpicker_core::render::Content::Animated {
                         identity: source.identity().clone(),

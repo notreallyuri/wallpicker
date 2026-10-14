@@ -33,8 +33,14 @@ ClippingRectangle {
         source: thumb.file ? "file://" + thumb.file : ""
         fillMode: Image.PreserveAspectCrop
         asynchronous: true
-        sourceSize.width: thumb.width * Screen.devicePixelRatio
-        opacity: status === Image.Ready ? 1 : 0
+        // In 128 px steps, the old one shown until a new size is in.
+        sourceSize.width: Math.ceil(thumb.width * Screen.devicePixelRatio / 128) * 128
+        retainWhileLoading: true
+        property bool came: false
+        onSourceChanged: came = false
+        onStatusChanged: if (status === Image.Ready)
+            came = true
+        opacity: came ? 1 : 0
         Behavior on opacity {
             NumberAnimation {
                 duration: Theme.ms(150)

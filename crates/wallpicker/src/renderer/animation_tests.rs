@@ -36,6 +36,7 @@ fn batch(source: &Source, monitors: &[String]) -> Batch {
             monitor: monitor.clone(),
             picture: Picture {
                 source: source.path().into(),
+                paused: false,
                 geometry: if index == 1 {
                     Geometry {
                         view: View::Region {

@@ -196,15 +196,15 @@ QtObject {
                 shown: Lifetime.shown,
                 trashFor: Dialogs.trashFor,
                 localDetailsFor: Dialogs.localDetailsFor,
-                adjusting: Dialogs.adjusting,
+                panel: Prefs.panelOpen,
                 adjust: Monitors.adjust,
                 current: Monitors.current,
                 selection: Monitors.selection,
                 spanned: Monitors.spanned,
                 applying: Monitors.applying,
-                drawer: Monitors.drawerOpen,
                 focus: String(hooks.root.Window.activeFocusItem).split("(")[0],
-                active: hooks.root.Window.active
+                active: hooks.root.Window.active,
+                font: Theme.font
             });
         }
 
@@ -224,9 +224,11 @@ QtObject {
             return JSON.stringify(s);
         }
 
-        /// Open a dialog: settings (at section `arg`), span (the span's
-        /// Adjust), across (the Span dialog for picture `arg`), adjust
-        /// (monitor `arg`), filters (Online's), details (picture `arg`'s).
+        /// Open a dialog: settings (at section `arg`), span (the control
+        /// panel on the span), across (the Span dialog for picture `arg`),
+        /// arrange (the Span dialog arranging the span shown), adjust (the
+        /// control panel on monitor `arg`), filters (Online's), details
+        /// (picture `arg`'s).
         function dialog(name: string, arg: string): string {
             switch (name) {
             case "reassign": {
@@ -244,6 +246,9 @@ QtObject {
             case "across":
                 Dialogs.spanAcross(arg);
                 break;
+            case "arrange":
+                Dialogs.arrangeSpan();
+                break;
             case "adjust":
                 Dialogs.adjust(arg);
                 break;
@@ -256,6 +261,15 @@ QtObject {
             default:
                 return "no " + name;
             }
+            return "ok";
+        }
+
+        /// Show a toast ("info" or "error"), to look at it.
+        function toast(kind: string, title: string): string {
+            if (kind === "error")
+                Toasts.error(title, "A line of detail under it");
+            else
+                Toasts.info(title, "A line of detail under it");
             return "ok";
         }
 

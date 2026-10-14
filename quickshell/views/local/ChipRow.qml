@@ -1,12 +1,14 @@
-// A row of the search card (tags.rs): every tag (or artist) in use with its
-// count, the chosen ones first, then by name or the most used first
-// (Settings → General), toggling the filter; All | Any once two are
-// chosen (where `matchAll` applies); Clear; one line, or all of them with
-// Expand (only when they don't fit). Hidden when there are none.
+// A row under the search bar (tags.rs; the "rows" filters layout): every
+// tag (or artist) in use with its count, the chosen ones first, then by
+// name or the most used first (Settings → General), toggling the filter;
+// All | Any once two are chosen (where `matchAll` applies); Clear; one
+// line, or all of them with Expand (only when they don't fit). Hidden
+// when there are none.
 import QtQuick
 import QtQuick.Layouts
 import qs.components
 import qs.services
+import "Filters.js" as Filters
 
 RowLayout {
     id: row
@@ -29,11 +31,7 @@ RowLayout {
     /// "name" (A to Z) or "count" (the most used first, then by name).
     property string order: "name"
 
-    // Every comparison decides (the name last): the engine's sort isn't
-    // stable, so ties would come out in any order.
-    readonly property var ordered: counts.slice().sort((a, b) => (chosen.includes(b.name) - chosen.includes(a.name)) || (order === "count" ? b.count - a.count : 0) || a.name.localeCompare(b.name, undefined, {
-            sensitivity: "base"
-        }) || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))
+    readonly property var ordered: Filters.ordered(counts, chosen, order)
     // Whether the chips run past one line.
     readonly property bool overflowing: chips.implicitHeight > 30
 

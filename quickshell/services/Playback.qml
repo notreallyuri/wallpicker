@@ -1,6 +1,6 @@
 // The animated wallpapers on screen: what each monitor's is doing (playing,
 // paused, a still) and how fast, read from the daemon every 2 s while
-// something shows it (the monitor drawer, Settings → Animated wallpapers)
+// something shows it (Settings → Animated wallpapers)
 // and the picker is open. Pausing acts on all of them at once.
 pragma Singleton
 import QtQuick
@@ -11,7 +11,7 @@ Singleton {
 
     /// {running, paused, monitors: {name: {state, fps, reason}}}; null until read.
     property var data: null
-    /// Things showing it besides the drawer (a settings section).
+    /// Things showing it (a settings section).
     property int watchers: 0
     readonly property bool enabled: !!(Settings.data.animation && Settings.data.animation.enabled)
     readonly property bool paused: !!(Settings.data.animation && Settings.data.animation.paused)
@@ -58,7 +58,7 @@ Singleton {
 
     Timer {
         interval: 2000
-        running: (Monitors.drawerOpen || playback.watchers > 0) && Lifetime.shown
+        running: playback.watchers > 0 && Lifetime.shown
         repeat: true
         triggeredOnStart: true
         onTriggered: playback.poll()

@@ -33,6 +33,7 @@ fn prepare(preparer: &Preparer, source: &Source) -> (SourceSession, mpsc::Receiv
         monitor: monitor.into(),
         picture: Picture {
             source: source.path().into(),
+            paused: false,
             geometry: Geometry::default(),
             content: Content::Animated {
                 identity: source.identity().clone(),

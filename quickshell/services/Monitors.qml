@@ -2,10 +2,9 @@
 // applies: one monitor, all of them, or the span (the app's rule: single
 // choice; picking the chosen one again keeps it). Spanned, the span's
 // monitors act as one: picked, a click spans the picture across them; the
-// others stay on their own (the span's actions: services/Span). Whether
-// the drawer of monitors
-// under the top bar is open. A wallpaper changed by something else while the
-// picker is open (the slideshow, a workspace, the plugin) gets a toast.
+// others stay on their own (the span's actions: services/Span). A
+// wallpaper changed by something else while the picker is open (the
+// slideshow, a workspace, the plugin) gets a toast.
 pragma Singleton
 import QtQuick
 import Quickshell
@@ -22,8 +21,6 @@ Singleton {
     /// monitor -> its adjustments ({flip: {h, v}, fit, frame}), until
     /// another wallpaper goes on it
     property var adjust: ({})
-    /// The drawer of monitors under the top bar (remembered).
-    readonly property bool drawerOpen: Prefs.monitorsOpen
     /// A monitor's name, `all` or `spanTarget`.
     property string selection: ""
     /// Paths being applied (a spinner on their tile).
@@ -69,10 +66,6 @@ Singleton {
         return list.filter(m => current[m.name] === path).map(m => m.name);
     }
 
-    function toggleDrawer() {
-        Prefs.monitorsOpen = !Prefs.monitorsOpen;
-    }
-
     /// A monitor of the span picks the span.
     function select(name) {
         selection = inSpan(name) ? spanTarget : name;
@@ -111,7 +104,9 @@ Singleton {
             },
             fit: a.fit || null,
             frame: a.frame || null,
-            span: a.span || null
+            span: a.span || null,
+            // Its animated wallpaper held (the control panel's Pause).
+            paused: !!a.paused
         };
     }
 
@@ -138,7 +133,7 @@ Singleton {
             next = Object.assign({}, next, {
                 span: null
             });
-        const none = !next.flip.h && !next.flip.v && !next.fit && !next.frame && !next.span;
+        const none = !next.flip.h && !next.flip.v && !next.fit && !next.frame && !next.span && !next.paused;
         const map = Object.assign({}, adjust);
         if (none)
             delete map[name];

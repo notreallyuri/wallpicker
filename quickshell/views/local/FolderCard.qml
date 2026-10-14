@@ -73,7 +73,9 @@ Item {
                     fillMode: Image.PreserveAspectCrop
                     asynchronous: true
                     cache: false
-                    sourceSize.width: width * Screen.devicePixelRatio
+                    // In 128 px steps, the old one shown until a new size is in.
+                    sourceSize.width: Math.ceil(width * Screen.devicePixelRatio / 128) * 128
+                    retainWhileLoading: true
                     opacity: card.hovered ? 0.7 : 0.5
                     Behavior on opacity {
                         NumberAnimation {

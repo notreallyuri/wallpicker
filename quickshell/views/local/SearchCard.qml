@@ -1,5 +1,7 @@
 // The card floating over the top of the grid (rounded-2xl, frosted glass
-// over the grid, a soft shadow): the search row, the tags and the artists.
+// over the grid, a soft shadow): the search row, and with the "rows"
+// filters layout (Settings → Appearance) the tags and the artists under
+// it while Filters has them open.
 import QtQuick
 import QtQuick.Effects
 import QtQuick.Layouts
@@ -55,35 +57,41 @@ Item {
             Layout.fillWidth: true
             local: card.local
         }
-        // The two rows' chips start at one place.
-        ChipRow {
-            id: tagRow
+        // The rows layout, opened by Filters.
+        ColumnLayout {
             Layout.fillWidth: true
-            labelWidth: artistRow.visible ? Math.max(labelImplicitWidth, artistRow.labelImplicitWidth) : -1
-            label: "Tags"
-            order: Prefs.tagOrder
-            counts: Library.tagCounts
-            chosen: card.local.tagFilter
-            matchAll: card.local.tagsMatchAll
-            expanded: Prefs.tagsExpanded
-            onExpandedChanged: Prefs.tagsExpanded = expanded
-            onToggled: name => card.local.toggleTag(name)
-            onCleared: card.local.tagFilter = []
-            onMatchToggled: card.local.tagsMatchAll = !card.local.tagsMatchAll
-        }
-        // Any of the artists picked (a wallpaper rarely has two).
-        ChipRow {
-            id: artistRow
-            Layout.fillWidth: true
-            labelWidth: tagRow.visible ? Math.max(labelImplicitWidth, tagRow.labelImplicitWidth) : -1
-            label: "Artists"
-            order: Prefs.tagOrder
-            counts: Library.artistCounts
-            chosen: card.local.artistFilter
-            expanded: Prefs.artistsExpanded
-            onExpandedChanged: Prefs.artistsExpanded = expanded
-            onToggled: name => card.local.toggleArtist(name)
-            onCleared: card.local.artistFilter = []
+            visible: Prefs.filtersLayout === "rows" && Prefs.filtersOpen
+            spacing: 8
+            // The two rows' chips start at one place.
+            ChipRow {
+                id: tagRow
+                Layout.fillWidth: true
+                labelWidth: artistRow.visible ? Math.max(labelImplicitWidth, artistRow.labelImplicitWidth) : -1
+                label: "Tags"
+                order: Prefs.tagOrder
+                counts: Library.tagCounts
+                chosen: card.local.tagFilter
+                matchAll: card.local.tagsMatchAll
+                expanded: Prefs.tagsExpanded
+                onExpandedChanged: Prefs.tagsExpanded = expanded
+                onToggled: name => card.local.toggleTag(name)
+                onCleared: card.local.tagFilter = []
+                onMatchToggled: card.local.tagsMatchAll = !card.local.tagsMatchAll
+            }
+            // Any of the artists picked (a wallpaper rarely has two).
+            ChipRow {
+                id: artistRow
+                Layout.fillWidth: true
+                labelWidth: tagRow.visible ? Math.max(labelImplicitWidth, tagRow.labelImplicitWidth) : -1
+                label: "Artists"
+                order: Prefs.tagOrder
+                counts: Library.artistCounts
+                chosen: card.local.artistFilter
+                expanded: Prefs.artistsExpanded
+                onExpandedChanged: Prefs.artistsExpanded = expanded
+                onToggled: name => card.local.toggleArtist(name)
+                onCleared: card.local.artistFilter = []
+            }
         }
     }
 }
