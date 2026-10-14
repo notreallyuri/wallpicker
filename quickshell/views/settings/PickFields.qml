@@ -11,6 +11,8 @@ ColumnLayout {
 
     property var form
     property string path
+    /// In a Group's card: its fields are its rows (hairlines between).
+    readonly property bool grouped: !!parent && parent.grouped === true
     readonly property var v: form ? (form.get(path) || {}) : ({})
     readonly property var colors: form && form.options ? [["", "Any color"]].concat(form.options.hues.concat(form.options.tones).map(c => [c.value, c.label])) : []
 
@@ -18,7 +20,7 @@ ColumnLayout {
         form.set(path + "." + key, value);
     }
 
-    spacing: 16
+    spacing: grouped ? 0 : 16
 
     ToggleField {
         label: "Only favorites"
@@ -26,6 +28,8 @@ ColumnLayout {
         onToggled: set.put("favorites", !set.v.favorites)
     }
     Field {
+        Layout.fillWidth: true
+        side: true
         label: "Only with the color"
         Select {
             minWidth: 180

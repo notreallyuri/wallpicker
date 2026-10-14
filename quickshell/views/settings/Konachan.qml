@@ -12,15 +12,18 @@ ColumnLayout {
 
     spacing: 20
 
-    Field {
-        Layout.fillWidth: true
-        label: "Site"
-        description: "Same posts on both. konachan.net only has safe-for-work ones; konachan.com adds the Questionable and Explicit ratings, which the Filters dialog then offers. No account or key is needed."
-        Select {
-            minWidth: 300
-            options: section.form && section.form.options ? section.form.options.konachan_sites.map(x => [x.value, x.label]) : []
-            value: section.d.konachan_site || "net"
-            onPicked: v => section.form.set("konachan_site", v)
+    Group {
+        Field {
+            Layout.fillWidth: true
+            side: true
+            label: "Site"
+            description: "Same posts on both. konachan.net only has safe-for-work ones; konachan.com adds the Questionable and Explicit ratings, which the Filters dialog then offers. No account or key is needed."
+            Select {
+                minWidth: 300
+                options: section.form && section.form.options ? section.form.options.konachan_sites.map(x => [x.value, x.label]) : []
+                value: section.d.konachan_site || "net"
+                onPicked: v => section.form.set("konachan_site", v)
+            }
         }
     }
     Note {

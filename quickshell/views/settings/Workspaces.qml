@@ -50,19 +50,21 @@ ColumnLayout {
         visible: section.choosing === ""
         Layout.fillWidth: true
         spacing: 20
-        ToggleField {
-            Layout.fillWidth: true
-            label: "A wallpaper per workspace"
-            description: "When a monitor switches to a workspace that has a wallpaper, it goes on that monitor. Workspaces without one leave the monitor as it is. Switching doesn't count as a pick: Previous still goes back to the one you chose before. Save to apply."
-            checked: !!section.w.enabled
-            onToggled: section.form.set("workspaces.enabled", !section.w.enabled)
-        }
-        ToggleField {
-            Layout.fillWidth: true
-            label: "Remember what I put on each workspace"
-            description: "A wallpaper you apply (or go back to) becomes the wallpaper of the workspace its monitor is showing. Random and the slideshow don't change them."
-            checked: section.w.remember !== false
-            onToggled: section.form.set("workspaces.remember", section.w.remember === false)
+        Group {
+            ToggleField {
+                Layout.fillWidth: true
+                label: "A wallpaper per workspace"
+                description: "When a monitor switches to a workspace that has a wallpaper, it goes on that monitor. Workspaces without one leave the monitor as it is. Switching doesn't count as a pick: Previous still goes back to the one you chose before. Save to apply."
+                checked: !!section.w.enabled
+                onToggled: section.form.set("workspaces.enabled", !section.w.enabled)
+            }
+            ToggleField {
+                Layout.fillWidth: true
+                label: "Remember what I put on each workspace"
+                description: "A wallpaper you apply (or go back to) becomes the wallpaper of the workspace its monitor is showing. Random and the slideshow don't change them."
+                checked: section.w.remember !== false
+                onToggled: section.form.set("workspaces.remember", section.w.remember === false)
+            }
         }
         Spinner {
             visible: section.rows === null

@@ -19,36 +19,40 @@ ColumnLayout {
 
     spacing: 20
 
-    ToggleField {
-        Layout.fillWidth: true
-        label: "Play animated wallpapers (experimental)"
-        description: "GIF and animated WebP wallpapers play on the GPU, one decoder for every monitor showing the same one. Off, or without hardware GPU playback, they show their first frame. Save to apply."
-        checked: !!section.a.enabled
-        onToggled: section.form.set("animation.enabled", !section.a.enabled)
-    }
-    ToggleField {
-        Layout.fillWidth: true
-        visible: Playback.enabled || !!section.a.enabled
-        label: "Pause animations"
-        description: "Every animated wallpaper holds its frame until resumed, after a restart too. Applies right away."
-        checked: Playback.paused
-        onToggled: Playback.setPaused(!Playback.paused)
-    }
-    Field {
-        Layout.fillWidth: true
-        label: "Frame rate"
-        description: "At most this many new frames a second on each monitor. Animations slower than that keep their own pace; a lower cap saves GPU and CPU on fast ones. Save to apply."
-        Select {
-            minWidth: 240
-            options: {
-                const choices = [["15", "15 a second"], ["24", "24 a second"], ["30", "30 a second"], ["60", "60 a second (default)"], ["120", "120 a second"], ["0", "As fast as the display refreshes"]];
-                // One set from the command line keeps its own entry.
-                if (!choices.some(c => c[0] === String(section.fps)))
-                    choices.push([String(section.fps), section.fps + " a second"]);
-                return choices;
+    Group {
+        title: "Playback"
+        ToggleField {
+            Layout.fillWidth: true
+            label: "Play animated wallpapers (experimental)"
+            description: "GIF and animated WebP wallpapers play on the GPU, one decoder for every monitor showing the same one. Off, or without hardware GPU playback, they show their first frame. Save to apply."
+            checked: !!section.a.enabled
+            onToggled: section.form.set("animation.enabled", !section.a.enabled)
+        }
+        ToggleField {
+            Layout.fillWidth: true
+            visible: Playback.enabled || !!section.a.enabled
+            label: "Pause all"
+            description: "Every animated wallpaper holds its frame until resumed, after a restart too; the control panel's Playback pauses one. Applies right away."
+            checked: Playback.paused
+            onToggled: Playback.setPaused(!Playback.paused)
+        }
+        Field {
+            Layout.fillWidth: true
+            side: true
+            label: "Frame rate"
+            description: "At most this many new frames a second on each monitor. Animations slower than that keep their own pace; a lower cap saves GPU and CPU on fast ones. Save to apply."
+            Select {
+                minWidth: 240
+                options: {
+                    const choices = [["15", "15 a second"], ["24", "24 a second"], ["30", "30 a second"], ["60", "60 a second (default)"], ["120", "120 a second"], ["0", "As fast as the display refreshes"]];
+                    // One set from the command line keeps its own entry.
+                    if (!choices.some(c => c[0] === String(section.fps)))
+                        choices.push([String(section.fps), section.fps + " a second"]);
+                    return choices;
+                }
+                value: String(section.fps)
+                onPicked: v => section.form.set("animation.max_fps", parseInt(v))
             }
-            value: String(section.fps)
-            onPicked: v => section.form.set("animation.max_fps", parseInt(v))
         }
     }
 
