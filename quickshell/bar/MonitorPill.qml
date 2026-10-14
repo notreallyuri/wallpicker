@@ -1,5 +1,6 @@
-// A pill in the top bar: its screen(s) (the slot), a label, and a check when
-// a click applies there. A monitor's, or All's.
+// A pill in the top bar: its screen(s) (the slot), a label, a play or
+// pause mark while its animated wallpaper plays or is held, and a check
+// when a click applies there. A monitor's, or All's.
 import QtQuick
 import QtQuick.Layouts
 import qs.components
@@ -13,6 +14,8 @@ Rectangle {
     default property alias screens: screens.data
     /// A tooltip.
     property string tip
+    /// Its animation's state ("playing", "paused"...; "" none).
+    property string playback
     signal picked
     /// A right-click (a monitor's pill: Adjust).
     signal rightClicked
@@ -43,6 +46,12 @@ Rectangle {
             font.family: Theme.font
             font.pixelSize: 14
             font.weight: Font.Black
+        }
+        Icon {
+            visible: pill.playback === "playing" || pill.playback === "paused"
+            name: pill.playback === "playing" ? "play" : "pause"
+            size: 11
+            color: Theme.primary
         }
         Rectangle {
             visible: pill.on

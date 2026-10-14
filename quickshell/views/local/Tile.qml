@@ -1,6 +1,7 @@
 // A Local tile (ui/src/views/local/tile.rs): a rounded card holding the
-// picture (16:10, its own rounded corners) with the monitors showing it, the
-// name and size, the artists (a brush) then the tags; the star in the corner. Hover: lifts with the
+// picture (16:10, its own rounded corners; a film badge when it's
+// animated) with the monitors showing it, the name and size, the artists
+// (a brush) then the tags; the star in the corner. Hover: lifts with the
 // bouncy ease, a primary ring and glow, the picture zooms 3%. A click
 // applies it.
 import QtQuick
@@ -132,6 +133,36 @@ Item {
                         Badge {
                             required property string modelData
                             text: modelData
+                        }
+                    }
+                }
+                // Animated (GIF, WebP): a film badge; the thumbnail stays
+                // its first frame.
+                Rectangle {
+                    visible: (tile.img.frames || 0) > 1
+                    x: 8
+                    y: parent.height - height - 8
+                    width: animatedRow.implicitWidth + 15
+                    height: animatedRow.implicitHeight + 6
+                    radius: height / 2
+                    color: Theme.a(Theme.card, 0.8)
+                    Row {
+                        id: animatedRow
+                        x: 7
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 4
+                        Icon {
+                            anchors.verticalCenter: parent.verticalCenter
+                            name: "film"
+                            size: 12
+                        }
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: tile.img.name.split(".").pop().toUpperCase()
+                            color: Theme.foreground
+                            font.family: Theme.font
+                            font.pixelSize: 10
+                            font.weight: Font.Bold
                         }
                     }
                 }

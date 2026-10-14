@@ -134,6 +134,8 @@ pub(super) fn prepare(store: &Store, preset: &Preset, outputs: &[Monitor]) -> Re
                 height,
             }),
             span: cuts.get(name).copied().or(region),
+            // A preset's wallpapers come in playing: pausing is temporary.
+            paused: false,
         };
         // Generate all changed images now. A later failure still leaves live
         // state and the desktop untouched; only disposable cache files exist.

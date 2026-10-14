@@ -34,6 +34,7 @@ fn animated(source: &Source, monitor: &str) -> Output {
         monitor: monitor.into(),
         picture: Picture {
             source: source.path().into(),
+            paused: false,
             geometry: Geometry::default(),
             content: Content::Animated {
                 identity: source.identity().clone(),

@@ -69,7 +69,8 @@ ColumnLayout {
         draft = f;
         settle.restart();
     }
-    /// Back as it came: no frame, mirroring or fit of its own.
+    /// Back as it came: no frame, mirroring or fit of its own (paused
+    /// stays paused).
     function reset() {
         if (!adjusted)
             return;
@@ -81,7 +82,8 @@ ColumnLayout {
                 v: false
             },
             fit: null,
-            frame: null
+            frame: null,
+            paused: current.paused
         });
     }
     function flipped(axis) {
@@ -140,6 +142,19 @@ ColumnLayout {
             color: Theme.mutedForeground
             font.family: Theme.font
             font.pixelSize: 12
+        }
+    }
+
+    // Only for an animated wallpaper: while it's there, the daemon's
+    // playback status is read every 2 s.
+    Loader {
+        active: !!view.image && view.image.frames > 1
+        visible: active
+        Layout.fillWidth: true
+        sourceComponent: PlaybackSection {
+            monitor: view.monitor
+            path: view.path
+            frames: view.image ? view.image.frames || 0 : 0
         }
     }
 
@@ -259,6 +274,11 @@ ColumnLayout {
             Layout.fillWidth: true
             label: "File"
             value: view.image ? (view.image.size / 1048576).toFixed(1) + " MB" : ""
+        }
+        InfoRow {
+            Layout.fillWidth: true
+            label: "Frames"
+            value: view.image && view.image.frames > 1 ? view.image.frames + " (animated " + view.path.split(".").pop().toUpperCase() + ")" : ""
         }
         InfoRow {
             Layout.fillWidth: true

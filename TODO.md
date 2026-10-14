@@ -161,9 +161,9 @@ identity and the renderer shows their first frame.
 - [x] Scan, thumbnail and apply GIF files (thumbnails use the first frame).
 - [ ] Media responses with animated classification, cached by file identity/modification and
   invalidated on changes; audit provider format checks.
-- [ ] Use first-frame thumbnails and an animated badge. Keep grid thumbnails still; load an
-  animated details preview only while visible, and release it when closed/hidden. Verify
-  Quickshell decoder/timing support; provide a still preview with explanation if unsupported.
+- [x] First-frame thumbnails and a film badge on animated tiles (the scan probes GIF/WebP for
+  their frame count: `LocalImage.frames`). Details shows the picture; an animated one plays
+  there (Qt's AnimatedImage at the preview's size) only while it's open, with its own pause.
 - [ ] Verify fits, frame adjustments, standalone cuts, spans, presets, Previous, slideshow,
   workspace automation and daemon restoration. Use the representative first frame for colors
   and Noctalia; do not retheme, append history or notify the picker on every animation frame.
@@ -255,8 +255,10 @@ Keep the core components; change the layout around them. Mockups first, reviewed
   The Adjust dialog is gone; right-clicking a pill opens the panel on it.
 - [ ] Check stage 2 on the desktop: two monitors, All, a span (framing, Arrange, Stop
   spanning), resizing, and the Framer at the panel's sizes.
-- [ ] Stage 3, animated wallpapers in the picker (section 3 above): tile badge, details
-  preview, Playback section, pill mark.
+- [x] Stage 3, animated wallpapers in the picker: film badge on tiles, Details preview that
+  plays, the panel's Playback section (per-wallpaper pause), a play/pause mark on the pills.
+- [ ] Check stage 3 on the desktop: Pause/Play on a shared animation (both monitors), the pill
+  marks, a paused wallpaper across a restart, the Details preview of a 4K GIF (memory).
 - [ ] Stage 4, visual refresh: tiles, presets, settings, empty/loading/error states,
   truncation now that Nunito is wider. Mockups final: "Stage 4 · Visual refresh" (R1–R4).
 
@@ -266,27 +268,21 @@ Active controls are growing (frame, mirror, fit, now playback). Stage them: exte
 first, then promote its sections into a Wallpaper Engine-like side panel once it needs to stay
 open while browsing. Both host the same section components, so stage 2 moves no logic.
 
-### 1. Playback in Adjust
+### 1. Playback (built straight into the control panel, 2026-10-14)
 
-- [ ] A Playback section for the monitor's animation: pause/resume, state and fps, and why
-  it's a still. Hidden for static wallpapers.
-- [ ] Pause per wallpaper, not per output: monitors sharing one animation share one decoder
-  and clock, so pausing it holds it everywhere it's shown (the section names those monitors).
-  A new pause reason, independent of the global pause: either one holds it.
-- [ ] Temporary like adjustments: saved per monitor in `state.json`, cleared when that
-  monitor's wallpaper changes, restored by the daemon (restore starts it paused, no flash).
-- [ ] Daemon request and status: per-session pause in the renderer; `wallpicker adjust
-  MONITOR --pause|--play`; the drawer card's button pauses that wallpaper, with "pause all"
-  staying in Settings and the drawer's All card.
+- [x] A Playback section for the monitor's animation (panel/PlaybackSection.qml): state and
+  fps, Pause/Play, why it's a still, Try again after a decoding error. Only for animations.
+- [x] Pause per wallpaper: a `paused` adjustment (core `Adjust`, render `Picture`), held by a
+  new `PauseReason::Wallpaper` while any monitor showing the session says so; independent of
+  the global pause. Status reports `held`.
+- [x] Temporary like adjustments: in `state.json`, cleared with the wallpaper, restored paused
+  from its first frame (private-KWin check). `wallpicker adjust MONITOR --pause|--play`.
 
-### 2. Side panel (when Adjust outgrows a dialog)
+### 2. Side panel
 
-- [ ] Non-modal panel on the right, opened from a monitor's card or pill, one monitor at a
-  time with a switcher; the grid stays usable beside it and applying keeps it open. Esc and
-  the monitor drawer close it; Compact/720p sizes overlay the grid instead of narrowing it.
-- [ ] Sections: live preview, Frame/Mirror/Fit (from Adjust), Playback, wallpaper info (size,
-  frames, loop length, decoder memory), quick actions (Previous, favorite, details).
-- [ ] Decide then whether Adjust remains as the compact form or is replaced.
+- [x] Done as stage 2 of the UI updates (panel/): follows the pills (no switcher of its own),
+  reflows the grid, overlays at Compact, replaced the Adjust dialog and the drawer.
+- [ ] About: loop length and decoder memory (the probe gives the frame count only).
 
 ### Later playback options (not scheduled)
 

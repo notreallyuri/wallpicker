@@ -461,6 +461,10 @@ pub struct Adjust {
     /// Its part of a picture spanned across the monitors (`span.rs`): wins
     /// over the frame and the fit.
     pub span: Option<Cut>,
+    /// Its animated wallpaper is held on its frame (the control panel's
+    /// Pause); playback goes on when it's off. Ignored for stills.
+    #[serde(skip_serializing_if = "is_false")]
+    pub paused: bool,
 }
 
 impl Adjust {
@@ -478,6 +482,7 @@ impl Adjust {
             && !self.backend_default_fit
             && self.frame.is_none()
             && self.span.is_none()
+            && !self.paused
     }
 }
 

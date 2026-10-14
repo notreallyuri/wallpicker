@@ -35,6 +35,9 @@ Singleton {
     readonly property color border: token("outline_variant", 20, "border")
     readonly property color input: border
     readonly property color star: "#facc15"
+    // As the tiles' too-small size and the destructive buttons.
+    readonly property color warning: "#f59e0b"
+    readonly property color destructive: "#fd4663"
 
     // Its own loader: a binding on the Instantiator's objectAt() is never
     // re-evaluated, so it stayed "sans-serif".

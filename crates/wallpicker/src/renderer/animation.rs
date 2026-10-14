@@ -70,6 +70,8 @@ pub(super) struct Active {
     target: Target,
     texture: Rc<Texture>,
     geometry: Geometry,
+    /// Its picture is paused here ([`PauseReason::Wallpaper`]).
+    paused: bool,
     size: (u32, u32),
     presentations: u64,
     error: Option<String>,
@@ -476,6 +478,7 @@ impl State {
                     target: incoming.target,
                     texture: incoming.texture.clone(),
                     geometry: incoming.picture.picture.geometry,
+                    paused: incoming.picture.picture.paused,
                     size,
                     presentations: 0,
                     error: None,
@@ -609,6 +612,23 @@ impl State {
                 runtime.retire(*generation);
                 return false;
             }
+            // Held while a monitor showing it (or about to) has it paused;
+            // set before the endpoint barrier lifts, so a paused wallpaper
+            // restored at start never plays a frame.
+            let held = self.screens.iter().any(|s| {
+                s.animation
+                    .as_ref()
+                    .is_some_and(|a| a.target.session == *generation && a.paused)
+                    || s.incoming
+                        .as_ref()
+                        .is_some_and(|a| a.target.session == *generation && a.picture.picture.paused)
+            });
+            if runtime
+                .source(*generation)
+                .is_some_and(|s| s.paused_by(PauseReason::Wallpaper) != held)
+            {
+                runtime.set_paused(*generation, PauseReason::Wallpaper, held);
+            }
             // Shared endpoint barrier: successful members start together
             // after every incoming layer has succeeded, failed or timed out.
             if !pending {
@@ -682,12 +702,16 @@ impl State {
             "replacing"
         } else if source.is_some_and(|s| s.running()) {
             "playing"
-        } else if source.is_some_and(|s| s.paused_by(PauseReason::Hidden) && !s.paused_by(PauseReason::Manual)) {
+        } else if source.is_some_and(|s| {
+            s.paused_by(PauseReason::Hidden) && !s.paused_by(PauseReason::Manual) && !s.paused_by(PauseReason::Wallpaper)
+        }) {
             "hidden" // Locked, powered off or covered.
         } else {
             "paused"
         };
         json!({ "state": state,
+            // Paused here (the control panel), apart from the global pause.
+            "held": source.is_some_and(|s| s.paused_by(PauseReason::Wallpaper)),
             "generation": active.target.session, "output_generation": active.target.output,
             "geometry": active.geometry,
             "sequence": source.map(|s| s.current().sequence), "uploaded_sequence": active.texture.sequence(),

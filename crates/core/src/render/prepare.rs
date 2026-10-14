@@ -95,6 +95,7 @@ impl Preparation {
         if prepared_size.is_some_and(|(w, h)| w == 0 || h == 0 || w > 16384 || h > 16384) {
             return Err(Error::Invalid("invalid target dimensions".into()));
         }
+        let animated = self.sources[path].animated.is_some();
         let content = if let Some(identity) = &self.sources[path].animated {
             Content::Animated {
                 identity: identity.clone(),
@@ -110,6 +111,7 @@ impl Preparation {
             source: path.to_owned(),
             geometry,
             content,
+            paused: animated && adjust.paused,
         })
     }
 }

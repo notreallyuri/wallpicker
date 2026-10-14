@@ -7,6 +7,27 @@ import QtQuick.Layouts
 import qs.services
 
 RowLayout {
+    id: pills
+
+    // While an animated wallpaper is on, the daemon's playback status is
+    // read (every 2 s) for the pills' play and pause marks.
+    readonly property bool animated: Monitors.list.some(m => {
+        const img = Library.images.find(i => i.path === Monitors.current[m.name]);
+        return !!img && img.frames > 1;
+    })
+    property bool watching: false
+    onAnimatedChanged: {
+        if (animated !== watching)
+            Playback.watchers += animated ? 1 : -1;
+        watching = animated;
+    }
+    Component.onCompleted: if (animated) {
+        Playback.watchers++;
+        watching = true;
+    }
+    Component.onDestruction: if (watching)
+        Playback.watchers--
+
     spacing: 6
 
     MonitorPill {
@@ -38,6 +59,10 @@ RowLayout {
                 return modelData.name + " · " + modelData.width + "×" + modelData.height + "\nShowing " + (shown ? shown.split("/").pop() : "nothing set");
             }
             on: Monitors.selection === modelData.name
+            playback: {
+                const p = Playback.of(modelData.name);
+                return p ? (p.state === "hidden" ? "paused" : p.state) : "";
+            }
             onPicked: Monitors.select(modelData.name)
             // Right-click: adjust what it shows.
             onRightClicked: Dialogs.adjust(modelData.name)

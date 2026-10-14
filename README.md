@@ -334,8 +334,12 @@ monitor's own pixels whatever its scale.
 - **Animated wallpapers** (experimental; Settings → Animated wallpapers, or `wallpicker settings
   set animation.enabled=true`): GIF and animated WebP play on the GPU, shared by every monitor
   showing them, and keep playing through zoom, pan and flips. Off, or without hardware EGL, they
-  show their first frame. **Pause** (that section, or `animation.paused=true`) holds every
-  frame at once. **Frame rate** caps new frames per
+  show their first frame. The grid marks them with a film badge (thumbnails stay the first
+  frame); **Details** plays one while it's open. The control panel's **Playback** shows what a
+  monitor's animation is doing and pauses that wallpaper alone (everywhere it's shown, one
+  clock; paused, it stays so until played or replaced, a restart too: `wallpicker adjust
+  MONITOR --pause|--play`); its pill shows a play or pause mark. **Pause all** (Settings →
+  Animated wallpapers, or `animation.paused=true`) holds every frame at once. **Frame rate** caps new frames per
   second on each monitor (`animation.max_fps`, default 60; 0: the display's refresh). The
   daemon follows these at once (edits of the settings file by hand within a second) and plays
   the saved animations again when it starts. That section shows what each monitor's

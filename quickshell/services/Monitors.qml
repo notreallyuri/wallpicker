@@ -104,7 +104,9 @@ Singleton {
             },
             fit: a.fit || null,
             frame: a.frame || null,
-            span: a.span || null
+            span: a.span || null,
+            // Its animated wallpaper held (the control panel's Pause).
+            paused: !!a.paused
         };
     }
 
@@ -131,7 +133,7 @@ Singleton {
             next = Object.assign({}, next, {
                 span: null
             });
-        const none = !next.flip.h && !next.flip.v && !next.fit && !next.frame && !next.span;
+        const none = !next.flip.h && !next.flip.v && !next.fit && !next.frame && !next.span && !next.paused;
         const map = Object.assign({}, adjust);
         if (none)
             delete map[name];

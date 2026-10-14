@@ -26,6 +26,9 @@ pub struct LocalImage {
     pub width: u32,
     #[serde(default)]
     pub height: u32,
+    /// Frames of an animated GIF or WebP (0: a still, or unreadable).
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub frames: u32,
     /// Its thumbnail, when one is already cached (filled in by
     /// [`with_cached_thumbs`]): the grid shows it without asking.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -91,8 +94,7 @@ fn walk(dir: &Path, recursive: bool, depth: usize, out: &mut Vec<LocalImage>) {
                 .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
                 .map(|d| d.as_secs())
                 .unwrap_or(0);
-            // Only the header is read, not the whole image.
-            let (width, height) = image::image_dimensions(&path).unwrap_or((0, 0));
+            let (width, height, frames) = dimensions(&path);
             out.push(LocalImage {
                 path,
                 name,
@@ -100,10 +102,31 @@ fn walk(dir: &Path, recursive: bool, depth: usize, out: &mut Vec<LocalImage>) {
                 modified,
                 width,
                 height,
+                frames,
                 thumb: None,
             });
         }
     }
+}
+
+/// Pixel size and, animated, frame count. Only the header is read, except
+/// for GIF and WebP: their containers are walked (no frame is decoded) to
+/// tell an animation from a still.
+fn dimensions(path: &Path) -> (u32, u32, u32) {
+    let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("").to_ascii_lowercase();
+    if (ext == "gif" || ext == "webp")
+        && let Ok(source) = crate::media::Source::open(path, crate::media::Limits::default())
+    {
+        let info = source.info();
+        let frames = if info.kind == crate::media::Kind::Animated { info.frame_count } else { 0 };
+        return (info.width, info.height, frames);
+    }
+    let (width, height) = image::image_dimensions(path).unwrap_or((0, 0));
+    (width, height, 0)
+}
+
+fn is_zero(value: &u32) -> bool {
+    *value == 0
 }
 
 /// The file `path` refers to, if it may be moved to the trash: an existing
@@ -413,6 +436,7 @@ mod folder_tests {
             modified: 0,
             width,
             height,
+            frames: 0,
             thumb: None,
         };
         assert!(img(1920, 1080).smaller_than(2560, 1440));
@@ -535,6 +559,34 @@ mod tests {
         let flat = scan(&[root.to_path_buf()], false);
         assert_eq!(flat.len(), 1);
         assert_eq!(flat[0].name, "a.png");
+    }
+
+    #[test]
+    fn scan_counts_the_frames_of_animated_gifs_only() {
+        let tmp = tempfile::tempdir().unwrap();
+        let write = |name: &str, frames: u8| {
+            let mut bytes = Vec::new();
+            {
+                let mut encoder = gif::Encoder::new(&mut bytes, 2, 1, &[0, 0, 0, 255, 255, 255]).unwrap();
+                for i in 0..frames {
+                    let frame = gif::Frame {
+                        width: 2,
+                        height: 1,
+                        buffer: std::borrow::Cow::Owned(vec![i % 2, 1]),
+                        delay: 5,
+                        ..Default::default()
+                    };
+                    encoder.write_frame(&frame).unwrap();
+                }
+            }
+            fs::write(tmp.path().join(name), bytes).unwrap();
+        };
+        write("moving.gif", 3);
+        write("still.gif", 1);
+        let mut found = scan(&[tmp.path().to_path_buf()], false);
+        found.sort_by(|a, b| a.name.cmp(&b.name));
+        assert_eq!((found[0].name.as_str(), found[0].frames, found[0].width), ("moving.gif", 3, 2));
+        assert_eq!((found[1].name.as_str(), found[1].frames, found[1].width), ("still.gif", 0, 2));
     }
 
     #[test]

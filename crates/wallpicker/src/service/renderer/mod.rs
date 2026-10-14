@@ -25,6 +25,8 @@ pub struct Monitor {
     pub fps: Option<f32>,
     /// Why it's a still, or what stopped it.
     pub reason: Option<String>,
+    /// Paused here (the control panel's Pause), apart from the global pause.
+    pub held: bool,
 }
 
 #[derive(Debug, Default, Serialize)]
@@ -74,6 +76,7 @@ fn playback_of(status: &Value, now: Instant) -> Playback {
                 state: state.to_string(),
                 fps,
                 reason,
+                held: playback["held"].as_bool().unwrap_or(false),
             },
         );
     }

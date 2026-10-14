@@ -143,15 +143,17 @@ fn absolute(path: &str) -> PathBuf {
     std::path::absolute(&p).unwrap_or(p)
 }
 
-/// `wallpicker adjust <monitor> [--flip h|v|both|none] [--fit F] [--frame ZOOM,X,Y | --no-frame] [--reset]`: adjust
+/// `wallpicker adjust <monitor> [--flip h|v|both|none] [--fit F] [--frame ZOOM,X,Y | --no-frame]
+/// [--pause | --play] [--reset]`: adjust
 /// what a monitor shows (wallpicker makes the changed copy), until another
 /// wallpaper goes there. Without options: what it is now.
 pub fn adjust(args: &[String]) -> i32 {
     use wallpicker_core::settings::{Adjust, Flip};
     let usage_text = "usage: wallpicker adjust <monitor> [--flip h|v|both|none] [--fit auto|cover|contain|tile|fill]\n\
-                      [--frame ZOOM,X,Y | --no-frame] [--reset]\n\
+                      [--frame ZOOM,X,Y | --no-frame] [--pause | --play] [--reset]\n\
      --frame  the part shown, cut to the monitor's size: ZOOM in % (100-400), the center X and Y\n\
-              in % of the picture (50,50 is the middle). e.g. --frame 200,70,40";
+              in % of the picture (50,50 is the middle). e.g. --frame 200,70,40\n\
+     --pause  hold its animated wallpaper on its frame (every monitor showing it), --play: go on";
     let Some((monitor, opts)) = args.split_first() else {
         return usage_for("adjust", "which monitor?", usage_text);
     };
@@ -198,6 +200,8 @@ pub fn adjust(args: &[String]) -> i32 {
                 }
             }
             "--no-frame" => adjust.frame = None,
+            "--pause" => adjust.paused = true,
+            "--play" => adjust.paused = false,
             "--frame" => {
                 let parts: Vec<f64> = rest
                     .next()
@@ -227,7 +231,7 @@ pub fn adjust(args: &[String]) -> i32 {
     }
     let describe = move |a: Adjust| {
         format!(
-            "{monitor}: flip {}, fit {}, frame {}",
+            "{monitor}: flip {}, fit {}, frame {}{}",
             if a.flip.is_none() { "none" } else { a.flip.as_str() },
             a.fit.map_or("auto", |f| f.as_str()),
             a.frame.map_or("none".to_string(), |f| format!(
@@ -237,7 +241,8 @@ pub fn adjust(args: &[String]) -> i32 {
                 f64::from(f.y) / 10.0,
                 f.width,
                 f.height
-            ))
+            )),
+            if a.paused { ", paused" } else { "" }
         )
     };
     if !changed {

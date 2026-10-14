@@ -40,13 +40,14 @@ ColumnLayout {
     function reset() {
         if (!adjusted)
             return;
-        setAll(() => ({
+        setAll(a => ({
                     flip: {
                         h: false,
                         v: false
                     },
                     fit: null,
-                    frame: null
+                    frame: null,
+                    paused: a.paused
                 }));
     }
 

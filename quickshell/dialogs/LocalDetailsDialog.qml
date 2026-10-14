@@ -1,9 +1,10 @@
-// A local wallpaper's details (right-click → Details…): where it came from
-// and who made it (the artists, each with More by <artist> on the provider
-// it came from; the uploader, More from; the source link; Open on the
-// provider's site), the artists and tags (each removable, a field to add
-// one), and the tags used elsewhere that match what's typed. A More search
-// goes to the Online tab.
+// A local wallpaper's details (right-click → Details…): the picture (an
+// animated one plays while it's open), where it came from and who made it
+// (the artists, each with More by <artist> on the provider it came from;
+// the uploader, More from; the source link; Open on the provider's site),
+// the artists and tags (each removable, a field to add one), and the tags
+// used elsewhere that match what's typed. A More search goes to the Online
+// tab.
 import QtQuick
 import QtQuick.Layouts
 import qs.components
@@ -81,6 +82,8 @@ Dialog {
         const parts = [];
         if (image && image.width > 0)
             parts.push(image.width + "×" + image.height);
+        if (image && image.frames > 1)
+            parts.push(image.frames + " frames");
         if (providerLabel !== "")
             parts.push("From " + providerLabel);
         return parts.join(" · ");
@@ -108,6 +111,13 @@ Dialog {
             if (Dialogs.localDetailsFor !== "")
                 dialog.open();
         }
+    }
+
+    // The picture: an animated one plays while the dialog is open.
+    LocalPreview {
+        Layout.fillWidth: true
+        image: dialog.image
+        live: dialog.visible
     }
 
     // The artists: each removable, with More by (where the provider can
