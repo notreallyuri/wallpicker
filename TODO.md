@@ -248,8 +248,13 @@ Keep the core components; change the layout around them. Mockups first, reviewed
   → Appearance), Color/Flat/Random turn to icons when narrow. Online/Collections already had
   the one-row card with Filters. The first tile row starts ~143 px down (was ~460).
 - [ ] Check stage 1 on the desktop (two monitors, a span, Compact size, the popover's keys).
-- [ ] Stage 2, the control panel below as a side panel (Preview, Frame, Mirror, Fit, Playback,
-  About, Actions); non-modal, resizable, overlays the grid at Compact. Replaces Adjust.
+- [x] Stage 2, the control panel (panel/): a floating card beside the grid following the pills
+  (a monitor: preview/framing, Frame, Mirror, Fit, About; All: Mirror and Fit for every
+  monitor; the span: framing, Arrange → the Span dialog), footer Previous/Favorite/Details/
+  Stop spanning/Reset; edge toggle, resizable 320–560, floats over the grid at Compact (Esc).
+  The Adjust dialog is gone; right-clicking a pill opens the panel on it.
+- [ ] Check stage 2 on the desktop: two monitors, All, a span (framing, Arrange, Stop
+  spanning), resizing, and the Framer at the panel's sizes.
 - [ ] Stage 3, animated wallpapers in the picker (section 3 above): tile badge, details
   preview, Playback section, pill mark.
 - [ ] Stage 4, visual refresh: tiles, presets, settings, empty/loading/error states,

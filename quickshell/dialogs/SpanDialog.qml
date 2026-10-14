@@ -2,9 +2,9 @@
 // on your desk: Arrange (click a monitor in or out, drag it; it snaps to
 // the others, a bezel apart) and Frame (zoom, move and mirror the picture
 // over them all). For a new span (a tile's "Span across…") nothing changes
-// until Span; for the span shown (the Spanned card's Adjust, a right-click
-// on its pill) each change goes on the monitors once it's been still for a
-// moment (Dialogs.spanPath, spanShown).
+// until Span; for the span shown (the control panel's Arrange) each change
+// goes on the monitors once it's been still for a moment (Dialogs.spanPath,
+// spanShown, spanArrange).
 import QtQuick
 import QtQuick.Layouts
 import qs.components
@@ -34,10 +34,13 @@ Dialog {
     title: shown ? "Adjust the span" : "Span across monitors"
     description: path.split("/").pop()
     preferredWidth: 600
-    onClosed: Dialogs.spanPath = ""
+    onClosed: {
+        Dialogs.spanPath = "";
+        Dialogs.spanArrange = false;
+    }
 
     onPathChanged: if (path !== "") {
-        arranging = !shown;
+        arranging = !shown || Dialogs.spanArrange;
         look = shown && Monitors.spanState ? JSON.parse(JSON.stringify(Monitors.spanState.look)) : SpanLayout.initial();
         file = "";
         naturalWidth = 0;

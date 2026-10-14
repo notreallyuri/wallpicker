@@ -1,5 +1,6 @@
 // The picker itself: a rounded panel with the wallpaper blurred behind it,
-// the top bar and the current tab.
+// the top bar, the current tab and, when it's open, the control panel
+// beside it (over it at Compact sizes).
 import QtQuick
 import QtQuick.Effects
 import QtQuick.Layouts
@@ -14,12 +15,22 @@ import qs.views.online
 import qs.views.presets
 import qs.views.collections
 import qs.views.settings
+import qs.panel
 
 Item {
     id: picker
 
     /// The content (for the test hooks' coordinates).
     readonly property alias content: content
+
+    /// Close the control panel while it floats over the grid (Esc);
+    /// whether it did.
+    function closePanel() {
+        if (!Prefs.panelOpen || !body.overlay)
+            return false;
+        Prefs.panelOpen = false;
+        return true;
+    }
 
     // What Local shows outlives its view (another tab is open meanwhile).
     LocalModel {
@@ -79,11 +90,94 @@ Item {
                 tab: Views.current
                 onTabPicked: index => Views.current = index
             }
-            // One tab at a time: the others aren't kept (nor their pictures).
-            Loader {
+            Item {
+                id: body
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                sourceComponent: [localTab, onlineTab, collectionsTab, presetsTab][Views.current]
+
+                // Too narrow to give the panel its room (Compact): it floats
+                // over the grid instead of narrowing it.
+                readonly property bool overlay: width < 1100
+                readonly property bool open: Prefs.panelOpen
+                // While its edge is dragged; saved when it's let go.
+                property real dragWidth: -1
+                readonly property real panelWidth: Math.max(320, Math.min(560, width - 400, dragWidth >= 0 ? dragWidth : Prefs.panelWidth))
+                // The edge toggle's room at the right.
+                readonly property real toggleRoom: 24
+
+                // One tab at a time: the others aren't kept (nor their pictures).
+                Loader {
+                    anchors.left: parent.left
+                    anchors.top: parent.top
+                    anchors.bottom: parent.bottom
+                    width: (body.open && !body.overlay ? controlPanel.x : body.width) - body.toggleRoom
+                    sourceComponent: [localTab, onlineTab, collectionsTab, presetsTab][Views.current]
+                }
+
+                ControlPanel {
+                    id: controlPanel
+                    anchors.top: parent.top
+                    anchors.bottom: parent.bottom
+                    anchors.right: parent.right
+                    anchors.topMargin: 12
+                    anchors.rightMargin: 12
+                    width: body.panelWidth
+                    floating: body.overlay
+                    visible: opacity > 0
+                    opacity: body.open ? 1 : 0
+                    Behavior on opacity {
+                        NumberAnimation {
+                            duration: Theme.ms(150)
+                        }
+                    }
+                    onCloseRequested: Prefs.panelOpen = false
+                }
+
+                // Drag the panel's left edge to resize it (320–560 px).
+                MouseArea {
+                    id: resize
+                    visible: body.open
+                    x: controlPanel.x - 5
+                    y: controlPanel.y + 24
+                    width: 10
+                    height: controlPanel.height - 48
+                    hoverEnabled: true
+                    cursorShape: Qt.SizeHorCursor
+                    property real startX
+                    property real startWidth
+                    onPressed: mouse => {
+                        startX = mapToItem(body, mouse.x, 0).x;
+                        startWidth = body.panelWidth;
+                        body.dragWidth = startWidth;
+                    }
+                    onPositionChanged: mouse => {
+                        if (pressed)
+                            body.dragWidth = Math.max(320, Math.min(560, startWidth + startX - mapToItem(body, mouse.x, 0).x));
+                    }
+                    onReleased: {
+                        Prefs.panelWidth = Math.round(body.panelWidth);
+                        body.dragWidth = -1;
+                    }
+                    Rectangle {
+                        anchors.centerIn: parent
+                        width: 4
+                        height: resize.containsMouse || resize.pressed ? 48 : 32
+                        radius: 2
+                        color: resize.containsMouse || resize.pressed ? Theme.primary : Theme.a(Theme.foreground, 0.12)
+                        Behavior on height {
+                            NumberAnimation {
+                                duration: Theme.ms(150)
+                            }
+                        }
+                    }
+                }
+
+                EdgeToggle {
+                    open: body.open
+                    x: (body.open ? controlPanel.x : body.width) - width
+                    y: Math.round((body.height - height) / 2)
+                    onClicked: Prefs.panelOpen = !Prefs.panelOpen
+                }
             }
         }
     }
@@ -148,7 +242,6 @@ Item {
     LocalDetailsDialog {}
     TrashDialog {}
     DuplicatesDialog {}
-    AdjustDialog {}
     SpanDialog {}
     FiltersDialog {}
     DetailsDialog {}

@@ -196,7 +196,7 @@ QtObject {
                 shown: Lifetime.shown,
                 trashFor: Dialogs.trashFor,
                 localDetailsFor: Dialogs.localDetailsFor,
-                adjusting: Dialogs.adjusting,
+                panel: Prefs.panelOpen,
                 adjust: Monitors.adjust,
                 current: Monitors.current,
                 selection: Monitors.selection,
@@ -224,9 +224,11 @@ QtObject {
             return JSON.stringify(s);
         }
 
-        /// Open a dialog: settings (at section `arg`), span (the span's
-        /// Adjust), across (the Span dialog for picture `arg`), adjust
-        /// (monitor `arg`), filters (Online's), details (picture `arg`'s).
+        /// Open a dialog: settings (at section `arg`), span (the control
+        /// panel on the span), across (the Span dialog for picture `arg`),
+        /// arrange (the Span dialog arranging the span shown), adjust (the
+        /// control panel on monitor `arg`), filters (Online's), details
+        /// (picture `arg`'s).
         function dialog(name: string, arg: string): string {
             switch (name) {
             case "reassign": {
@@ -243,6 +245,9 @@ QtObject {
                 break;
             case "across":
                 Dialogs.spanAcross(arg);
+                break;
+            case "arrange":
+                Dialogs.arrangeSpan();
                 break;
             case "adjust":
                 Dialogs.adjust(arg);

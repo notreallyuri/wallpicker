@@ -22,6 +22,9 @@ Singleton {
     property alias filtersLayout: data.filtersLayout
     /// The rows are open ("rows" layout).
     property alias filtersOpen: data.filtersOpen
+    /// The control panel (panel/ControlPanel.qml) is open, and its width.
+    property alias panelOpen: data.panelOpen
+    property alias panelWidth: data.panelWidth
     /// "system", "light" or "dark".
     property alias darkMode: data.darkMode
     /// A color theme (services/Themes.js).
@@ -68,6 +71,8 @@ Singleton {
             property bool tagsMatchAll: true
             property string filtersLayout: "popover"
             property bool filtersOpen: false
+            property bool panelOpen: false
+            property int panelWidth: 360
             property string darkMode: "system"
             property string colorTheme: "blossom"
             property bool glass: true

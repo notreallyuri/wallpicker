@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Headless slow-drag regression at high zoom. Requires ui-check.sh's tools and Pillow."""
+"""Headless slow-drag regression at high zoom, on the control panel's preview
+(open at its default width). Requires ui-check.sh's tools and Pillow."""
 import json
 import os
 from pathlib import Path
@@ -22,13 +23,13 @@ path.write_text(json.dumps(state))
 ''')
 calls = [
     f'!python3 {seed} {image}', '!sleep 1', 'dialog adjust HEADLESS-1', 'state',
-    'drag 960 350 954 350', 'state',
-    'drag 954 350 960 350', 'state',
-    'drag 960 350 960 344', 'state',
-    'drag 960 344 960 350', 'state',
+    'drag 1725 220 1719 220', 'state',
+    'drag 1719 220 1725 220', 'state',
+    'drag 1725 220 1725 214', 'state',
+    'drag 1725 214 1725 220', 'state',
     '!wtype -k Escape', f'!python3 {seed} {image} mirror', '!sleep 1',
-    'dialog adjust HEADLESS-1', 'drag 960 350 954 350', 'state',
-    'drag 954 350 960 350', 'state',
+    'dialog adjust HEADLESS-1', 'drag 1725 220 1719 220', 'state',
+    'drag 1719 220 1725 220', 'state',
 ]
 env = os.environ.copy()
 env['CHECK_FOLDERS'] = str(root)

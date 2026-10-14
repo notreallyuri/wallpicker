@@ -63,12 +63,17 @@ Noctalia is optional, for wallpaper-derived colors.
   one currently has (with a thumbnail).
 - **Fit**: a general fit in Settings, and a fit per monitor under it (say, Contain on a 4:3
   screen).
-- **Adjust** (right-click a monitor's pill): **frame** what
-  a monitor shows (drag the preview to move, scroll or the sliders to zoom up to 4×; it's cut to
-  the monitor's exact resolution), **mirror** it (left to right, top to bottom), or give it its
-  own **fit**. The preview follows at once; the monitor a moment after you stop. Temporary:
-  another wallpaper on that monitor goes on as it is. wallpicker
-  makes the changed copy (cached, deleted when unused).
+- **The control panel** (the tab on the picker's right edge, or right-click a monitor's pill):
+  beside the grid, everything about the wallpaper where a click applies, following the pills.
+  On a monitor: **frame** what it shows (drag the preview to move, scroll or the sliders to zoom
+  up to 4×; it's cut to the monitor's exact resolution), **mirror** it (left to right, top to
+  bottom), or give it its own **fit**; About says what the picture is; the footer goes back
+  (**Previous**), stars it, opens its **Details** or resets it. The preview follows at once; the
+  monitor a moment after you stop. Temporary: another wallpaper on that monitor goes on as it
+  is. On **All**: Mirror and Fit for every monitor. Applying from the grid keeps it open, so you
+  can try wallpapers and adjust them in one go. Drag its left edge to resize it (320–560 px,
+  remembered); the grid makes room, except at Compact sizes where it floats over it (Esc
+  closes it). wallpicker makes the changed copy (cached, deleted when unused).
   `wallpicker adjust <monitor> --frame 200,70,40 --flip h --fit contain`.
 - The search bar (and the tags and folder path under it) stays at the top while you scroll.
 - **Keys**: Ctrl+F search field, Ctrl+R random, Alt+Up parent folder, Alt+Left/Right pages,
@@ -83,9 +88,10 @@ Noctalia is optional, for wallpaper-derived colors.
   arrangement is wallpicker's own, kept for next time (**From Hyprland** starts it over). The
   span's monitors then act as one: one **Spanned** pill (them as arranged, one picture);
   picked, a click on a tile spans that picture across them; the other monitors carry on on
-  their own. Right-click the pill to reopen the dialog on the span shown
-  (changes go on the monitors as you make them), with **Frame the picture**: zoom, move and
-  mirror it over them all. **Separate** gives each monitor back to itself, keeping its part;
+  their own. Picked (or right-clicked), the control panel frames the span shown: zoom, move and
+  mirror the picture over them all, changes going on the monitors as you make them;
+  **Arrange monitors…** reopens the dialog to change which ones and where. Its unlink button
+  gives each monitor back to itself, keeping its part;
   **Previous** goes back on the span's monitors. Another wallpaper on one of them ends the
   span. From the command line: `--monitors A,B`, `--frame ZOOM,X,Y`, `--flip h|v|both`,
   `wallpicker span --separate`, `wallpicker settings set span_bezel=MM`.
