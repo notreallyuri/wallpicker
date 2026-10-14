@@ -259,8 +259,11 @@ Keep the core components; change the layout around them. Mockups first, reviewed
   plays, the panel's Playback section (per-wallpaper pause), a play/pause mark on the pills.
 - [ ] Check stage 3 on the desktop: Pause/Play on a shared animation (both monitors), the pill
   marks, a paused wallpaper across a restart, the Details preview of a 4K GIF (memory).
-- [ ] Stage 4, visual refresh: tiles, presets, settings, empty/loading/error states,
-  truncation now that Nunito is wider. Mockups final: "Stage 4 · Visual refresh" (R1–R4).
+- [x] Stage 4, visual refresh (mockups R1–R4): tiles keep their tags on one line (+N); preset
+  cards four across, On now and a calm Not connected; one EmptyState for empty/no-match/error
+  views and toasts with the same marks; Settings with section icons, grouped rows (Group,
+  Field `side`, ToggleField rows), a Notice, and Unsaved changes/Revert in the footer.
+- [ ] Check stage 4 on the desktop (On now with your monitors, every Settings page, toasts).
 
 ## Wallpaper control panel (planned 2026-10-12)
 
