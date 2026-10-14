@@ -83,7 +83,6 @@ ColumnLayout {
     }
     RowLayout {
         visible: section.following && Monitors.list.length > 1
-        Layout.leftMargin: 48
         spacing: 6
         Text {
             text: "From"

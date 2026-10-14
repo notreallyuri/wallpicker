@@ -1,7 +1,8 @@
-// The Settings dialog's sections, by group (App, Providers): the chosen one
-// highlighted; a click shows it.
+// The Settings dialog's sections, by group (App, Providers), each with its
+// icon: the chosen one highlighted; a click shows it.
 import QtQuick
 import QtQuick.Layouts
+import qs.components
 import qs.services
 
 Rectangle {
@@ -21,7 +22,7 @@ Rectangle {
 
         // The dialog's name, as tall as the pane's header (the rules meet).
         Text {
-            Layout.preferredHeight: 52
+            Layout.preferredHeight: 64
             Layout.leftMargin: 8
             verticalAlignment: Text.AlignVCenter
             text: "Settings"
@@ -57,14 +58,24 @@ Rectangle {
                         implicitHeight: 34
                         radius: 10
                         color: on ? Theme.a(Theme.primary, 0.18) : mouse.containsMouse ? Theme.a(Theme.primary, 0.08) : "transparent"
-                        Text {
+                        Row {
                             anchors.verticalCenter: parent.verticalCenter
                             x: 10
-                            text: entry.modelData.label
-                            color: entry.on ? Theme.primary : Theme.foreground
-                            font.family: Theme.font
-                            font.pixelSize: 14
-                            font.weight: entry.on ? Font.Bold : Font.Medium
+                            spacing: 10
+                            Icon {
+                                anchors.verticalCenter: parent.verticalCenter
+                                name: entry.modelData.icon || ""
+                                size: 16
+                                color: entry.on ? Theme.primary : Theme.mutedForeground
+                            }
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: entry.modelData.label
+                                color: entry.on ? Theme.primary : Theme.foreground
+                                font.family: Theme.font
+                                font.pixelSize: 14
+                                font.weight: entry.on ? Font.Bold : Font.Medium
+                            }
                         }
                         MouseArea {
                             id: mouse

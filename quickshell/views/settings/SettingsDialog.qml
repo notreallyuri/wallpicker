@@ -15,6 +15,7 @@ DialogFrame {
     readonly property var sections: [
         {
             slug: "general",
+            icon: "settings",
             label: "General",
             group: "App",
             file: "General.qml",
@@ -22,6 +23,7 @@ DialogFrame {
         },
         {
             slug: "appearance",
+            icon: "brush",
             label: "Appearance",
             group: "App",
             file: "Appearance.qml",
@@ -29,6 +31,7 @@ DialogFrame {
         },
         {
             slug: "downloads",
+            icon: "download",
             label: "Downloads",
             group: "App",
             file: "Downloads.qml",
@@ -36,6 +39,7 @@ DialogFrame {
         },
         {
             slug: "slideshow",
+            icon: "shuffle",
             label: "Slideshow",
             group: "App",
             file: "Slideshow.qml",
@@ -43,6 +47,7 @@ DialogFrame {
         },
         {
             slug: "workspaces",
+            icon: "grid",
             label: "Workspaces",
             group: "App",
             file: "Workspaces.qml",
@@ -50,6 +55,7 @@ DialogFrame {
         },
         {
             slug: "animation",
+            icon: "film",
             label: "Animated wallpapers",
             group: "App",
             file: "Animation.qml",
@@ -57,6 +63,7 @@ DialogFrame {
         },
         {
             slug: "performance",
+            icon: "sliders-horizontal",
             label: "Performance",
             group: "App",
             file: "Performance.qml",
@@ -64,6 +71,7 @@ DialogFrame {
         },
         {
             slug: "backup",
+            icon: "copy",
             label: "Backup",
             group: "App",
             file: "Backup.qml",
@@ -71,6 +79,7 @@ DialogFrame {
         },
         {
             slug: "wallhaven",
+            icon: "external-link",
             label: "Wallhaven",
             group: "Providers",
             file: "Wallhaven.qml",
@@ -78,6 +87,7 @@ DialogFrame {
         },
         {
             slug: "konachan",
+            icon: "external-link",
             label: "Konachan",
             group: "Providers",
             file: "Konachan.qml",
@@ -85,6 +95,7 @@ DialogFrame {
         },
         {
             slug: "yandere",
+            icon: "external-link",
             label: "yande.re",
             group: "Providers",
             file: "Yandere.qml",
@@ -127,18 +138,31 @@ DialogFrame {
             Layout.fillHeight: true
             spacing: 0
 
-            // The section's name; the corner is left to nothing (Esc closes).
+            // The section's name and what it's for; the corner is left to
+            // nothing (Esc closes).
             Item {
                 Layout.fillWidth: true
-                Layout.preferredHeight: 52
-                Text {
+                Layout.preferredHeight: 64
+                Column {
                     x: 20
+                    width: parent.width - 40
                     anchors.verticalCenter: parent.verticalCenter
-                    text: dialog.section.label
-                    color: Theme.foreground
-                    font.family: Theme.font
-                    font.pixelSize: 15
-                    font.weight: Font.ExtraBold
+                    spacing: 2
+                    Text {
+                        text: dialog.section.label
+                        color: Theme.foreground
+                        font.family: Theme.font
+                        font.pixelSize: 18
+                        font.weight: Font.ExtraBold
+                    }
+                    Text {
+                        width: parent.width
+                        elide: Text.ElideRight
+                        text: dialog.section.blurb
+                        color: Theme.mutedForeground
+                        font.family: Theme.font
+                        font.pixelSize: 13
+                    }
                 }
                 Rectangle {
                     anchors.bottom: parent.bottom
@@ -165,14 +189,6 @@ DialogFrame {
                     y: 20
                     width: pane.width - 40
                     spacing: 20
-                    Text {
-                        Layout.fillWidth: true
-                        text: dialog.section.blurb
-                        wrapMode: Text.Wrap
-                        color: Theme.mutedForeground
-                        font.family: Theme.font
-                        font.pixelSize: 13
-                    }
                     Loader {
                         id: sectionLoader
                         Layout.fillWidth: true
@@ -191,12 +207,36 @@ DialogFrame {
                 Layout.margins: 12
                 Layout.leftMargin: 20
                 spacing: 8
+                // Unsaved changes say so; Revert drops them.
+                Rectangle {
+                    visible: form.dirty
+                    implicitWidth: 8
+                    implicitHeight: 8
+                    radius: 4
+                    color: Theme.warning
+                }
+                Text {
+                    visible: form.dirty
+                    text: "Unsaved changes"
+                    color: Theme.warning
+                    font.family: Theme.font
+                    font.pixelSize: 13
+                    font.weight: Font.Bold
+                }
                 Text {
                     Layout.fillWidth: true
-                    text: "Saved to ~/.config/wallpicker/config.json"
+                    elide: Text.ElideRight
+                    text: (form.dirty ? "· saved to " : "Saved to ") + "~/.config/wallpicker/config.json"
                     color: Theme.mutedForeground
                     font.family: Theme.font
                     font.pixelSize: 12
+                }
+                Btn {
+                    visible: form.dirty
+                    variant: "ghost"
+                    text: "Revert"
+                    tip: "Back to the settings as they're saved"
+                    onClicked: form.load()
                 }
                 Btn {
                     variant: "primary"
