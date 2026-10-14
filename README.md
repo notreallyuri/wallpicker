@@ -77,8 +77,9 @@ Noctalia is optional, for wallpaper-derived colors.
   `wallpicker adjust <monitor> --frame 200,70,40 --flip h --fit contain`.
 - The search bar (and the tags and folder path under it) stays at the top while you scroll.
 - **Keys**: Ctrl+F search field, Ctrl+R random, Alt+Up parent folder, Alt+Left/Right pages,
-  Ctrl+1/2/3/4 Local/Online/Collections/Presets, Alt+1…N where a click applies (a monitor, in the top bar's
-  order) and Alt+N+1 All, Delete a tile's trash, Esc the top menu or dialog, then the picker.
+  Ctrl+1/2/3/4 Local/Online/Collections/Presets, Ctrl+B the control panel, Alt+1…N where a
+  click applies (a monitor, in the top bar's order) and Alt+N+1 All, Delete a tile's trash,
+  Esc the top menu or dialog, the panel floating over the grid, then the picker.
 - **Span across monitors** (a tile's right-click menu → **Span across…**, or `wallpicker span
   <image>`): one picture across the monitors you choose, each showing its part. The Span dialog
   has a canvas of your monitors at their real sizes (from what they report, so a 27" QHD next

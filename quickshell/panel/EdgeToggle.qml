@@ -52,6 +52,6 @@ Rectangle {
     Tip {
         over: mouse.containsMouse
         pressed: mouse.pressed
-        text: toggle.open ? "Close the panel" : "Adjust the wallpaper: frame, mirror, fit"
+        text: toggle.open ? "Close the panel (Ctrl+B)" : "Adjust the wallpaper: frame, mirror, fit (Ctrl+B)"
     }
 }

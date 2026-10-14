@@ -220,6 +220,13 @@ Item {
         PresetsView {}
     }
 
+    // Ctrl+B: the control panel, open or closed (while no popup is open).
+    Shortcut {
+        enabled: Dialogs.calm
+        sequence: "Ctrl+B"
+        onActivated: Prefs.panelOpen = !Prefs.panelOpen
+    }
+
     // Ctrl+1/2/3/4: Local, Online, Collections, Presets (while no popup is open).
     Repeater {
         model: 4
