@@ -126,63 +126,69 @@ Item {
                     sourceComponent: [localTab, onlineTab, collectionsTab, presetsTab][Views.current]
                 }
 
-                ControlPanel {
-                    id: controlPanel
-                    anchors.top: parent.top
-                    anchors.bottom: parent.bottom
-                    anchors.topMargin: 12
-                    x: body.panelLeft
-                    width: body.panelWidth
-                    floating: body.overlay
-                    visible: body.shown > 0
-                    opacity: body.shown
-                    onCloseRequested: Prefs.panelOpen = false
-                }
+                // The panel, its handle and its toggle, cut at the picker's
+                // edge while the panel slides in and out.
+                Item {
+                    anchors.fill: parent
+                    clip: true
+                    ControlPanel {
+                        id: controlPanel
+                        anchors.top: parent.top
+                        anchors.bottom: parent.bottom
+                        anchors.topMargin: 12
+                        x: body.panelLeft
+                        width: body.panelWidth
+                        floating: body.overlay
+                        visible: body.shown > 0
+                        opacity: body.shown
+                        onCloseRequested: Prefs.panelOpen = false
+                    }
 
-                // Drag the panel's left edge to resize it (320–560 px).
-                MouseArea {
-                    id: resize
-                    visible: body.open
-                    x: controlPanel.x - 5
-                    y: controlPanel.y + 24
-                    width: 10
-                    height: controlPanel.height - 48
-                    hoverEnabled: true
-                    cursorShape: Qt.SizeHorCursor
-                    property real startX
-                    property real startWidth
-                    onPressed: mouse => {
-                        startX = mapToItem(body, mouse.x, 0).x;
-                        startWidth = body.panelWidth;
-                        body.dragWidth = startWidth;
-                    }
-                    onPositionChanged: mouse => {
-                        if (pressed)
-                            body.dragWidth = Math.max(320, Math.min(560, startWidth + startX - mapToItem(body, mouse.x, 0).x));
-                    }
-                    onReleased: {
-                        Prefs.panelWidth = Math.round(body.panelWidth);
-                        body.dragWidth = -1;
-                    }
-                    Rectangle {
-                        anchors.centerIn: parent
-                        width: 4
-                        height: resize.containsMouse || resize.pressed ? 48 : 32
-                        radius: 2
-                        color: resize.containsMouse || resize.pressed ? Theme.primary : Theme.a(Theme.foreground, 0.12)
-                        Behavior on height {
-                            NumberAnimation {
-                                duration: Theme.ms(150)
+                    // Drag the panel's left edge to resize it (320–560 px).
+                    MouseArea {
+                        id: resize
+                        visible: body.open
+                        x: controlPanel.x - 5
+                        y: controlPanel.y + 24
+                        width: 10
+                        height: controlPanel.height - 48
+                        hoverEnabled: true
+                        cursorShape: Qt.SizeHorCursor
+                        property real startX
+                        property real startWidth
+                        onPressed: mouse => {
+                            startX = mapToItem(body, mouse.x, 0).x;
+                            startWidth = body.panelWidth;
+                            body.dragWidth = startWidth;
+                        }
+                        onPositionChanged: mouse => {
+                            if (pressed)
+                                body.dragWidth = Math.max(320, Math.min(560, startWidth + startX - mapToItem(body, mouse.x, 0).x));
+                        }
+                        onReleased: {
+                            Prefs.panelWidth = Math.round(body.panelWidth);
+                            body.dragWidth = -1;
+                        }
+                        Rectangle {
+                            anchors.centerIn: parent
+                            width: 4
+                            height: resize.containsMouse || resize.pressed ? 48 : 32
+                            radius: 2
+                            color: resize.containsMouse || resize.pressed ? Theme.primary : Theme.a(Theme.foreground, 0.12)
+                            Behavior on height {
+                                NumberAnimation {
+                                    duration: Theme.ms(150)
+                                }
                             }
                         }
                     }
-                }
 
-                EdgeToggle {
-                    open: body.open
-                    x: body.panelLeft - width
-                    y: Math.round((body.height - height) / 2)
-                    onClicked: Prefs.panelOpen = !Prefs.panelOpen
+                    EdgeToggle {
+                        open: body.open
+                        x: body.panelLeft - width
+                        y: Math.round((body.height - height) / 2)
+                        onClicked: Prefs.panelOpen = !Prefs.panelOpen
+                    }
                 }
             }
         }

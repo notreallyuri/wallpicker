@@ -34,7 +34,7 @@ ClippingRectangle {
         id: movie
         anchors.fill: parent
         source: preview.animated && preview.live ? "file://" + preview.image.path : ""
-        sourceSize.width: preview.width * Screen.devicePixelRatio
+        sourceSize.width: Math.ceil(preview.width * Screen.devicePixelRatio / 128) * 128
         fillMode: Image.PreserveAspectCrop
         asynchronous: true
         cache: false

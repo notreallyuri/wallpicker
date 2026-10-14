@@ -108,10 +108,19 @@ Item {
                     asynchronous: true
                     cache: false
                     // Decoded at the size it's shown (in the screen's pixels: 1x at
-                    // scale 1; 2x took ~20 MB more), not the file's.
-                    sourceSize.width: picture.width * Screen.devicePixelRatio
+                    // scale 1; 2x took ~20 MB more), not the file's: in 128 px
+                    // steps, the old one shown until a new size is in, so the
+                    // grid resizing (the control panel) doesn't reload it at
+                    // every step.
+                    sourceSize.width: Math.ceil(picture.width * Screen.devicePixelRatio / 128) * 128
+                    retainWhileLoading: true
                     scale: tile.hovered ? 1.03 : 1
-                    opacity: status === Image.Ready ? 1 : 0
+                    // Fades in once, when it first comes in.
+                    property bool came: false
+                    onSourceChanged: came = false
+                    onStatusChanged: if (status === Image.Ready)
+                        came = true
+                    opacity: came ? 1 : 0
                     Behavior on scale {
                         NumberAnimation {
                             duration: Theme.duration

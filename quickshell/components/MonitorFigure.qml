@@ -131,7 +131,10 @@ Item {
                 anchors.fill: parent
                 source: figure.thumb ? "file://" + figure.thumb : ""
                 fillMode: Image.PreserveAspectCrop
-                sourceSize.width: figure.screenWidth * Screen.devicePixelRatio
+                // In 128 px steps, the old one shown until a new size is in
+                // (the control panel's preview resizes with the panel).
+                sourceSize.width: Math.ceil(figure.screenWidth * Screen.devicePixelRatio / 128) * 128
+                retainWhileLoading: true
                 asynchronous: true
                 // Mirrored like it's shown (Adjust).
                 transform: Scale {
