@@ -45,44 +45,26 @@ Item {
     }
 
     // Nothing in the folders at all.
-    Plate {
+    EmptyState {
         visible: !Library.loading && Library.images.length === 0
         anchors.centerIn: parent
-        padX: 24
-        padY: 16
-        Column {
-            width: Math.min(520, view.width - 96)
-            spacing: 8
-            Text {
-                width: parent.width
-                horizontalAlignment: Text.AlignHCenter
-                text: "No images found"
-                color: Theme.foreground
-                font.family: Theme.font
-                font.pixelSize: 18
-                font.weight: Font.ExtraBold
-            }
-            Text {
-                width: parent.width
-                horizontalAlignment: Text.AlignHCenter
-                wrapMode: Text.Wrap
-                text: "Looking in: " + Library.roots.map(r => r.path).join(", ") + ". Add folders in Settings, or download something from the Wallhaven tab."
-                color: Theme.mutedForeground
-                font.family: Theme.font
-                font.pixelSize: 14
-            }
-        }
+        width: Math.min(440, view.width - 48)
+        icon: "folder"
+        title: "No images found"
+        text: "Looking in " + Library.roots.map(r => r.path).join(", ") + ". Add folders in Settings, or download something from the Online tab."
+        action: "Open Settings"
+        onTriggered: Dialogs.openSettings("general")
     }
-    // Some, but none pass the filters.
-    Plate {
+    // Some, but none pass the search and filters.
+    EmptyState {
         visible: !Library.loading && Library.images.length > 0 && view.local.pageItems.length === 0
         anchors.centerIn: parent
-        Text {
-            text: "No wallpapers match."
-            color: Theme.foreground
-            font.family: Theme.font
-            font.pixelSize: 14
-        }
+        width: Math.min(440, view.width - 48)
+        icon: "funnel"
+        title: "No wallpapers match"
+        text: "Nothing passes the search and filters you've set."
+        action: "Clear filters"
+        onTriggered: view.local.clearFilters()
     }
 
     // Keyboard (as shortcuts.rs), while no menu or dialog is open.

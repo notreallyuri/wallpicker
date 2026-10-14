@@ -264,6 +264,15 @@ QtObject {
             return "ok";
         }
 
+        /// Show a toast ("info" or "error"), to look at it.
+        function toast(kind: string, title: string): string {
+            if (kind === "error")
+                Toasts.error(title, "A line of detail under it");
+            else
+                Toasts.info(title, "A line of detail under it");
+            return "ok";
+        }
+
         /// The last toasts.
         function toasts(): string {
             return JSON.stringify(Toasts.list.map(t => t.title + (t.detail ? ": " + t.detail : "")));

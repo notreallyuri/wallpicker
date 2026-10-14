@@ -1,5 +1,6 @@
 // The toasts, bottom right of `host` (the panel), newest at the bottom; each
-// slides in and can be clicked away. They live in the window's overlay, above
+// slides in and can be clicked away. Like the empty states, a tinted mark
+// says what kind it is (an error's is red). They live in the window's overlay, above
 // dialogs too (an error from Settings was dimmed under its shade); looked up
 // each time one comes, like Tip's bubble: the panel's window can be replaced.
 import QtQuick
@@ -45,7 +46,7 @@ ColumnLayout {
             id: toast
             required property var modelData
             Layout.alignment: Qt.AlignRight
-            implicitWidth: Math.min(380, body.implicitWidth + 32)
+            implicitWidth: Math.min(400, body.implicitWidth + 26)
             implicitHeight: body.implicitHeight + 24
             opacity: 0
             x: 24
@@ -79,31 +80,56 @@ ColumnLayout {
                 radius: 16
                 color: Theme.popover
                 border.width: 1
-                border.color: toast.modelData.error ? "#fd4663" : Theme.a(Theme.border, 0.6)
+                border.color: Theme.a(Theme.border, 0.6)
             }
-            ColumnLayout {
+            RowLayout {
                 id: body
-                x: 16
+                x: 14
                 y: 12
-                width: parent.width - 32
-                spacing: 2
-                Text {
-                    Layout.fillWidth: true
-                    text: toast.modelData.title
-                    wrapMode: Text.Wrap
-                    color: toast.modelData.error ? "#fd4663" : Theme.foreground
-                    font.family: Theme.font
-                    font.pixelSize: 14
-                    font.weight: Font.Bold
+                width: parent.width - 26
+                spacing: 12
+                Rectangle {
+                    Layout.alignment: Qt.AlignTop
+                    implicitWidth: 28
+                    implicitHeight: 28
+                    radius: 14
+                    color: Theme.a(toast.modelData.error ? Theme.destructive : Theme.primary, 0.15)
+                    Icon {
+                        anchors.centerIn: parent
+                        name: toast.modelData.error ? "x" : "info"
+                        size: 14
+                        color: toast.modelData.error ? Theme.destructive : Theme.primary
+                    }
                 }
-                Text {
-                    visible: toast.modelData.detail !== ""
+                ColumnLayout {
                     Layout.fillWidth: true
-                    text: toast.modelData.detail
-                    wrapMode: Text.Wrap
+                    Layout.maximumWidth: 320
+                    spacing: 2
+                    Text {
+                        Layout.fillWidth: true
+                        text: toast.modelData.title
+                        wrapMode: Text.Wrap
+                        color: Theme.foreground
+                        font.family: Theme.font
+                        font.pixelSize: 14
+                        font.weight: Font.Bold
+                    }
+                    Text {
+                        visible: toast.modelData.detail !== ""
+                        Layout.fillWidth: true
+                        text: toast.modelData.detail
+                        wrapMode: Text.Wrap
+                        color: Theme.mutedForeground
+                        font.family: Theme.font
+                        font.pixelSize: 12
+                    }
+                }
+                Icon {
+                    Layout.alignment: Qt.AlignTop
+                    Layout.topMargin: 2
+                    name: "x"
+                    size: 14
                     color: Theme.mutedForeground
-                    font.family: Theme.font
-                    font.pixelSize: 12
                 }
             }
             MouseArea {

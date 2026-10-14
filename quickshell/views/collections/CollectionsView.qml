@@ -24,7 +24,7 @@ Item {
         OnlineGrid {
             id: grid
             anchors.fill: parent
-            headerSpace: card.height + 12 + 28 + (error.visible ? error.height + 12 : 0)
+            headerSpace: card.height + 12 + 28
             results: Collections.results
             current: Collections.page ? Collections.page.page : 0
             last: Collections.page ? Collections.page.last_page : 0
@@ -57,20 +57,20 @@ Item {
         follow: view.y
     }
 
-    // The chosen one couldn't be opened (no username...).
-    Plate {
-        id: error
-        visible: Collections.error !== ""
-        x: 32
-        y: card.y + card.height + 20
-        Text {
-            width: Math.min(implicitWidth, view.width - 92)
-            wrapMode: Text.Wrap
-            text: Collections.error
-            color: "#fd4663"
-            font.family: Theme.font
-            font.pixelSize: 14
-        }
+    // The collections couldn't be listed (no API key...), there are none,
+    // or the chosen one couldn't be opened.
+    EmptyState {
+        readonly property bool listFailed: Collections.list !== null && Collections.listError !== ""
+        readonly property bool none: Collections.list !== null && !listFailed && Collections.list.length === 0
+        visible: listFailed || none || Collections.error !== ""
+        anchors.centerIn: parent
+        width: Math.min(440, view.width - 48)
+        error: !none
+        icon: none ? "star" : "x"
+        title: listFailed ? "Couldn't list your collections" : none ? "No collections yet" : "Couldn't open this collection"
+        text: listFailed ? Collections.listError : none ? "The collections you make on Wallhaven show here." : Collections.error
+        action: none ? "" : "Wallhaven settings…"
+        onTriggered: Dialogs.openSettings("wallhaven")
     }
 
     Shortcut {
