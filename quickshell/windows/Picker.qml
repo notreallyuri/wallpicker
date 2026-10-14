@@ -104,13 +104,25 @@ Item {
                 readonly property real panelWidth: Math.max(320, Math.min(560, width - 400, dragWidth >= 0 ? dragWidth : Prefs.panelWidth))
                 // The edge toggle's room at the right.
                 readonly property real toggleRoom: 24
+                // 0 closed, 1 open, in between while it slides: the panel
+                // comes in from the right and the grid narrows with it.
+                property real shown: open ? 1 : 0
+                Behavior on shown {
+                    NumberAnimation {
+                        duration: Theme.duration
+                        easing.type: Easing.OutCubic
+                    }
+                }
+                // Where the panel's left edge is, all the way in (12 px from
+                // the right) or out past the edge.
+                readonly property real panelLeft: width - (panelWidth + 12) * shown
 
                 // One tab at a time: the others aren't kept (nor their pictures).
                 Loader {
                     anchors.left: parent.left
                     anchors.top: parent.top
                     anchors.bottom: parent.bottom
-                    width: (body.open && !body.overlay ? controlPanel.x : body.width) - body.toggleRoom
+                    width: (body.overlay ? body.width : body.panelLeft) - body.toggleRoom
                     sourceComponent: [localTab, onlineTab, collectionsTab, presetsTab][Views.current]
                 }
 
@@ -118,18 +130,12 @@ Item {
                     id: controlPanel
                     anchors.top: parent.top
                     anchors.bottom: parent.bottom
-                    anchors.right: parent.right
                     anchors.topMargin: 12
-                    anchors.rightMargin: 12
+                    x: body.panelLeft
                     width: body.panelWidth
                     floating: body.overlay
-                    visible: opacity > 0
-                    opacity: body.open ? 1 : 0
-                    Behavior on opacity {
-                        NumberAnimation {
-                            duration: Theme.ms(150)
-                        }
-                    }
+                    visible: body.shown > 0
+                    opacity: body.shown
                     onCloseRequested: Prefs.panelOpen = false
                 }
 
@@ -174,7 +180,7 @@ Item {
 
                 EdgeToggle {
                     open: body.open
-                    x: (body.open ? controlPanel.x : body.width) - width
+                    x: body.panelLeft - width
                     y: Math.round((body.height - height) / 2)
                     onClicked: Prefs.panelOpen = !Prefs.panelOpen
                 }
