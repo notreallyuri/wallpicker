@@ -1,9 +1,9 @@
 // A Local tile (ui/src/views/local/tile.rs): a rounded card holding the
 // picture (16:10, its own rounded corners; a film badge when it's
 // animated) with the monitors showing it, the name and size, the artists
-// (a brush) then the tags; the star in the corner. Hover: lifts with the
-// bouncy ease, a primary ring and glow, the picture zooms 3%. A click
-// applies it.
+// (a brush) then the tags on one line (+N for the rest); the star in the
+// corner. Hover: lifts with the bouncy ease, a primary ring and glow, the
+// picture zooms 3%. A click applies it.
 import QtQuick
 import QtQuick.Effects
 import QtQuick.Layouts
@@ -224,28 +224,16 @@ Item {
                         }
                     }
                 }
-                Row {
+                // One line: the artists, then the tags, then +N.
+                BadgeLine {
                     visible: tile.tags.length > 0 || tile.artists.length > 0
                     Layout.fillWidth: true
-                    spacing: 4
-                    clip: true
-                    Repeater {
-                        model: tile.artists
-                        Badge {
-                            required property string modelData
-                            soft: true
-                            icon: "brush"
-                            text: modelData
-                        }
-                    }
-                    Repeater {
-                        model: tile.tags
-                        Badge {
-                            required property string modelData
-                            soft: true
-                            text: modelData
-                        }
-                    }
+                    items: tile.artists.map(a => ({
+                                text: a,
+                                icon: "brush"
+                            })).concat(tile.tags.map(t => ({
+                                text: t
+                            })))
                 }
             }
         }
